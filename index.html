@@ -7,6 +7,9 @@
 <meta name="description" content="A retro hunter leveling system with quests, trials, and rank progression." />
 <meta property="og:title" content="XELI // Leveling System" />
 <meta property="og:description" content="A retro hunter leveling system with quests, trials, and rank progression." />
+<meta property="og:image" content="/assets/xeli_logo.png" />
+<link rel="icon" type="image/png" href="/assets/xeli_logo.png">
+<link rel="apple-touch-icon" href="/assets/xeli_logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=VT323&family=Tahoma&display=swap" rel="stylesheet">
@@ -18,11 +21,6 @@
 
 <div class="retro-titlebar">
   <span class="retro-titlebar-text">⚔ XELI LEVELING SYSTEM — v1.0</span>
-  <div class="retro-titlebar-btns">
-    <button class="retro-btn" type="button" title="1998 vibes only" aria-hidden="true" tabindex="-1">_</button>
-    <button class="retro-btn" type="button" title="1998 vibes only" aria-hidden="true" tabindex="-1">□</button>
-    <button class="retro-btn retro-btn-close" type="button" id="retroCloseBtn" title="Try it">×</button>
-  </div>
 </div>
 
 <div class="app">
@@ -31,7 +29,7 @@
   <aside class="sidebar">
     <div class="brand">
       <span class="brand-mark" id="brandLogo" title="XELI Leveling System">
-        <img src="/assets/xeli_leveling_logo.jpg" alt="XELI Leveling Emblem" class="brand-logo-img" referrerPolicy="no-referrer" />
+        <img src="/assets/xeli_logo.png" alt="XELI Leveling Emblem" class="brand-logo-img" referrerPolicy="no-referrer" />
       </span>
       <div class="brand-text">
         <span class="brand-name">XELI</span>
@@ -232,17 +230,14 @@
 
       <!-- ===================== LEETCODE PROGRESS SUITE ===================== -->
       <div class="lc-progress-grid">
-        <!-- Card 1: Solved Problems / Trials Breakdown (LeetCode Donut Card) -->
+        <!-- Card 1: Solved Problems / Trials Breakdown (Challenge Lab) -->
         <div class="panel lc-card lc-solved-card">
           <div class="panel-head lc-head">
             <div class="lc-head-title">
               <svg viewBox="0 0 24 24" class="panel-icon lc-icon"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 14.5a1.5 1.5 0 1 1-1.5-1.5 1.5 1.5 0 0 1 1.5 1.5Zm1.5-6.5a2.5 2.5 0 0 0-5 0 1 1 0 0 1-2 0 4.5 4.5 0 1 1 6.3 4.1 1 1 0 0 1-.8.9h-.5a1 1 0 0 1-1-1v-.5a1 1 0 0 1 2 0v.3a2.5 2.5 0 0 0 1-3.8Z"/></svg>
               <h2>Solved Problems</h2>
             </div>
-            <div class="lc-mode-toggle" id="lcModeToggle">
-              <button class="lc-toggle-btn is-active" id="lcModeTrialsBtn" type="button" title="Show CCNA & Coding Lab Trials">Trials</button>
-              <button class="lc-toggle-btn" id="lcModeAllBtn" type="button" title="Show Combined Quests & Trials">All Tasks</button>
-            </div>
+            <span class="lc-contest-badge">Challenge Lab</span>
           </div>
 
           <div class="lc-solved-body">
@@ -269,7 +264,7 @@
                   <span class="lc-diff-name lc-easy-text">Easy</span>
                   <div class="lc-diff-stats">
                     <span class="lc-diff-count" id="lcEasyCount">0<span class="lc-diff-total">/3</span></span>
-                    <span class="lc-diff-beats" id="lcEasyBeats">Beats 0%</span>
+                    <span class="lc-diff-beats" id="lcEasyBeats">0%</span>
                   </div>
                 </div>
                 <div class="lc-progress-track">
@@ -283,7 +278,7 @@
                   <span class="lc-diff-name lc-med-text">Medium</span>
                   <div class="lc-diff-stats">
                     <span class="lc-diff-count" id="lcMedCount">0<span class="lc-diff-total">/4</span></span>
-                    <span class="lc-diff-beats" id="lcMedBeats">Beats 0%</span>
+                    <span class="lc-diff-beats" id="lcMedBeats">0%</span>
                   </div>
                 </div>
                 <div class="lc-progress-track">
@@ -297,7 +292,7 @@
                   <span class="lc-diff-name lc-hard-text">Hard</span>
                   <div class="lc-diff-stats">
                     <span class="lc-diff-count" id="lcHardCount">0<span class="lc-diff-total">/1</span></span>
-                    <span class="lc-diff-beats" id="lcHardBeats">Beats 0%</span>
+                    <span class="lc-diff-beats" id="lcHardBeats">0%</span>
                   </div>
                 </div>
                 <div class="lc-progress-track">
@@ -308,41 +303,40 @@
           </div>
         </div>
 
-        <!-- Card 2: Contest / Hunter Rating & Rank (LeetCode Contest Rating) -->
+        <!-- Card 2: Real Hunter Rating & Progression -->
         <div class="panel lc-card lc-contest-card">
           <div class="panel-head lc-head">
             <div class="lc-head-title">
               <svg viewBox="0 0 24 24" class="panel-icon lc-icon"><path d="M12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2Z"/></svg>
               <h2>Hunter Rating</h2>
             </div>
-            <span class="lc-contest-badge" id="lcContestLeague">Apprentice Tier</span>
+            <span class="lc-contest-badge" id="lcContestLeague">Rank E · The Awakened</span>
           </div>
 
           <div class="lc-contest-body">
             <div class="lc-contest-score-row">
               <div class="lc-score-main">
-                <span class="lc-score-num" id="lcHunterRating">1,200</span>
-                <span class="lc-score-label">Contest Rating</span>
+                <span class="lc-score-num" id="lcHunterRating">0</span>
+                <span class="lc-score-label">Total EXP Earned</span>
               </div>
-              <div class="lc-score-delta lc-delta-positive" id="lcRatingDelta">▲ +25 this week</div>
             </div>
 
             <div class="lc-contest-stats-grid">
               <div class="lc-metric-box">
-                <span class="lc-metric-label">Global Ranking</span>
-                <span class="lc-metric-value" id="lcGlobalRank">#1,824</span>
+                <span class="lc-metric-label">Trials Solved</span>
+                <span class="lc-metric-value" id="lcTotalCleared">0 / 8</span>
               </div>
               <div class="lc-metric-box">
-                <span class="lc-metric-label">Percentile</span>
-                <span class="lc-metric-value" id="lcPercentile">Top 12.5%</span>
+                <span class="lc-metric-label">Quests Cleared</span>
+                <span class="lc-metric-value" id="lcQuestsClearedMetric">0</span>
               </div>
               <div class="lc-metric-box">
-                <span class="lc-metric-label">Total Cleared</span>
-                <span class="lc-metric-value" id="lcTotalCleared">0</span>
+                <span class="lc-metric-label">Hunter Level</span>
+                <span class="lc-metric-value" id="lcHunterLevelMetric">Lv. 1</span>
               </div>
               <div class="lc-metric-box">
-                <span class="lc-metric-label">Clear Rate</span>
-                <span class="lc-metric-value" id="lcAcceptanceRate">100%</span>
+                <span class="lc-metric-label">Active Streak</span>
+                <span class="lc-metric-value" id="lcStreakMetric">0 days</span>
               </div>
             </div>
           </div>
