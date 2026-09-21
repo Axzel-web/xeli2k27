@@ -11,6 +11,209 @@ import {
   getContextualHelp,
 } from "./cisco-sim.js";
 
+// ============================================================================
+// Web Audio Synthesizer for Cisco CLI Retro Mechanical Typing Sounds
+// ============================================================================
+let cliAudioCtx = null;
+let isCliSoundMuted = false;
+
+function getCliAudioContext() {
+  try {
+    if (!cliAudioCtx && (window.AudioContext || window.webkitAudioContext)) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      cliAudioCtx = new AudioCtx();
+    }
+    if (cliAudioCtx && cliAudioCtx.state === "suspended") {
+      cliAudioCtx.resume().catch(() => {});
+    }
+    return cliAudioCtx;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function playCliSound(type = "key") {
+  if (isCliSoundMuted) return;
+  const ctx = getCliAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+
+  try {
+    if (type === "key") {
+      // High-volume vintage mechanical key click with randomized micro-jitter (1800Hz - 2300Hz)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+
+      filter.type = "highpass";
+      filter.frequency.setValueAtTime(800, now);
+
+      const baseFreq = 1900 + (Math.random() * 450 - 225);
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(650, now + 0.022);
+
+      gain.gain.setValueAtTime(0.48, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.028);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.032);
+
+      // Secondary tactile casing thud for authentic high-volume clack
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(390 + Math.random() * 70, now);
+      osc2.frequency.exponentialRampToValueAtTime(130, now + 0.025);
+      gain2.gain.setValueAtTime(0.38, now);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now);
+      osc2.stop(now + 0.035);
+    } else if (type === "space") {
+      // High-volume deeper acoustic spacebar thump
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(90, now + 0.038);
+
+      gain.gain.setValueAtTime(0.55, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } else if (type === "backspace") {
+      // High-volume quick crisp erasure snap
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(860, now);
+      osc.frequency.exponentialRampToValueAtTime(340, now + 0.024);
+
+      gain.gain.setValueAtTime(0.48, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.035);
+    } else if (type === "enter") {
+      // High-volume solid mechanical return latch clack (dual frequency)
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = "triangle";
+      osc1.frequency.setValueAtTime(280, now);
+      osc1.frequency.exponentialRampToValueAtTime(90, now + 0.045);
+
+      osc2.type = "square";
+      osc2.frequency.setValueAtTime(1400, now);
+      osc2.frequency.exponentialRampToValueAtTime(380, now + 0.035);
+
+      gain.gain.setValueAtTime(0.58, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.055);
+      osc2.stop(now + 0.055);
+    } else if (type === "tab") {
+      // High-volume ascending dual auto-complete chirp
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(987.77, now);
+      osc.frequency.setValueAtTime(1318.51, now + 0.04);
+
+      gain.gain.setValueAtTime(0.50, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.13);
+    } else if (type === "help") {
+      // High-volume Contextual Help chime
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.setValueAtTime(1174.66, now + 0.05);
+
+      gain.gain.setValueAtTime(0.50, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.14);
+    } else if (type === "error") {
+      // High-volume Retro console buzzer/bell
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(320, now);
+
+      gain.gain.setValueAtTime(0.46, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.17);
+    } else if (type === "goal") {
+      // High-volume Objective satisfied chime
+      [523.25, 659.25, 783.99].forEach((freq, idx) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "triangle";
+        o.frequency.setValueAtTime(freq, now + idx * 0.07);
+        g.gain.setValueAtTime(0, now + idx * 0.07);
+        g.gain.linearRampToValueAtTime(0.48, now + idx * 0.07 + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.13);
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(now + idx * 0.07);
+        o.stop(now + idx * 0.07 + 0.15);
+      });
+    } else if (type === "fanfare") {
+      // High-volume Claim EXP fanfare
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.setValueAtTime(freq, now + idx * 0.08);
+        g.gain.setValueAtTime(0, now + idx * 0.08);
+        g.gain.linearRampToValueAtTime(0.52, now + idx * 0.08 + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.22);
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(now + idx * 0.08);
+        o.stop(now + idx * 0.08 + 0.24);
+      });
+    }
+  } catch (e) {}
+}
+
 function escapeHtml(str) {
   if (!str) return "";
   return String(str)
@@ -136,6 +339,7 @@ Type "?" for help or press [Tab] for command completion.
           <button class="cli-tool-btn" id="cliQuestionBtn" type="button" title="View valid commands in current mode">[?] Help</button>
           <button class="cli-tool-btn" id="cliEndBtn" type="button" title="Jump to privileged EXEC">end (Ctrl+Z)</button>
           <button class="cli-tool-btn" id="cliClearBtn" type="button" title="Clear screen">Clear</button>
+          <button class="cli-tool-btn cli-sound-toggle-btn" id="cliSoundToggleBtn" type="button" title="Toggle mechanical keyboard typing audio">🔊 Audio: On</button>
         </div>
 
         <!-- Terminal Screen -->
@@ -164,15 +368,20 @@ Type "?" for help or press [Tab] for command completion.
   const resetBtn = document.getElementById("cliResetBtn");
   const progressCounter = document.getElementById("cliProgressCounter");
   const progressBarFill = document.getElementById("cliProgressBarFill");
+  const soundToggleBtn = document.getElementById("cliSoundToggleBtn");
+
+  // Keep track of satisfied goals to trigger celebratory audio on new completion
+  const satisfiedGoalsSet = new Set();
 
   // Keep screen focused on click
   screen.addEventListener("click", () => {
     hiddenInput.focus();
   });
 
-  // Sync typed input display
+  // Sync typed input display & trigger mechanical sound
   hiddenInput.addEventListener("input", () => {
     inputDisplay.textContent = hiddenInput.value;
+    playCliSound(hiddenInput.value.endsWith(" ") ? "space" : "key");
   });
 
   function renderHistory() {
@@ -206,6 +415,8 @@ Type "?" for help or press [Tab] for command completion.
     }
 
     let satisfiedCount = 0;
+    let newlySatisfied = false;
+
     c.goals.forEach((goal, i) => {
       const itemEl = document.getElementById(`cliGoal-${i}`);
       const iconEl = document.getElementById(`cliGoalIcon-${i}`);
@@ -213,13 +424,22 @@ Type "?" for help or press [Tab] for command completion.
 
       if (ok) {
         satisfiedCount++;
+        if (!satisfiedGoalsSet.has(i)) {
+          satisfiedGoalsSet.add(i);
+          newlySatisfied = true;
+        }
         if (itemEl) itemEl.classList.add("is-satisfied");
         if (iconEl) iconEl.textContent = "✔";
       } else {
+        satisfiedGoalsSet.delete(i);
         if (itemEl) itemEl.classList.remove("is-satisfied");
         if (iconEl) iconEl.textContent = "○";
       }
     });
+
+    if (newlySatisfied) {
+      playCliSound("goal");
+    }
 
     const percent = Math.round((satisfiedCount / c.goals.length) * 100);
     progressCounter.textContent = `${satisfiedCount} / ${c.goals.length}`;
@@ -255,6 +475,14 @@ Type "?" for help or press [Tab] for command completion.
 
     if (result.output) {
       terminalLines.push({ type: "output", text: result.output });
+      if (
+        result.output.includes("% Invalid") ||
+        result.output.includes("% Incomplete") ||
+        result.output.includes("% Bad") ||
+        result.output.includes("% Access denied")
+      ) {
+        playCliSound("error");
+      }
     }
 
     // Clear input
@@ -267,18 +495,26 @@ Type "?" for help or press [Tab] for command completion.
     evaluateGoals();
   }
 
-  // Keyboard navigation
+  // Keyboard navigation & sound effects
   hiddenInput.addEventListener("keydown", (e) => {
     // Enter
     if (e.key === "Enter") {
       e.preventDefault();
+      playCliSound("enter");
       runCurrentCommand();
+      return;
+    }
+
+    // Backspace / Delete
+    if (e.key === "Backspace" || e.key === "Delete") {
+      playCliSound("backspace");
       return;
     }
 
     // Tab Completion
     if (e.key === "Tab") {
       e.preventDefault();
+      playCliSound("tab");
       const current = hiddenInput.value;
       const completed = getTabCompletion(device, current);
       if (completed !== current) {
@@ -291,6 +527,7 @@ Type "?" for help or press [Tab] for command completion.
     // Contextual Help "?"
     if (e.key === "?") {
       e.preventDefault();
+      playCliSound("help");
       const current = hiddenInput.value;
       const helpItems = getContextualHelp(device, current);
       const prompt = getPrompt(device);
@@ -406,6 +643,19 @@ Type "?" for help or press [Tab] for command completion.
     hiddenInput.focus();
   });
 
+  // Sound toggle button
+  if (soundToggleBtn) {
+    soundToggleBtn.addEventListener("click", () => {
+      isCliSoundMuted = !isCliSoundMuted;
+      soundToggleBtn.textContent = isCliSoundMuted ? "🔇 Audio: Muted" : "🔊 Audio: On";
+      soundToggleBtn.classList.toggle("is-muted", isCliSoundMuted);
+      if (!isCliSoundMuted) {
+        playCliSound("key");
+      }
+      hiddenInput.focus();
+    });
+  }
+
   // Reset terminal button
   resetBtn.addEventListener("click", () => {
     device = createDefaultDevice({
@@ -432,6 +682,7 @@ Press RETURN to get started!
   // Claim EXP button
   claimBtn.addEventListener("click", () => {
     if (onClaimExp) {
+      playCliSound("fanfare");
       onClaimExp(c);
       claimBtn.disabled = true;
       claimBtn.textContent = "EXP Claimed";

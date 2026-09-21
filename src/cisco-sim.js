@@ -28,24 +28,36 @@ export function createDefaultDevice(options = {}) {
   return {
     deviceType: isSwitch ? "switch" : "router",
     hostname: options.hostname || defaultHostname,
-    mode: "user_exec", // user_exec, priv_exec, global_config, if_config, line_config
+    mode: "user_exec", // user_exec, priv_exec, global_config, if_config, line_config, vlan_config
     currentInterface: null,
     currentLine: null,
+    currentVlan: null,
     enableSecret: null,
     enablePassword: null,
     bannerMotd: null,
+    domainName: null,
+    cryptoKeyGenerated: false,
+    users: {},
+    vlans: {
+      "1": { id: 1, name: "default", status: "active", ports: ["Fa0/1", "Fa0/2"] },
+    },
+    staticRoutes: [],
     startupConfigSaved: false,
     verifiedShowRun: false,
     verifiedShowIpIntBrief: false,
+    verifiedShowIpRoute: false,
+    verifiedShowVlanBrief: false,
     pingsSent: [],
+    tracertsSent: [],
+    commandHistory: [],
     lines: {
       "console 0": { password: null, login: false },
-      "vty 0 4": { password: null, login: false },
+      "vty 0 4": { password: null, login: false, transportInput: "all", loginLocal: false },
     },
     interfaces: isSwitch
       ? {
-          "FastEthernet0/1": { name: "FastEthernet0/1", ip: null, mask: null, adminUp: true, lineProtocol: "up", description: null },
-          "FastEthernet0/2": { name: "FastEthernet0/2", ip: null, mask: null, adminUp: true, lineProtocol: "up", description: null },
+          "FastEthernet0/1": { name: "FastEthernet0/1", ip: null, mask: null, adminUp: true, lineProtocol: "up", description: null, mode: "access", vlan: 1 },
+          "FastEthernet0/2": { name: "FastEthernet0/2", ip: null, mask: null, adminUp: true, lineProtocol: "up", description: null, mode: "access", vlan: 1 },
           "Vlan1": { name: "Vlan1", ip: null, mask: null, adminUp: false, lineProtocol: "down", description: null },
         }
       : {
@@ -72,6 +84,8 @@ export function getPrompt(device) {
       return `${h}(config-if)#`;
     case "line_config":
       return `${h}(config-line)#`;
+    case "vlan_config":
+      return `${h}(config-vlan)#`;
     default:
       return `${h}>`;
   }
@@ -109,7 +123,7 @@ export function generateRunningConfig(device) {
   const lines = [
     "Building configuration...",
     "",
-    "Current configuration : 1180 bytes",
+    "Current configuration : 1340 bytes",
     "!",
     "version 15.4",
     "no service timestamps log datetime msec",
@@ -119,6 +133,18 @@ export function generateRunningConfig(device) {
     `hostname ${device.hostname}`,
     "!",
   ];
+
+  if (device.domainName) {
+    lines.push(`ip domain-name ${device.domainName}`);
+    lines.push("!");
+  }
+
+  if (device.users && Object.keys(device.users).length > 0) {
+    Object.entries(device.users).forEach(([user, u]) => {
+      lines.push(`username ${user} secret 5 $1$mERr$${user.slice(0, 4)}hash (password: "${u.secret || u.password}")`);
+    });
+    lines.push("!");
+  }
 
   if (device.enableSecret) {
     lines.push(`enable secret 5 $1$mERr$hx5rVt7rPNoS4wqbXKX7m0 (set to "${device.enableSecret}")`);
@@ -139,6 +165,12 @@ export function generateRunningConfig(device) {
     } else {
       lines.push(` no ip address`);
     }
+    if (iface.mode) {
+      lines.push(` switchport mode ${iface.mode}`);
+      if (iface.vlan && iface.vlan !== 1) {
+        lines.push(` switchport access vlan ${iface.vlan}`);
+      }
+    }
     if (!iface.adminUp) {
       lines.push(` shutdown`);
     } else {
@@ -148,6 +180,14 @@ export function generateRunningConfig(device) {
     lines.push(" speed auto");
     lines.push("!");
   });
+
+  // Static Routes
+  if (device.staticRoutes && device.staticRoutes.length > 0) {
+    device.staticRoutes.forEach((r) => {
+      lines.push(`ip route ${r.network} ${r.mask} ${r.nextHop}`);
+    });
+    lines.push("!");
+  }
 
   // Banner
   if (device.bannerMotd) {
@@ -167,8 +207,12 @@ export function generateRunningConfig(device) {
   const vty = device.lines["vty 0 4"];
   lines.push("line vty 0 4");
   if (vty.password) lines.push(` password ${vty.password}`);
-  if (vty.login) lines.push(" login");
-  lines.push(" transport input all");
+  if (vty.loginLocal) {
+    lines.push(" login local");
+  } else if (vty.login) {
+    lines.push(" login");
+  }
+  lines.push(` transport input ${vty.transportInput || "all"}`);
   lines.push("!");
   lines.push("end");
 
@@ -190,6 +234,67 @@ export function generateIpIntBrief(device) {
     return `${padName}${ipStr}${okStr}${methodStr}${statusStr}${protoStr}`;
   });
   return [header, ...rows].join("\n");
+}
+
+/**
+ * Generates Cisco IOS "show ip route" table
+ */
+export function generateIpRoute(device) {
+  const lines = [
+    "Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP",
+    "       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area",
+    "",
+  ];
+
+  const defaultRoute = (device.staticRoutes || []).find(
+    (r) => r.network === "0.0.0.0" && r.mask === "0.0.0.0"
+  );
+  if (defaultRoute) {
+    lines.push(`Gateway of last resort is ${defaultRoute.nextHop} to network 0.0.0.0`);
+  } else {
+    lines.push("Gateway of last resort is not set");
+  }
+  lines.push("");
+
+  // Connected interfaces
+  Object.values(device.interfaces).forEach((iface) => {
+    if (iface.ip && iface.mask && iface.adminUp && iface.lineProtocol === "up") {
+      const octets = iface.ip.split(".");
+      const netBase = `${octets[0]}.${octets[1]}.${octets[2]}.0`;
+      lines.push(`C    ${netBase}/24 is directly connected, ${iface.name}`);
+      lines.push(`L    ${iface.ip}/32 is directly connected, ${iface.name}`);
+    }
+  });
+
+  // Static routes
+  (device.staticRoutes || []).forEach((r) => {
+    if (r.network === "0.0.0.0" && r.mask === "0.0.0.0") {
+      lines.push(`S*   0.0.0.0/0 [1/0] via ${r.nextHop}`);
+    } else {
+      lines.push(`S    ${r.network}/24 [1/0] via ${r.nextHop}`);
+    }
+  });
+
+  return lines.join("\n");
+}
+
+/**
+ * Generates Cisco IOS "show vlan brief" table
+ */
+export function generateVlanBrief(device) {
+  const lines = [
+    "VLAN Name                             Status    Ports",
+    "---- -------------------------------- --------- -------------------------------",
+  ];
+  const vlans = device.vlans || { "1": { id: 1, name: "default", status: "active", ports: ["Fa0/1", "Fa0/2"] } };
+  Object.values(vlans).forEach((v) => {
+    const vlanIdStr = String(v.id).padEnd(4, " ");
+    const nameStr = (v.name || `VLAN${v.id}`).padEnd(32, " ");
+    const statusStr = (v.status || "active").padEnd(9, " ");
+    const portsStr = (v.ports || []).join(", ");
+    lines.push(`${vlanIdStr} ${nameStr} ${statusStr} ${portsStr}`);
+  });
+  return lines.join("\n");
 }
 
 /**
@@ -343,6 +448,10 @@ export function executeCiscoCommand(device, rawLine) {
   // History tracking
   dev.commandHistory = dev.commandHistory || [];
   dev.commandHistory.push(line);
+  dev.modeHistory = dev.modeHistory || [];
+  if (!dev.modeHistory.includes(dev.mode)) {
+    dev.modeHistory.push(dev.mode);
+  }
 
   // Handle help "?"
   if (line === "?" || line.endsWith("?")) {
@@ -427,6 +536,24 @@ export function executeCiscoCommand(device, rawLine) {
       };
     }
 
+    if (cmd0 === "traceroute" || cmd0 === "trace") {
+      if (!tokens[1]) return { output: "% Incomplete command.", device: dev };
+      const target = tokens[1];
+      const valid = isValidIpv4(target);
+      dev.tracertsSent = dev.tracertsSent || [];
+      dev.tracertsSent.push({ target, success: valid });
+      if (valid) {
+        return {
+          output: `Type escape sequence to abort.\nTracing the route to ${target}\n\n  1  10.0.0.1  2 msec  1 msec  1 msec\n  2  192.168.1.1  4 msec  3 msec  3 msec\n  3  ${target}  5 msec  4 msec  4 msec`,
+          device: dev,
+        };
+      }
+      return {
+        output: `Type escape sequence to abort.\nTracing the route to ${target}\n\n  1  * * *\n  2  * * *\n  3  * * *`,
+        device: dev,
+      };
+    }
+
     if (cmd0 === "exit" || cmd0 === "quit") {
       return { output: `[Connection to ${dev.hostname} closed]`, device: dev };
     }
@@ -471,6 +598,31 @@ export function executeCiscoCommand(device, rawLine) {
     if ((cmd0 === "show" || cmd0 === "sh") && cmd1 === "ip" && (cmd2 === "interface" || cmd2 === "int") && (tokens[3] || "").toLowerCase().startsWith("br")) {
       dev.verifiedShowIpIntBrief = true;
       return { output: generateIpIntBrief(dev), device: dev };
+    }
+
+    // "show ip route" / "sh ip ro"
+    if ((cmd0 === "show" || cmd0 === "sh") && cmd1 === "ip" && (cmd2 === "route" || cmd2 === "ro")) {
+      dev.verifiedShowIpRoute = true;
+      return { output: generateIpRoute(dev), device: dev };
+    }
+
+    // "show vlan brief" / "sh vlan"
+    if ((cmd0 === "show" || cmd0 === "sh") && (cmd1 === "vlan" || cmd1 === "vl")) {
+      dev.verifiedShowVlanBrief = true;
+      return { output: generateVlanBrief(dev), device: dev };
+    }
+
+    // "show ip ssh"
+    if ((cmd0 === "show" || cmd0 === "sh") && cmd1 === "ip" && cmd2 === "ssh") {
+      if (!dev.cryptoKeyGenerated) {
+        return { output: "% SSH has not been enabled", device: dev };
+      }
+      return { output: `SSH Enabled - version 1.99\nAuthentication timeout: 120 secs; Authentication retries: 3`, device: dev };
+    }
+
+    // "show history"
+    if ((cmd0 === "show" || cmd0 === "sh") && cmd1 === "history") {
+      return { output: (dev.commandHistory || []).slice(-15).join("\n"), device: dev };
     }
 
     // "show version"
@@ -518,6 +670,25 @@ export function executeCiscoCommand(device, rawLine) {
       };
     }
 
+    // "traceroute <ip>"
+    if (cmd0 === "traceroute" || cmd0 === "trace") {
+      if (!tokens[1]) return { output: "% Incomplete command.", device: dev };
+      const target = tokens[1];
+      const valid = isValidIpv4(target);
+      dev.tracertsSent = dev.tracertsSent || [];
+      dev.tracertsSent.push({ target, success: valid });
+      if (valid) {
+        return {
+          output: `Type escape sequence to abort.\nTracing the route to ${target}\n\n  1  10.0.0.1  2 msec  1 msec  1 msec\n  2  192.168.1.1  4 msec  3 msec  3 msec\n  3  ${target}  5 msec  4 msec  4 msec`,
+          device: dev,
+        };
+      }
+      return {
+        output: `Type escape sequence to abort.\nTracing the route to ${target}\n\n  1  * * *\n  2  * * *\n  3  * * *`,
+        device: dev,
+      };
+    }
+
     // "exit"
     if (cmd0 === "exit" || cmd0 === "quit") {
       dev.mode = "user_exec";
@@ -535,6 +706,64 @@ export function executeCiscoCommand(device, rawLine) {
     if (cmd0 === "hostname" || cmd0 === "host") {
       if (!tokens[1]) return { output: "% Incomplete command.", device: dev };
       dev.hostname = tokens[1].trim();
+      return { output: "", device: dev };
+    }
+
+    // "ip domain-name <name>" / "ip domain name <name>"
+    if (cmd0 === "ip" && (cmd1 === "domain-name" || (cmd1 === "domain" && cmd2 === "name"))) {
+      const domain = cmd1 === "domain-name" ? tokens[2] : tokens[3];
+      if (!domain) return { output: "% Incomplete command.", device: dev };
+      dev.domainName = domain.trim();
+      return { output: "", device: dev };
+    }
+
+    // "crypto key generate rsa"
+    if (cmd0 === "crypto" && cmd1 === "key" && cmd2 === "generate") {
+      if (!dev.domainName) {
+        return { output: "% Please define a domain-name first.", device: dev };
+      }
+      dev.cryptoKeyGenerated = true;
+      return {
+        output: `The name for the keys will be: ${dev.hostname}.${dev.domainName}\nChoose the size of the key modulus in the range of 360 to 2048 for your\nGeneral Purpose Keys. Choosing a key modulus greater than 512 may take\na few minutes.\n\nHow many bits in the modulus [512]: 1024\n% Generating 1024 bit RSA keys, keys will be non-exportable...\n[OK] (elapsed time was 1 seconds)`,
+        device: dev,
+      };
+    }
+
+    // "username <name> secret/password <pass>"
+    if (cmd0 === "username") {
+      const uName = tokens[1];
+      const pass = tokens.slice(3).join(" ").trim();
+      if (!uName || !pass) return { output: "% Incomplete command. Syntax: username <user> secret <password>", device: dev };
+      dev.users = dev.users || {};
+      dev.users[uName] = { secret: pass };
+      return { output: "", device: dev };
+    }
+
+    // "ip route <network> <mask> <next-hop>"
+    if (cmd0 === "ip" && (cmd1 === "route" || cmd1 === "ro")) {
+      const network = tokens[2];
+      const mask = tokens[3];
+      const nextHop = tokens[4];
+      if (!network || !mask || !nextHop) {
+        return { output: "% Incomplete command. Syntax: ip route <network> <mask> <next-hop>", device: dev };
+      }
+      dev.staticRoutes = dev.staticRoutes || [];
+      dev.staticRoutes.push({ network, mask, nextHop });
+      return { output: "", device: dev };
+    }
+
+    // "vlan <vlan-id>"
+    if (cmd0 === "vlan") {
+      const vid = parseInt(tokens[1], 10);
+      if (isNaN(vid) || vid < 1 || vid > 4094) {
+        return { output: "% Invalid VLAN number (1-4094).", device: dev };
+      }
+      dev.vlans = dev.vlans || {};
+      if (!dev.vlans[vid]) {
+        dev.vlans[vid] = { id: vid, name: `VLAN${vid}`, status: "active", ports: [] };
+      }
+      dev.currentVlan = vid;
+      dev.mode = "vlan_config";
       return { output: "", device: dev };
     }
 
@@ -617,6 +846,29 @@ export function executeCiscoCommand(device, rawLine) {
   }
 
   // =========================================================================
+  // VLAN CONFIG MODE (Switch(config-vlan)#)
+  // =========================================================================
+  if (dev.mode === "vlan_config") {
+    const vid = dev.currentVlan;
+    if (cmd0 === "name") {
+      const vName = tokens.slice(1).join(" ").trim();
+      if (!vName) return { output: "% Incomplete command. Syntax: name <VLAN_NAME>", device: dev };
+      if (dev.vlans && dev.vlans[vid]) {
+        dev.vlans[vid].name = vName;
+      }
+      return { output: "", device: dev };
+    }
+
+    if (cmd0 === "exit") {
+      dev.mode = "global_config";
+      dev.currentVlan = null;
+      return { output: "", device: dev };
+    }
+
+    return { output: `% Invalid input detected at '^' marker.\n  ${line}\n  ^`, device: dev };
+  }
+
+  // =========================================================================
   // INTERFACE CONFIG MODE (Router(config-if)#)
   // =========================================================================
   if (dev.mode === "if_config") {
@@ -629,6 +881,26 @@ export function executeCiscoCommand(device, rawLine) {
       lineProtocol: "down",
       description: null,
     };
+
+    // "switchport mode access" / "switchport mode trunk"
+    if (cmd0 === "switchport" || cmd0 === "sw") {
+      if (cmd1 === "mode") {
+        if (cmd2 === "access" || cmd2 === "trunk") {
+          iface.mode = cmd2;
+          dev.interfaces[ifName] = iface;
+          return { output: "", device: dev };
+        }
+      }
+      if (cmd1 === "access" && cmd2 === "vlan") {
+        const vid = parseInt(tokens[3], 10);
+        if (!isNaN(vid)) {
+          iface.vlan = vid;
+          dev.interfaces[ifName] = iface;
+          return { output: "", device: dev };
+        }
+      }
+      return { output: "% Incomplete switchport command.", device: dev };
+    }
 
     // "ip address <ip> <mask>" / "ip add <ip> <mask>"
     if (cmd0 === "ip" && (cmd1 === "address" || cmd1 === "add")) {
@@ -720,9 +992,21 @@ export function executeCiscoCommand(device, rawLine) {
       return { output: "", device: dev };
     }
 
-    // "login"
+    // "login" / "login local"
     if (cmd0 === "login") {
-      lineObj.login = true;
+      if (cmd1 === "local") {
+        lineObj.loginLocal = true;
+        lineObj.login = true;
+      } else {
+        lineObj.login = true;
+      }
+      dev.lines[lineKey] = lineObj;
+      return { output: "", device: dev };
+    }
+
+    // "transport input <ssh|all|telnet|none>"
+    if (cmd0 === "transport" && cmd1 === "input") {
+      lineObj.transportInput = tokens[2] || "all";
       dev.lines[lineKey] = lineObj;
       return { output: "", device: dev };
     }

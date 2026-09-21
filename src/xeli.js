@@ -12,6 +12,7 @@ import {
   loadProgressFromSupabase,
 } from "./supabase.js";
 import { renderCliLabChallenge } from "./cli-lab-ui.js";
+import { renderBinaryLabChallenge } from "./binary-lab-ui.js";
 
 /* ============================================================
    XELI — Challenge Lab data
@@ -150,252 +151,348 @@ const CHALLENGES = [
   {
     id: "net-cli-modes-exploration",
     cat: "networking",
-    title: "Router CLI Navigation",
+    title: "Router CLI Navigation & Help",
     difficulty: "Easy",
     exp: 120,
-    type: "lab",
-    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
-    sections: [
+    type: "cli-lab",
+    deviceType: "router",
+    initialHostname: "Router",
+    intro: "Explore Cisco IOS navigation hierarchy. Move between User EXEC, Privileged EXEC, and Global Configuration modes. Explore contextual help (?) and command history.",
+    goals: [
       {
-        heading: "1. Mode Navigation",
-        body: "Move between CLI modes:",
-        checklist: [
-          "User EXEC → Privileged EXEC (enable)",
-          "Privileged EXEC → Global Config (configure terminal)",
-          "exit back down, then up again",
-          "end from Global Config → Privileged EXEC",
-        ],
+        id: "priv_exec",
+        text: "Elevate to Privileged EXEC mode using enable",
+        hint: "Router> enable",
+        check: (dev) => dev.mode === "priv_exec" || (dev.commandHistory || []).some((c) => c.toLowerCase().trim() === "enable"),
       },
       {
-        heading: "2. Explore Commands",
-        body: "At Router#, use ? and Tab-completion.",
-        checklist: ["Explored ? at Router#", "Tried Tab-completion"],
-        reflection: {
-          label: "5 commands you discovered:",
-          count: 5,
-          placeholder: "Command",
-        },
+        id: "global_config",
+        text: "Enter Global Configuration mode (configure terminal)",
+        hint: "Router# configure terminal (or conf t)",
+        check: (dev) => dev.mode === "global_config" || (dev.commandHistory || []).some((c) => c.toLowerCase().startsWith("conf")),
+      },
+      {
+        id: "interface_config",
+        text: "Navigate into interface configuration mode",
+        hint: "Router(config)# interface GigabitEthernet0/0",
+        check: (dev) => dev.mode === "if_config" || (dev.commandHistory || []).some((c) => c.toLowerCase().startsWith("int")),
+      },
+      {
+        id: "return_exec",
+        text: "Return to Privileged EXEC using end or exit",
+        hint: "Router(config-if)# end (or exit)",
+        check: (dev) => (dev.commandHistory || []).some((c) => c.toLowerCase().trim() === "end" || c.toLowerCase().trim() === "exit"),
+      },
+      {
+        id: "show_history",
+        text: "Inspect recent command history with show history",
+        hint: "Router# show history",
+        check: (dev) => (dev.commandHistory || []).some((c) => c.toLowerCase().includes("hist")),
       },
     ],
   },
   {
     id: "net-hostname-banner-passwords",
     cat: "networking",
-    title: "Hostname, Banner & Passwords",
+    title: "Switch Identity, Banner & Passwords",
     difficulty: "Easy",
     exp: 140,
-    type: "lab",
-    intro: "Hands-on Packet Tracer lab. Do it on the router and switch, then check off what you did.",
-    sections: [
+    type: "cli-lab",
+    deviceType: "switch",
+    initialHostname: "Switch",
+    intro: "Configure device identity and multi-tier authentication passwords on the Cisco Catalyst switch. Set hostname to SW1, configure an MOTD security banner, an enable secret password, and secure the console and VTY lines.",
+    goals: [
       {
-        heading: "1. Hostname & Banner",
-        body: "Set identity and a login warning on both devices.",
-        checklist: [
-          "Set hostname on router (e.g. R1)",
-          "Created banner motd with a warning message on router",
-          "Set hostname on switch (e.g. SW1)",
-          "Created banner motd on switch",
-        ],
+        id: "hostname",
+        text: "Set switch hostname to SW1",
+        hint: "Switch(config)# hostname SW1",
+        check: (dev) => (dev.hostname || "").trim().toUpperCase() === "SW1",
       },
       {
-        heading: "2. Passwords (3 Types)",
-        body: "Set on both devices, then verify.",
-        checklist: [
-          "Set enable secret on router and switch",
-          "Set console password + login on both",
-          "Set vty password + login on both",
-          "Reopened CLI — login asked for password",
-          "Ran enable — asked for password",
-        ],
+        id: "banner",
+        text: "Create a login MOTD security banner",
+        hint: "SW1(config)# banner motd #Authorized Access Only#",
+        check: (dev) => Boolean(dev.bannerMotd && dev.bannerMotd.trim().length > 0),
+      },
+      {
+        id: "secret",
+        text: "Configure an enable secret password",
+        hint: "SW1(config)# enable secret cisco123",
+        check: (dev) => Boolean(dev.enableSecret && dev.enableSecret.trim().length > 0),
+      },
+      {
+        id: "console_pass",
+        text: "Configure console line password and enable login",
+        hint: "SW1(config)# line console 0 -> password ciscocon -> login",
+        check: (dev) => {
+          const con = dev.lines && dev.lines["console 0"];
+          return Boolean(con && con.password && con.login);
+        },
+      },
+      {
+        id: "vty_pass",
+        text: "Configure VTY lines 0 4 password and enable login",
+        hint: "SW1(config)# line vty 0 4 -> password ciscovty -> login",
+        check: (dev) => {
+          const vty = dev.lines && dev.lines["vty 0 4"];
+          return Boolean(vty && vty.password && vty.login);
+        },
       },
     ],
   },
   {
     id: "net-ip-interface-description",
     cat: "networking",
-    title: "IP Addressing & Interface Description",
+    title: "Interface Addressing & Descriptions",
     difficulty: "Easy",
     exp: 130,
-    type: "lab",
-    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
-    sections: [
+    type: "cli-lab",
+    deviceType: "router",
+    initialHostname: "R1",
+    intro: "Configure and document router interfaces. Assign IP addresses, attach descriptive interface labels, and bring links up with no shutdown.",
+    goals: [
       {
-        heading: "1. IP Address & No Shutdown",
-        body: "Assign an IP to an interface, enable it, verify status.",
-        checklist: [
-          "Assigned an IP address to an interface",
-          "Enabled the interface with no shutdown",
-          "Verified up/up status with show ip interface brief",
-        ],
+        id: "gi0_ip",
+        text: "Assign IP 10.0.0.1 255.255.255.0 to GigabitEthernet0/0",
+        hint: "R1(config-if)# ip address 10.0.0.1 255.255.255.0",
+        check: (dev) => {
+          const gi0 = dev.interfaces && dev.interfaces["GigabitEthernet0/0"];
+          return Boolean(gi0 && gi0.ip === "10.0.0.1" && gi0.mask === "255.255.255.0");
+        },
       },
       {
-        heading: "2. Interface Descriptions",
-        body: "Label two interfaces with what they connect to.",
-        checklist: [
-          "Added a description to interface 1 (e.g. Link to Switch1)",
-          "Added a description to interface 2 (e.g. Link to PC-LAN)",
-        ],
+        id: "gi0_desc",
+        text: "Add description 'Link to HQ Core Switch' on GigabitEthernet0/0",
+        hint: "R1(config-if)# description Link to HQ Core Switch",
+        check: (dev) => {
+          const gi0 = dev.interfaces && dev.interfaces["GigabitEthernet0/0"];
+          return Boolean(gi0 && gi0.description && gi0.description.trim().length > 0);
+        },
+      },
+      {
+        id: "gi0_up",
+        text: "Bring GigabitEthernet0/0 up with no shutdown",
+        hint: "R1(config-if)# no shutdown",
+        check: (dev) => {
+          const gi0 = dev.interfaces && dev.interfaces["GigabitEthernet0/0"];
+          return Boolean(gi0 && gi0.adminUp);
+        },
+      },
+      {
+        id: "gi1_ip",
+        text: "Assign IP 192.168.10.1 255.255.255.0 to GigabitEthernet0/1 and enable it",
+        hint: "R1(config)# int gi0/1 -> ip address 192.168.10.1 255.255.255.0 -> no shut",
+        check: (dev) => {
+          const gi1 = dev.interfaces && dev.interfaces["GigabitEthernet0/1"];
+          return Boolean(gi1 && gi1.ip === "192.168.10.1" && gi1.adminUp);
+        },
+      },
+      {
+        id: "verify_brief",
+        text: "Verify both interfaces with show ip interface brief",
+        hint: "R1# show ip interface brief",
+        check: (dev) => Boolean(dev.verifiedShowIpIntBrief),
       },
     ],
   },
- 
   {
     id: "net-save-manage-config",
     cat: "networking",
-    title: "Saving & Managing Config",
+    title: "Saving & Managing Configuration",
     difficulty: "Medium",
     exp: 150,
-    type: "lab",
-    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
-    sections: [
+    type: "cli-lab",
+    deviceType: "router",
+    initialHostname: "Router",
+    intro: "Learn the distinction between RAM (running-config) and NVRAM (startup-config). Configure device identity, verify running configuration, save to NVRAM, and test configuration persistence with reload.",
+    goals: [
       {
-        heading: "1. Save & Verify Persistence",
-        body: "Make a change, save it, reload, confirm it stuck.",
-        checklist: [
-          "Made a config change (e.g. edited the banner text)",
-          "Ran copy running-config startup-config",
-          "Reloaded the device",
-          "Verified the change was still there after reboot",
-        ],
+        id: "hostname",
+        text: "Set hostname to R1-CORE",
+        hint: "Router(config)# hostname R1-CORE",
+        check: (dev) => (dev.hostname || "").trim().toUpperCase() === "R1-CORE",
       },
       {
-        heading: "2. Running vs Startup",
-        body: "Make another change but don't save it yet.",
-        checklist: [
-          "Made a second change without saving",
-          "Compared show running-config vs show startup-config",
-          "Confirmed the new change only appears in running-config",
-        ],
+        id: "banner",
+        text: "Configure a security banner motd",
+        hint: "R1-CORE(config)# banner motd #Core Router Authorized Only#",
+        check: (dev) => Boolean(dev.bannerMotd && dev.bannerMotd.trim().length > 0),
+      },
+      {
+        id: "inspect_run",
+        text: "Inspect running configuration (show running-config)",
+        hint: "R1-CORE# show running-config",
+        check: (dev) => Boolean(dev.verifiedShowRun),
+      },
+      {
+        id: "save_nvram",
+        text: "Save running config to startup config (copy run start)",
+        hint: "R1-CORE# copy running-config startup-config",
+        check: (dev) => Boolean(dev.startupConfigSaved),
+      },
+      {
+        id: "reload_dev",
+        text: "Perform a system reload to verify saved persistence",
+        hint: "R1-CORE# reload",
+        check: (dev) => (dev.commandHistory || []).some((c) => c.toLowerCase().trim() === "reload"),
       },
     ],
   },
- 
   {
     id: "net-ping-traceroute",
     cat: "networking",
-    title: "Ping & Traceroute",
+    title: "Ping & Traceroute Diagnostics",
     difficulty: "Medium",
     exp: 150,
-    type: "lab",
-    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
-    sections: [
+    type: "cli-lab",
+    deviceType: "router",
+    initialHostname: "R1",
+    intro: "Configure routing reachability and perform Layer 3 network diagnostics. Bring up Gi0/0 with IP 10.1.1.1/24, configure a static route for remote network 192.168.2.0/24 via next-hop 10.1.1.2, verify the route table, and execute ping and traceroute tests.",
+    goals: [
       {
-        heading: "1. Ping Test",
-        body: "Build a 2-router topology, assign IPs, ping R1 to R2.",
-        checklist: [
-          "Built the 2-router topology",
-          "Assigned IPs and enabled interfaces",
-          "Pinged R1 to R2 successfully",
-        ],
+        id: "interface_setup",
+        text: "Configure GigabitEthernet0/0 with 10.1.1.1 255.255.255.0 and no shutdown",
+        hint: "R1(config-if)# ip address 10.1.1.1 255.255.255.0 -> no shut",
+        check: (dev) => {
+          const gi0 = dev.interfaces && dev.interfaces["GigabitEthernet0/0"];
+          return Boolean(gi0 && gi0.ip === "10.1.1.1" && gi0.adminUp);
+        },
       },
       {
-        heading: "2. Traceroute + Explanation",
-        body: "Traceroute the same destination, then explain what's different.",
-        checklist: ["Ran traceroute to the same destination"],
-        reflection: {
-          type: "note",
-          label: "In your own words (2-3 sentences): what's different between the traceroute output and the ping output?",
-          placeholder: "Your explanation…",
-        },
+        id: "static_route",
+        text: "Add static route: ip route 192.168.2.0 255.255.255.0 10.1.1.2",
+        hint: "R1(config)# ip route 192.168.2.0 255.255.255.0 10.1.1.2",
+        check: (dev) => (dev.staticRoutes || []).some((r) => r.network === "192.168.2.0" && r.nextHop === "10.1.1.2"),
+      },
+      {
+        id: "verify_route",
+        text: "Inspect routing table with show ip route",
+        hint: "R1# show ip route",
+        check: (dev) => Boolean(dev.verifiedShowIpRoute),
+      },
+      {
+        id: "test_ping",
+        text: "Ping the neighboring router at 10.1.1.2",
+        hint: "R1# ping 10.1.1.2",
+        check: (dev) => (dev.pingsSent || []).some((p) => p.target === "10.1.1.2"),
+      },
+      {
+        id: "test_traceroute",
+        text: "Run traceroute to destination host 192.168.2.50",
+        hint: "R1# traceroute 192.168.2.50",
+        check: (dev) => (dev.tracertsSent || []).some((t) => t.target === "192.168.2.50"),
       },
     ],
   },
- 
   {
     id: "net-ssh-access",
     cat: "networking",
-    title: "SSH Remote Access",
+    title: "SSH Remote Access Hardening",
     difficulty: "Medium",
     exp: 160,
-    type: "lab",
-    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
-    sections: [
+    type: "cli-lab",
+    deviceType: "router",
+    initialHostname: "R1",
+    intro: "Harden remote management on R1 using Secure Shell (SSHv2). Configure domain-name xeli.lab, generate RSA cryptographic keys, create local admin user, enforce SSH on VTY lines with login local, and verify with show ip ssh.",
+    goals: [
       {
-        heading: "1. SSH Setup",
-        body: "Configure the router for SSH.",
-        checklist: [
-          "Set hostname and domain-name",
-          "Generated the crypto key",
-          "Created a local username",
-          "Set transport input ssh + login local on vty lines",
-        ],
+        id: "domain_name",
+        text: "Configure domain name to xeli.lab (ip domain-name xeli.lab)",
+        hint: "R1(config)# ip domain-name xeli.lab",
+        check: (dev) => Boolean(dev.domainName && dev.domainName.toLowerCase() === "xeli.lab"),
       },
       {
-        heading: "2. Test SSH & Confirm Telnet Disabled",
-        body: "Connect from another device, then confirm Telnet is blocked.",
-        checklist: [
-          "SSH'd into the router from a PC — connected successfully",
-          "Tried Telnet to the same IP — it failed",
-        ],
+        id: "crypto_keys",
+        text: "Generate RSA crypto key pair (crypto key generate rsa)",
+        hint: "R1(config)# crypto key generate rsa",
+        check: (dev) => Boolean(dev.cryptoKeyGenerated),
+      },
+      {
+        id: "user_account",
+        text: "Create local admin user: username admin secret cisco123",
+        hint: "R1(config)# username admin secret cisco123",
+        check: (dev) => Boolean(dev.users && dev.users["admin"]),
+      },
+      {
+        id: "vty_ssh",
+        text: "Configure line vty 0 4 with 'login local' and 'transport input ssh'",
+        hint: "R1(config-line)# login local -> transport input ssh",
+        check: (dev) => {
+          const vty = dev.lines && dev.lines["vty 0 4"];
+          return Boolean(vty && vty.loginLocal && (vty.transportInput || "").toLowerCase().includes("ssh"));
+        },
+      },
+      {
+        id: "verify_ssh",
+        text: "Verify SSH service status with show ip ssh",
+        hint: "R1# show ip ssh",
+        check: (dev) => (dev.commandHistory || []).some((c) => c.toLowerCase().includes("show ip ssh") || c.toLowerCase().includes("sh ip ssh")),
       },
     ],
   },
- 
   {
     id: "net-full-topology-build",
     cat: "networking",
-    title: "Full Topology Build",
+    title: "Full Edge Router Topology Provisioning",
     difficulty: "Hard",
     exp: 220,
-    type: "lab",
-    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
-    sections: [
+    type: "cli-lab",
+    deviceType: "router",
+    initialHostname: "Router",
+    intro: "Synthesize all core networking disciplines: identity, security, dual-homed WAN/LAN interfaces, default static routing, and configuration persistence to provision the enterprise edge router.",
+    goals: [
       {
-        heading: "1. Full Config — 2 Routers + 1 PC",
-        body: "Combine everything: identity, security, interfaces, SSH, save.",
-        checklist: [
-          "Set hostname, banner, and passwords on both routers",
-          "Assigned IP + no shutdown + description on interfaces",
-          "Enabled SSH access on both routers",
-          "Saved config with copy running-config startup-config",
-          "Configured the PC's IP",
-        ],
+        id: "hostname_banner",
+        text: "Set hostname to R1-EDGE and configure MOTD banner",
+        hint: "Router(config)# hostname R1-EDGE -> banner motd #Enterprise Gateway#",
+        check: (dev) => (dev.hostname || "").trim().toUpperCase() === "R1-EDGE" && Boolean(dev.bannerMotd),
       },
       {
-        heading: "2. Bonus: IP Addressing Table",
-        body: "Document the topology.",
-        reflection: {
-          type: "note",
-          label: "List device, interface, IP address, and subnet mask for every device in your topology.",
-          placeholder: "e.g. R1 — Gi0/0 — 10.0.0.1 — 255.255.255.0",
+        id: "passwords",
+        text: "Configure enable secret and console password with login",
+        hint: "R1-EDGE(config)# enable secret class123 -> line con 0 -> password cisco -> login",
+        check: (dev) => Boolean(dev.enableSecret && dev.lines && dev.lines["console 0"]?.password && dev.lines["console 0"]?.login),
+      },
+      {
+        id: "wan_interface",
+        text: "Configure WAN Gi0/0 with 10.0.0.1 255.255.255.252 and no shutdown",
+        hint: "R1-EDGE(config-if)# ip address 10.0.0.1 255.255.255.252 -> no shut",
+        check: (dev) => {
+          const gi0 = dev.interfaces && dev.interfaces["GigabitEthernet0/0"];
+          return Boolean(gi0 && gi0.ip === "10.0.0.1" && gi0.mask === "255.255.255.252" && gi0.adminUp);
         },
+      },
+      {
+        id: "lan_interface",
+        text: "Configure LAN Gi0/1 with 192.168.1.1 255.255.255.0 and no shutdown",
+        hint: "R1-EDGE(config-if)# ip address 192.168.1.1 255.255.255.0 -> no shut",
+        check: (dev) => {
+          const gi1 = dev.interfaces && dev.interfaces["GigabitEthernet0/1"];
+          return Boolean(gi1 && gi1.ip === "192.168.1.1" && gi1.mask === "255.255.255.0" && gi1.adminUp);
+        },
+      },
+      {
+        id: "default_route",
+        text: "Configure default route: ip route 0.0.0.0 0.0.0.0 10.0.0.2",
+        hint: "R1-EDGE(config)# ip route 0.0.0.0 0.0.0.0 10.0.0.2",
+        check: (dev) => (dev.staticRoutes || []).some((r) => r.network === "0.0.0.0" && r.nextHop === "10.0.0.2"),
+      },
+      {
+        id: "save_config",
+        text: "Save complete configuration with copy running-config startup-config",
+        hint: "R1-EDGE# copy running-config startup-config",
+        check: (dev) => Boolean(dev.startupConfigSaved),
       },
     ],
   },
- 
   {
     id: "net-binary-subnetting",
     cat: "networking",
-    title: "Binary & Subnetting Practice",
+    title: "Binary Math & IPv4 Subnetting Lab",
     difficulty: "Medium",
     exp: 150,
-    type: "lab",
-    intro: "Hands-on paper + calculator lab. Work it out, then check off what you did.",
-    sections: [
-      {
-        heading: "1. Binary Conversion (5 IPs)",
-        body: "Pick 5 random IPs, convert each octet to binary by hand, then verify.",
-        checklist: [
-          "Converted 5 IP addresses to binary by hand",
-          "Verified all conversions with a calculator or online tool",
-        ],
-        reflection: {
-          type: "list",
-          count: 5,
-          label: "Your 5 IPs (for the record):",
-          placeholder: "IP address",
-        },
-      },
-      {
-        heading: "2. Find Network / Broadcast / Range for a /24",
-        body: "Pick any /24 network and work out its addressing.",
-        reflection: {
-          type: "note",
-          label: "Your /24 network, plus its network address, broadcast address, and usable host range.",
-          placeholder: "e.g. 10.20.30.0/24 → network … broadcast … range …",
-        },
-      },
-    ],
+    type: "binary-lab",
+    intro: "Hands-on interactive binary octet bit converter, CIDR subnet mask explorer, and live subnetting calculation challenges with instant validation.",
   },
 ];
  
@@ -530,7 +627,7 @@ const ACHIEVEMENT_GROUPS = [
       dailyExp: {},          // { "YYYY-MM-DD": expEarnedThatDay }
       unlockedAchievements: [], // achievement ids
       soundEnabled: true,
-      bgmEnabled: true,
+      bgmEnabled: false,
       bgmVolume: 65,
       guild: "Hunter Association",
       isLoggedIn: true,
@@ -546,7 +643,8 @@ const ACHIEVEMENT_GROUPS = [
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultState();
       const parsed = JSON.parse(raw);
-      return { ...defaultState(), ...parsed };
+      // Auto-off for BGM on initial load so background music does not auto-play
+      return { ...defaultState(), ...parsed, bgmEnabled: false };
     } catch (e) {
       console.warn("Could not read saved state, starting fresh.", e);
       return defaultState();
@@ -571,7 +669,7 @@ const ACHIEVEMENT_GROUPS = [
     if (!Array.isArray(merged.activity)) merged.activity = [];
     if (!Array.isArray(merged.unlockedAchievements)) merged.unlockedAchievements = [];
     if (typeof merged.soundEnabled !== "boolean") merged.soundEnabled = true;
-    if (typeof merged.bgmEnabled !== "boolean") merged.bgmEnabled = true;
+    if (typeof merged.bgmEnabled !== "boolean") merged.bgmEnabled = false;
     if (typeof merged.bgmVolume !== "number" || isNaN(merged.bgmVolume)) merged.bgmVolume = 65;
     if (typeof merged.dailyExp !== "object" || merged.dailyExp === null) merged.dailyExp = {};
     if (typeof merged.name !== "string" || !merged.name.trim()) merged.name = "Hunter";
@@ -611,63 +709,201 @@ const ACHIEVEMENT_GROUPS = [
     osc.frequency.value = freq;
     const start = ctx.currentTime + (delay || 0);
     gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(volume || 0.04, start + 0.006);
+    gain.gain.linearRampToValueAtTime(volume || 0.40, start + 0.006);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + (duration || 0.05));
     osc.connect(gain).connect(ctx.destination);
     osc.start(start);
     osc.stop(start + (duration || 0.05) + 0.03);
   }
- 
+
+  // High-volume punchy retro mechanical UI switch click
   function playClick() {
-    beep(680 + Math.random() * 260, 0.04, "square", 0.03);
+    if (!state.soundEnabled) return;
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Layer 1: High crisp snap (1800 - 2400Hz)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "triangle";
+    osc1.frequency.setValueAtTime(1800 + Math.random() * 600, now);
+    osc1.frequency.exponentialRampToValueAtTime(520, now + 0.024);
+    gain1.gain.setValueAtTime(0.46, now);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+    osc1.connect(gain1).connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.035);
+
+    // Layer 2: Solid punchy mechanical body thump (380 - 460Hz)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(420 + Math.random() * 80, now);
+    osc2.frequency.exponentialRampToValueAtTime(130, now + 0.028);
+    gain2.gain.setValueAtTime(0.40, now);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.034);
+    osc2.connect(gain2).connect(ctx.destination);
+    osc2.start(now);
+    osc2.stop(now + 0.04);
   }
+
+  // High-volume tactile mechanical typing sounds across all input fields
+  function playTypingSound(key) {
+    if (!state.soundEnabled) return;
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    if (key === " " || key === "Space" || key === "Spacebar") {
+      // High-volume deep acoustic spacebar thump
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(90, now + 0.038);
+      gain.gain.setValueAtTime(0.55, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } else if (key === "Backspace" || key === "Delete") {
+      // High-volume crisp erasure snap
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(860, now);
+      osc.frequency.exponentialRampToValueAtTime(340, now + 0.024);
+      gain.gain.setValueAtTime(0.48, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.035);
+    } else if (key === "Enter") {
+      // High-volume return latch clack
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc1.type = "triangle";
+      osc1.frequency.setValueAtTime(280, now);
+      osc1.frequency.exponentialRampToValueAtTime(90, now + 0.045);
+      osc2.type = "square";
+      osc2.frequency.setValueAtTime(1400, now);
+      osc2.frequency.exponentialRampToValueAtTime(380, now + 0.035);
+      gain.gain.setValueAtTime(0.58, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.055);
+      osc2.stop(now + 0.055);
+    } else {
+      // High-volume crisp mechanical key clack
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "triangle";
+      const baseFreq = 1900 + (Math.random() * 500 - 250);
+      osc1.frequency.setValueAtTime(baseFreq, now);
+      osc1.frequency.exponentialRampToValueAtTime(650, now + 0.022);
+      gain1.gain.setValueAtTime(0.48, now);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.028);
+      osc1.connect(gain1).connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.032);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(390 + Math.random() * 80, now);
+      osc2.frequency.exponentialRampToValueAtTime(130, now + 0.025);
+      gain2.gain.setValueAtTime(0.38, now);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+      osc2.connect(gain2).connect(ctx.destination);
+      osc2.start(now);
+      osc2.stop(now + 0.035);
+    }
+  }
+
   function playSuccess() {
-    beep(660, 0.08, "square", 0.05, 0);
-    beep(990, 0.12, "square", 0.05, 0.08);
+    beep(660, 0.09, "square", 0.40, 0);
+    beep(990, 0.14, "square", 0.45, 0.08);
   }
   function playError() {
-    beep(260, 0.05, "sawtooth", 0.06, 0);
-    beep(160, 0.16, "sawtooth", 0.06, 0.05);
+    beep(260, 0.06, "sawtooth", 0.42, 0);
+    beep(160, 0.18, "sawtooth", 0.46, 0.05);
   }
   function playLevelUp() {
-    [523, 659, 784, 1046].forEach((f, i) => beep(f, 0.12, "square", 0.055, i * 0.09));
+    [523, 659, 784, 1046].forEach((f, i) => beep(f, 0.14, "square", 0.46, i * 0.09));
   }
   function playUnlock() {
-    beep(784, 0.07, "square", 0.05, 0);
-    beep(1046, 0.14, "square", 0.05, 0.07);
+    beep(784, 0.08, "square", 0.42, 0);
+    beep(1046, 0.16, "square", 0.48, 0.07);
   }
   function playPower() {
-    beep(520, 0.05, "square", 0.05, 0);
-    beep(320, 0.05, "square", 0.05, 0.06);
-    beep(160, 0.14, "square", 0.05, 0.12);
+    beep(520, 0.06, "square", 0.40, 0);
+    beep(320, 0.06, "square", 0.42, 0.06);
+    beep(160, 0.16, "square", 0.46, 0.12);
   }
   function playLogonChime() {
     if (!state.soundEnabled) return;
     const notes = [
-      { f: 392.0, d: 0.26, t: 0.0, type: "triangle", v: 0.06 },  // G4
-      { f: 523.25, d: 0.28, t: 0.08, type: "triangle", v: 0.07 },// C5
-      { f: 659.25, d: 0.32, t: 0.18, type: "triangle", v: 0.07 },// E5
-      { f: 783.99, d: 0.42, t: 0.3, type: "triangle", v: 0.08 }, // G5
-      { f: 1046.5, d: 0.65, t: 0.42, type: "sine", v: 0.09 },    // C6
+      { f: 392.0, d: 0.26, t: 0.0, type: "triangle", v: 0.36 },  // G4
+      { f: 523.25, d: 0.28, t: 0.08, type: "triangle", v: 0.40 },// C5
+      { f: 659.25, d: 0.32, t: 0.18, type: "triangle", v: 0.42 },// E5
+      { f: 783.99, d: 0.42, t: 0.3, type: "triangle", v: 0.46 }, // G5
+      { f: 1046.5, d: 0.65, t: 0.42, type: "sine", v: 0.50 },    // C6
     ];
     notes.forEach((n) => beep(n.f, n.d, n.type, n.v, n.t));
   }
   function playLogoffSound() {
     if (!state.soundEnabled) return;
-    beep(523.25, 0.12, "triangle", 0.06, 0.0);
-    beep(392.0, 0.14, "triangle", 0.06, 0.1);
-    beep(261.63, 0.24, "sine", 0.07, 0.22);
+    beep(523.25, 0.12, "triangle", 0.38, 0.0);
+    beep(392.0, 0.14, "triangle", 0.40, 0.1);
+    beep(261.63, 0.24, "sine", 0.44, 0.22);
   }
- 
-  // Every click on an interactive element gets a little terminal blip.
+
+  // Every click on any interactive UI element gets a high-volume crisp tactile click.
   // Capture phase so it always fires, even if the target calls stopPropagation().
   document.addEventListener(
     "click",
     (e) => {
-      const elTarget = e.target.closest(
-        "button, .nav-item, .tab, .quest-card, .challenge-card, .mcq-option, .qc-btn, .icon-btn, .retro-btn, .link-btn"
+      const elTarget = e.target && (
+        e.target.closest(
+          "button, a, input, select, textarea, label, [role='button'], [tabindex], " +
+          ".nav-item, .tab, .quest-card, .mini-quest, .challenge-card, .mcq-option, " +
+          ".qc-btn, .icon-btn, .retro-btn, .link-btn, .pill, .diff-tag, .stat-chip, " +
+          ".calendar-cell, .toast, .modal-close, .avatar-option, .theme-btn, .sys-btn, " +
+          ".roadmap-node, .achievement-card, summary, details, [data-view], [data-tab], " +
+          "[data-action], [data-filter], [data-id], [data-complete], [data-dash-complete], " +
+          ".close-btn, .filter-chip, .mq-check-btn, .panel-head, .profile-avatar-wrap, " +
+          ".win95-start-btn, .dock-icon, .desktop-shortcut, .context-menu-item, " +
+          ".panel, .card, .status-card, .lab-section, .dropdown-item, [onclick]"
+        ) ||
+        (window.getComputedStyle(e.target).cursor === "pointer" ? e.target : null)
       );
       if (elTarget) playClick();
+    },
+    true
+  );
+
+  // High-volume mechanical typing sound when typing anywhere across the application
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (["Shift", "Control", "Alt", "Meta", "CapsLock", "Escape"].includes(e.key)) return;
+      if (e.target && e.target.id === "cliHiddenInput") return; // Handled by Cisco CLI simulator
+
+      const isTyping = e.target && (
+        e.target.tagName === "INPUT" ||
+        e.target.tagName === "TEXTAREA" ||
+        e.target.isContentEditable
+      );
+
+      if (isTyping) {
+        playTypingSound(e.key);
+      }
     },
     true
   );
@@ -953,14 +1189,35 @@ const ACHIEVEMENT_GROUPS = [
   function renderDashQuestList() {
     const active = state.quests.filter((q) => !q.done).slice(0, 5);
     if (!active.length) {
-      el.dashQuestList.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" class="empty-icon"><path d="M9 3v2H4v16h16V9h2v14H2V3h7Zm10 6-9 9-4-4 1.4-1.4L10 15.2 17.6 7.6 19 9Z"/></svg><p>No active quests. Head to the Quests tab to log one.</p></div>`;
+      el.dashQuestList.innerHTML = `
+        <div class="empty-state mini-quest-empty">
+          <svg viewBox="0 0 24 24" class="empty-icon"><path d="M9 3v2H4v16h16V9h2v14H2V3h7Zm10 6-9 9-4-4 1.4-1.4L10 15.2 17.6 7.6 19 9Z"/></svg>
+          <p>No active quests. Head to the Quests tab to log one.</p>
+          <button class="btn btn-primary mini-create-quest-btn" id="dashCreateQuestBtn" type="button">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;flex-shrink:0;"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6Z"/></svg>
+            <span>+ New Quest</span>
+          </button>
+        </div>`;
+      const btn = $("#dashCreateQuestBtn");
+      if (btn) btn.addEventListener("click", () => openQuestForm());
       return;
     }
     el.dashQuestList.innerHTML = active
       .map((q) => `
-        <div class="mini-quest">
-          <span>${escapeHtml(q.title)}</span>
-          <span class="mq-exp">+${q.exp} EXP</span>
+        <div class="mini-quest" data-id="${q.id}" tabindex="0" role="button" aria-label="Open quest: ${escapeHtml(q.title)}">
+          <div class="mq-left">
+            <div class="mq-meta-row">
+              <span class="mq-cat">${escapeHtml(q.category || "General")}</span>
+              <span class="diff-tag mq-diff">${DIFF_LABELS[q.exp] || "Custom"}</span>
+            </div>
+            <div class="mq-title">${escapeHtml(q.title)}</div>
+          </div>
+          <div class="mq-right">
+            <span class="mq-exp">+${q.exp} EXP</span>
+            <button class="qc-btn mq-check-btn" data-dash-complete="${q.id}" title="Mark complete" aria-label="Mark complete">
+              <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg>
+            </button>
+          </div>
         </div>`)
       .join("");
   }
@@ -1453,7 +1710,10 @@ const ACHIEVEMENT_GROUPS = [
     $(`#${id}`).classList.remove("is-open");
     if (id === "modalChallenge") {
       const m = $("#modalChallenge .modal");
-      if (m) m.classList.remove("modal-cli-lab");
+      if (m) {
+        m.classList.remove("modal-cli-lab");
+        m.classList.remove("modal-binary-lab");
+      }
     }
   }
   $$("[data-close]").forEach((btn) =>
@@ -1461,7 +1721,14 @@ const ACHIEVEMENT_GROUPS = [
   );
   $$(".modal-overlay").forEach((overlay) =>
     overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) overlay.classList.remove("is-open");
+      if (e.target === overlay) {
+        overlay.classList.remove("is-open");
+        const m = overlay.querySelector(".modal");
+        if (m) {
+          m.classList.remove("modal-cli-lab");
+          m.classList.remove("modal-binary-lab");
+        }
+      }
     })
   );
  
@@ -1521,6 +1788,31 @@ const ACHIEVEMENT_GROUPS = [
     if (!card) return;
     e.preventDefault();
     openQuestDetail(card.dataset.id);
+  });
+
+  // ---------------------------------------------------------
+  // DASHBOARD ACTIVE QUESTS EVENTS
+  // ---------------------------------------------------------
+  el.dashQuestList.addEventListener("click", (e) => {
+    const completeBtn = e.target.closest("[data-dash-complete]");
+    if (completeBtn) {
+      e.stopPropagation();
+      completeQuest(completeBtn.dataset.dashComplete);
+      return;
+    }
+    const questItem = e.target.closest(".mini-quest");
+    if (questItem) {
+      openQuestDetail(questItem.dataset.id);
+    }
+  });
+
+  el.dashQuestList.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const questItem = e.target.closest(".mini-quest");
+    if (questItem) {
+      e.preventDefault();
+      openQuestDetail(questItem.dataset.id);
+    }
   });
  
   // ---------------------------------------------------------
@@ -1614,14 +1906,30 @@ const ACHIEVEMENT_GROUPS = [
 
     if (type === "cli-lab") {
       const modalBox = $("#modalChallenge .modal");
-      if (modalBox) modalBox.classList.add("modal-cli-lab");
+      if (modalBox) {
+        modalBox.classList.add("modal-cli-lab");
+        modalBox.classList.remove("modal-binary-lab");
+      }
       renderCliLabChallenge(c, solved, (claimedChallenge) => {
+        awardChallenge(claimedChallenge);
+        showToast(`Cleared ${claimedChallenge.title}! +${claimedChallenge.exp} EXP earned.`);
+      });
+    } else if (type === "binary-lab") {
+      const modalBox = $("#modalChallenge .modal");
+      if (modalBox) {
+        modalBox.classList.remove("modal-cli-lab");
+        modalBox.classList.add("modal-binary-lab");
+      }
+      renderBinaryLabChallenge(c, solved, (claimedChallenge) => {
         awardChallenge(claimedChallenge);
         showToast(`Cleared ${claimedChallenge.title}! +${claimedChallenge.exp} EXP earned.`);
       });
     } else {
       const modalBox = $("#modalChallenge .modal");
-      if (modalBox) modalBox.classList.remove("modal-cli-lab");
+      if (modalBox) {
+        modalBox.classList.remove("modal-cli-lab");
+        modalBox.classList.remove("modal-binary-lab");
+      }
 
       if (type === "code") {
         body.innerHTML = `
@@ -2581,7 +2889,7 @@ const ACHIEVEMENT_GROUPS = [
           width: "1",
           videoId: YOUTUBE_BGM_ID,
           playerVars: {
-            autoplay: 1,
+            autoplay: 0,
             loop: 1,
             playlist: YOUTUBE_BGM_ID,
             controls: 0,
