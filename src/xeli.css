@@ -367,6 +367,578 @@ button{ font-family:inherit; }
 .stat-label{ font-size:10.5px; color:var(--dim); text-align:right; max-width:90px; }
  
 /* ============================================================
+   LEETCODE PROGRESS SUITE & ANALYTICS
+   ============================================================ */
+.lc-progress-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) {
+  .lc-progress-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lc-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.lc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.lc-head-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lc-head-title h2 {
+  font-size: 15.5px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lc-icon {
+  width: 16px;
+  height: 16px;
+  fill: var(--mist);
+  flex-shrink: 0;
+}
+
+.lc-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--ink-3);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.lc-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.lc-toggle-btn:hover {
+  color: var(--paper);
+}
+
+.lc-toggle-btn.is-active {
+  background: #000080;
+  color: #ffffff !important;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.25), 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Solved Card Body */
+.lc-solved-body {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+@media (max-width: 540px) {
+  .lc-solved-body {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+}
+
+.lc-donut-wrap {
+  position: relative;
+  width: 136px;
+  height: 136px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lc-donut-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.lc-donut-bg {
+  fill: none;
+  stroke: var(--line-soft);
+  stroke-width: 9.5px;
+}
+
+.lc-donut-seg {
+  fill: none;
+  stroke-width: 9.5px;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s cubic-bezier(0.4, 0, 0.2, 1), stroke-dashoffset 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lc-seg-easy {
+  stroke: #00b8a3;
+}
+
+.lc-seg-med {
+  stroke: #ffc01e;
+}
+
+.lc-seg-hard {
+  stroke: #ef4444;
+}
+
+.lc-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.lc-donut-count {
+  font-family: 'Rajdhani', 'JetBrains Mono', sans-serif;
+  font-weight: 700;
+  font-size: 27px;
+  line-height: 1;
+  color: var(--paper);
+}
+
+.lc-donut-label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  margin-top: 2px;
+}
+
+.lc-donut-ratio {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--mist);
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* Difficulty Breakdown Stack */
+.lc-diff-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+}
+
+.lc-diff-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 11px;
+  border-radius: var(--radius-s);
+  background: var(--ink-3);
+  border: 1px solid var(--line-soft);
+}
+
+.lc-diff-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.lc-diff-name {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.lc-easy-text {
+  color: #008f7e;
+}
+
+.lc-med-text {
+  color: #d97706;
+}
+
+.lc-hard-text {
+  color: #dc2626;
+}
+
+.lc-diff-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lc-diff-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--paper);
+}
+
+.lc-diff-total {
+  font-size: 10.5px;
+  color: var(--dim);
+  margin-left: 1px;
+}
+
+.lc-diff-beats {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.lc-progress-track {
+  height: 5px;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.lc-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+.lc-easy-fill {
+  background: linear-gradient(90deg, #00b8a3, #10b981);
+}
+
+.lc-med-fill {
+  background: linear-gradient(90deg, #ffc01e, #f59e0b);
+}
+
+.lc-hard-fill {
+  background: linear-gradient(90deg, #ef4444, #f43f5e);
+}
+
+/* Contest / Hunter Rating Card */
+.lc-contest-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.lc-contest-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #000080;
+  background: #ffffff;
+  border: 1px solid #808080;
+  padding: 2px 7px;
+  box-shadow: inset 1px 1px 0 #dfdfdf;
+  border-radius: 3px;
+}
+
+.lc-contest-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  justify-content: space-between;
+}
+
+.lc-contest-score-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line-soft);
+}
+
+.lc-score-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lc-score-num {
+  font-family: 'Rajdhani', 'JetBrains Mono', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #000080;
+  line-height: 1;
+}
+
+.lc-score-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+}
+
+.lc-score-delta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #16a34a;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.lc-contest-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.lc-metric-box {
+  background: var(--ink-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-s);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lc-metric-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+}
+
+.lc-metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--paper);
+}
+
+/* LeetCode Heatmap Stats Strip */
+.lc-cal-stats-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  background: var(--ink-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-s);
+}
+
+.lc-cal-main-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.lc-cal-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--paper);
+}
+
+.lc-cal-lbl {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.lc-cal-streak-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lc-streak-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  padding: 3px 8px;
+  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+}
+
+.lc-streak-lbl {
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.lc-streak-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11.5px;
+  color: #000000;
+}
+
+.lc-streak-highlight {
+  color: #0284c7 !important;
+}
+
+.lc-streak-fire {
+  color: #ea580c !important;
+}
+
+/* LeetCode Submissions Feed */
+.lc-submissions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.lc-sub-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 11px;
+  background: var(--ink-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-s);
+  font-size: 12.5px;
+  transition: background 0.15s ease;
+}
+
+.lc-sub-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.lc-sub-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.lc-sub-status {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lc-status-accepted {
+  background: #00b8a3;
+  color: #ffffff;
+}
+
+.lc-status-achieve {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.lc-status-level {
+  background: #000080;
+  color: #ffffff;
+}
+
+.lc-sub-title {
+  font-weight: 600;
+  color: var(--paper);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+}
+
+.lc-sub-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lc-sub-diff {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1.5px 6px;
+  border-radius: 2px;
+}
+
+.lc-diff-easy {
+  background: rgba(0, 184, 163, 0.12);
+  color: #008f7e;
+  border: 1px solid rgba(0, 184, 163, 0.3);
+}
+
+.lc-diff-med {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.lc-diff-hard {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.lc-diff-quest {
+  background: rgba(0, 0, 128, 0.08);
+  color: #000080;
+  border: 1px solid rgba(0, 0, 128, 0.2);
+}
+
+.lc-diff-gold {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.lc-diff-cyan {
+  background: rgba(6, 182, 212, 0.12);
+  color: #0e7490;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.lc-sub-exp {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.lc-sub-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+/* ============================================================
    DASHBOARD GRID / PANELS
    ============================================================ */
 .dash-grid{ display:grid; grid-template-columns:1.1fr 1fr; gap:20px; }
@@ -1870,6 +2442,98 @@ body, button, input, select, textarea{ font-family:'Tahoma','Segoe UI',Verdana,s
   .login-field-row{ grid-template-columns:1fr; gap:4px; }
   .login-checkbox-group{ margin-left:0; }
   .login-banner{ flex-direction:column; align-items:flex-start; }
+}
+
+/* LeetCode Progress Suite Retro Skin & Responsive Additions */
+.lc-diff-row {
+  background: #dfdfdf !important;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080 !important;
+  border: none !important;
+}
+.lc-progress-track {
+  background: #ffffff !important;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff !important;
+  border: none !important;
+}
+.lc-metric-box {
+  background: #dfdfdf !important;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080 !important;
+  border: none !important;
+}
+.lc-cal-stats-strip {
+  background: #dfdfdf !important;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080 !important;
+  border: none !important;
+}
+.lc-sub-item {
+  background: #dfdfdf !important;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080 !important;
+  border: none !important;
+}
+.lc-streak-chip {
+  background: #ffffff !important;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff !important;
+  border: none !important;
+}
+.lc-mode-toggle {
+  background: #dfdfdf !important;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff !important;
+  border: none !important;
+}
+.lc-toggle-btn {
+  background: #c0c0c0 !important;
+  color: #000000 !important;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080 !important;
+}
+.lc-toggle-btn.is-active {
+  background: #000080 !important;
+  color: #ffffff !important;
+  box-shadow: inset -1px -1px 0 #fff, inset 1px 1px 0 #000000 !important;
+}
+.lc-contest-badge {
+  background: #ffffff !important;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff !important;
+  border: 1px solid #808080 !important;
+}
+.lc-diff-beats {
+  background: #ffffff !important;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff !important;
+  color: #555555 !important;
+}
+
+@media (max-width: 600px) {
+  .lc-progress-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .lc-solved-body {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 14px !important;
+  }
+  .lc-cal-stats-strip {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  .lc-cal-streak-group {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+  .lc-contest-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+  .lc-score-num {
+    font-size: 28px !important;
+  }
+  .lc-sub-item {
+    padding: 6px 8px !important;
+    font-size: 11.5px !important;
+  }
+  .lc-sub-title {
+    max-width: 160px !important;
+  }
 }
  
 @media (prefers-reduced-motion:reduce){

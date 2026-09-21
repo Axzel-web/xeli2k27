@@ -230,6 +230,125 @@
         </div>
       </div>
 
+      <!-- ===================== LEETCODE PROGRESS SUITE ===================== -->
+      <div class="lc-progress-grid">
+        <!-- Card 1: Solved Problems / Trials Breakdown (LeetCode Donut Card) -->
+        <div class="panel lc-card lc-solved-card">
+          <div class="panel-head lc-head">
+            <div class="lc-head-title">
+              <svg viewBox="0 0 24 24" class="panel-icon lc-icon"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 14.5a1.5 1.5 0 1 1-1.5-1.5 1.5 1.5 0 0 1 1.5 1.5Zm1.5-6.5a2.5 2.5 0 0 0-5 0 1 1 0 0 1-2 0 4.5 4.5 0 1 1 6.3 4.1 1 1 0 0 1-.8.9h-.5a1 1 0 0 1-1-1v-.5a1 1 0 0 1 2 0v.3a2.5 2.5 0 0 0 1-3.8Z"/></svg>
+              <h2>Solved Problems</h2>
+            </div>
+            <div class="lc-mode-toggle" id="lcModeToggle">
+              <button class="lc-toggle-btn is-active" id="lcModeTrialsBtn" type="button" title="Show CCNA & Coding Lab Trials">Trials</button>
+              <button class="lc-toggle-btn" id="lcModeAllBtn" type="button" title="Show Combined Quests & Trials">All Tasks</button>
+            </div>
+          </div>
+
+          <div class="lc-solved-body">
+            <!-- Circular Donut SVG Meter -->
+            <div class="lc-donut-wrap">
+              <svg class="lc-donut-svg" viewBox="0 0 140 140">
+                <circle class="lc-donut-bg" cx="70" cy="70" r="54" />
+                <circle class="lc-donut-seg lc-seg-easy" id="lcSegEasy" cx="70" cy="70" r="54" transform="rotate(-90 70 70)" />
+                <circle class="lc-donut-seg lc-seg-med" id="lcSegMed" cx="70" cy="70" r="54" transform="rotate(-90 70 70)" />
+                <circle class="lc-donut-seg lc-seg-hard" id="lcSegHard" cx="70" cy="70" r="54" transform="rotate(-90 70 70)" />
+              </svg>
+              <div class="lc-donut-center">
+                <span class="lc-donut-count" id="lcSolvedTotal">0</span>
+                <span class="lc-donut-label">Solved</span>
+                <span class="lc-donut-ratio" id="lcSolvedRatio">0 / 8</span>
+              </div>
+            </div>
+
+            <!-- Difficulty Breakdown Stack -->
+            <div class="lc-diff-stack">
+              <!-- Easy Row -->
+              <div class="lc-diff-row" data-diff="easy">
+                <div class="lc-diff-meta">
+                  <span class="lc-diff-name lc-easy-text">Easy</span>
+                  <div class="lc-diff-stats">
+                    <span class="lc-diff-count" id="lcEasyCount">0<span class="lc-diff-total">/3</span></span>
+                    <span class="lc-diff-beats" id="lcEasyBeats">Beats 0%</span>
+                  </div>
+                </div>
+                <div class="lc-progress-track">
+                  <div class="lc-progress-fill lc-easy-fill" id="lcEasyBar" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Medium Row -->
+              <div class="lc-diff-row" data-diff="medium">
+                <div class="lc-diff-meta">
+                  <span class="lc-diff-name lc-med-text">Medium</span>
+                  <div class="lc-diff-stats">
+                    <span class="lc-diff-count" id="lcMedCount">0<span class="lc-diff-total">/4</span></span>
+                    <span class="lc-diff-beats" id="lcMedBeats">Beats 0%</span>
+                  </div>
+                </div>
+                <div class="lc-progress-track">
+                  <div class="lc-progress-fill lc-med-fill" id="lcMedBar" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Hard Row -->
+              <div class="lc-diff-row" data-diff="hard">
+                <div class="lc-diff-meta">
+                  <span class="lc-diff-name lc-hard-text">Hard</span>
+                  <div class="lc-diff-stats">
+                    <span class="lc-diff-count" id="lcHardCount">0<span class="lc-diff-total">/1</span></span>
+                    <span class="lc-diff-beats" id="lcHardBeats">Beats 0%</span>
+                  </div>
+                </div>
+                <div class="lc-progress-track">
+                  <div class="lc-progress-fill lc-hard-fill" id="lcHardBar" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Contest / Hunter Rating & Rank (LeetCode Contest Rating) -->
+        <div class="panel lc-card lc-contest-card">
+          <div class="panel-head lc-head">
+            <div class="lc-head-title">
+              <svg viewBox="0 0 24 24" class="panel-icon lc-icon"><path d="M12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2Z"/></svg>
+              <h2>Hunter Rating</h2>
+            </div>
+            <span class="lc-contest-badge" id="lcContestLeague">Apprentice Tier</span>
+          </div>
+
+          <div class="lc-contest-body">
+            <div class="lc-contest-score-row">
+              <div class="lc-score-main">
+                <span class="lc-score-num" id="lcHunterRating">1,200</span>
+                <span class="lc-score-label">Contest Rating</span>
+              </div>
+              <div class="lc-score-delta lc-delta-positive" id="lcRatingDelta">▲ +25 this week</div>
+            </div>
+
+            <div class="lc-contest-stats-grid">
+              <div class="lc-metric-box">
+                <span class="lc-metric-label">Global Ranking</span>
+                <span class="lc-metric-value" id="lcGlobalRank">#1,824</span>
+              </div>
+              <div class="lc-metric-box">
+                <span class="lc-metric-label">Percentile</span>
+                <span class="lc-metric-value" id="lcPercentile">Top 12.5%</span>
+              </div>
+              <div class="lc-metric-box">
+                <span class="lc-metric-label">Total Cleared</span>
+                <span class="lc-metric-value" id="lcTotalCleared">0</span>
+              </div>
+              <div class="lc-metric-box">
+                <span class="lc-metric-label">Clear Rate</span>
+                <span class="lc-metric-value" id="lcAcceptanceRate">100%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="dash-grid">
         <div class="panel">
           <div class="panel-head">
@@ -246,9 +365,9 @@
 
         <div class="panel">
           <div class="panel-head">
-            <h2><svg viewBox="0 0 24 24" class="panel-icon"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3Zm1 4v6l5 3-.75 1.3L12 14V7h2Z"/></svg>Recent Activity</h2>
+            <h2><svg viewBox="0 0 24 24" class="panel-icon"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3Zm1 4v6l5 3-.75 1.3L12 14V7h2Z"/></svg>Recent Submissions</h2>
           </div>
-          <ul class="activity-list" id="activityList">
+          <ul class="activity-list lc-submissions-list" id="activityList">
             <li class="empty-state">
               <svg viewBox="0 0 24 24" class="empty-icon"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3Zm1 4v6l5 3-.75 1.3L12 14V7h2Z"/></svg>
               <p>Your history will appear here once you start earning EXP.</p>
@@ -261,6 +380,28 @@
         <div class="panel-head">
           <h2><svg viewBox="0 0 24 24" class="panel-icon"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7ZM5 9h14v11H5V9Z"/></svg>Progress Calendar</h2>
           <span class="calendar-caption" id="calendarCaption">0 EXP earned in the last year</span>
+        </div>
+
+        <!-- LeetCode Heatmap Stats Header Bar -->
+        <div class="lc-cal-stats-strip">
+          <div class="lc-cal-main-stat">
+            <span class="lc-cal-val" id="lcCalTotalSubs">0</span>
+            <span class="lc-cal-lbl">submissions in the past year</span>
+          </div>
+          <div class="lc-cal-streak-group">
+            <div class="lc-streak-chip">
+              <span class="lc-streak-lbl">Active Days:</span>
+              <span class="lc-streak-val" id="lcCalActiveDays">0</span>
+            </div>
+            <div class="lc-streak-chip">
+              <span class="lc-streak-lbl">Max Streak:</span>
+              <span class="lc-streak-val lc-streak-highlight" id="lcCalMaxStreak">0</span>
+            </div>
+            <div class="lc-streak-chip">
+              <span class="lc-streak-lbl">Current Streak:</span>
+              <span class="lc-streak-val lc-streak-fire" id="lcCalCurrentStreak">0</span>
+            </div>
+          </div>
         </div>
         <div class="calendar-scroll">
           <div class="calendar-wrap">

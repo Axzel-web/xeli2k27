@@ -720,10 +720,24 @@ const ACHIEVEMENT_GROUPS = [
     toastStack: $("#toastStack"),
     levelupOverlay: $("#levelupOverlay"), levelupNumber: $("#levelupNumber"), levelupRankline: $("#levelupRankline"),
     levelupAvatarPreview: $("#levelupAvatarPreview"), levelupAvatarImg: $("#levelupAvatarImg"),
+    // LeetCode Progress Suite
+    lcSolvedTotal: $("#lcSolvedTotal"), lcSolvedRatio: $("#lcSolvedRatio"),
+    lcSegEasy: $("#lcSegEasy"), lcSegMed: $("#lcSegMed"), lcSegHard: $("#lcSegHard"),
+    lcEasyCount: $("#lcEasyCount"), lcEasyBeats: $("#lcEasyBeats"), lcEasyBar: $("#lcEasyBar"),
+    lcMedCount: $("#lcMedCount"), lcMedBeats: $("#lcMedBeats"), lcMedBar: $("#lcMedBar"),
+    lcHardCount: $("#lcHardCount"), lcHardBeats: $("#lcHardBeats"), lcHardBar: $("#lcHardBar"),
+    lcModeTrialsBtn: $("#lcModeTrialsBtn"), lcModeAllBtn: $("#lcModeAllBtn"),
+    lcHunterRating: $("#lcHunterRating"), lcRatingDelta: $("#lcRatingDelta"),
+    lcContestLeague: $("#lcContestLeague"), lcGlobalRank: $("#lcGlobalRank"),
+    lcPercentile: $("#lcPercentile"), lcTotalCleared: $("#lcTotalCleared"),
+    lcAcceptanceRate: $("#lcAcceptanceRate"),
+    lcCalTotalSubs: $("#lcCalTotalSubs"), lcCalActiveDays: $("#lcCalActiveDays"),
+    lcCalMaxStreak: $("#lcCalMaxStreak"), lcCalCurrentStreak: $("#lcCalCurrentStreak"),
   };
  
   let questFilter = "active";
   let labCategory = "networking";
+  let lcProgressMode = "trials";
  
   // ---------------------------------------------------------
   // RENDER: header / hero / sidebar
@@ -802,6 +816,7 @@ const ACHIEVEMENT_GROUPS = [
  
     el.statQuests.textContent = state.quests.filter((q) => q.done).length;
     el.statChallenges.textContent = state.solvedChallenges.length;
+    renderLeetCodeProgress();
  
     renderDashQuestList();
     renderActivity();
@@ -828,6 +843,188 @@ const ACHIEVEMENT_GROUPS = [
       .join("");
   }
  
+  // ---------------------------------------------------------
+  // RENDER: LeetCode Progress Suite & Analytics
+  // ---------------------------------------------------------
+  function renderLeetCodeProgress() {
+    if (!el.lcSolvedTotal) return;
+
+    let easyTotal = 0, easySolved = 0;
+    let medTotal = 0, medSolved = 0;
+    let hardTotal = 0, hardSolved = 0;
+
+    if (lcProgressMode === "trials") {
+      // CCNA / Technical Lab Trials
+      CHALLENGES.forEach((c) => {
+        const diff = (c.difficulty || "medium").toLowerCase();
+        const isSolved = state.solvedChallenges.includes(c.id);
+        if (diff === "easy") {
+          easyTotal++;
+          if (isSolved) easySolved++;
+        } else if (diff === "hard") {
+          hardTotal++;
+          if (isSolved) hardSolved++;
+        } else {
+          medTotal++;
+          if (isSolved) medSolved++;
+        }
+      });
+    } else {
+      // Combined Quests + Trials
+      CHALLENGES.forEach((c) => {
+        const diff = (c.difficulty || "medium").toLowerCase();
+        const isSolved = state.solvedChallenges.includes(c.id);
+        if (diff === "easy") {
+          easyTotal++;
+          if (isSolved) easySolved++;
+        } else if (diff === "hard") {
+          hardTotal++;
+          if (isSolved) hardSolved++;
+        } else {
+          medTotal++;
+          if (isSolved) medSolved++;
+        }
+      });
+
+      state.quests.forEach((q) => {
+        const exp = q.exp || 30;
+        const isDone = !!q.done;
+        if (exp <= 40) {
+          easyTotal++;
+          if (isDone) easySolved++;
+        } else if (exp > 80) {
+          hardTotal++;
+          if (isDone) hardSolved++;
+        } else {
+          medTotal++;
+          if (isDone) medSolved++;
+        }
+      });
+    }
+
+    const totalSolved = easySolved + medSolved + hardSolved;
+    const totalProblems = easyTotal + medTotal + hardTotal;
+
+    // Toggle button states
+    if (el.lcModeTrialsBtn && el.lcModeAllBtn) {
+      if (lcProgressMode === "trials") {
+        el.lcModeTrialsBtn.classList.add("is-active");
+        el.lcModeAllBtn.classList.remove("is-active");
+      } else {
+        el.lcModeAllBtn.classList.add("is-active");
+        el.lcModeTrialsBtn.classList.remove("is-active");
+      }
+    }
+
+    // Center counts
+    el.lcSolvedTotal.textContent = totalSolved;
+    el.lcSolvedRatio.textContent = `${totalSolved} / ${totalProblems}`;
+
+    // SVG Circular Donut Math: radius = 54 => Circumference = 2 * pi * 54 = 339.292
+    const C = 2 * Math.PI * 54;
+    const baseTotal = Math.max(1, totalProblems);
+    const lenEasy = (easySolved / baseTotal) * C;
+    const lenMed = (medSolved / baseTotal) * C;
+    const lenHard = (hardSolved / baseTotal) * C;
+
+    if (el.lcSegEasy) {
+      el.lcSegEasy.style.strokeDasharray = `${lenEasy} ${C}`;
+      el.lcSegEasy.style.strokeDashoffset = `0`;
+    }
+    if (el.lcSegMed) {
+      el.lcSegMed.style.strokeDasharray = `${lenMed} ${C}`;
+      el.lcSegMed.style.strokeDashoffset = `-${lenEasy}`;
+    }
+    if (el.lcSegHard) {
+      el.lcSegHard.style.strokeDasharray = `${lenHard} ${C}`;
+      el.lcSegHard.style.strokeDashoffset = `-${lenEasy + lenMed}`;
+    }
+
+    // Breakdown Rows
+    const updateDiffRow = (countEl, barEl, beatsEl, solved, total, levelWeight) => {
+      if (countEl) countEl.innerHTML = `${solved}<span class="lc-diff-total">/${total}</span>`;
+      const pct = total ? Math.min(100, (solved / total) * 100) : 0;
+      if (barEl) barEl.style.width = pct + "%";
+      if (beatsEl) {
+        if (solved === 0) {
+          beatsEl.textContent = "Beats 0%";
+        } else if (solved === total) {
+          beatsEl.textContent = "Beats 100%";
+        } else {
+          const beats = Math.min(99.4, Math.round(((solved / Math.max(1, total)) * 75 + (state.level * levelWeight)) * 10) / 10);
+          beatsEl.textContent = `Beats ${beats}%`;
+        }
+      }
+    };
+
+    updateDiffRow(el.lcEasyCount, el.lcEasyBar, el.lcEasyBeats, easySolved, easyTotal, 0.22);
+    updateDiffRow(el.lcMedCount, el.lcMedBar, el.lcMedBeats, medSolved, medTotal, 0.18);
+    updateDiffRow(el.lcHardCount, el.lcHardBar, el.lcHardBeats, hardSolved, hardTotal, 0.14);
+
+    // Hunter Rating & Rank Card
+    const solvedChallengesCount = state.solvedChallenges.length;
+    const clearedQuestsCount = state.quests.filter((q) => q.done).length;
+    const rating = Math.round(
+      1200 +
+      (state.level - 1) * 26 +
+      solvedChallengesCount * 45 +
+      clearedQuestsCount * 14 +
+      Math.min(180, (state.streak || 0) * 12)
+    );
+
+    if (el.lcHunterRating) el.lcHunterRating.textContent = rating.toLocaleString();
+
+    let league = "Apprentice Tier";
+    if (rating >= 2500) league = "Monarch Vanguard";
+    else if (rating >= 2100) league = "National Hunter";
+    else if (rating >= 1800) league = "Grandmaster";
+    else if (rating >= 1550) league = "Master Hunter";
+    else if (rating >= 1350) league = "Elite Specialist";
+    else if (rating >= 1200) league = "Adept Guardian";
+
+    if (el.lcContestLeague) el.lcContestLeague.textContent = league;
+
+    const rankNumber = Math.max(1, Math.round(16000 / (1 + (rating - 1100) / 150)));
+    if (el.lcGlobalRank) el.lcGlobalRank.textContent = `#${rankNumber.toLocaleString()}`;
+
+    const percentileVal = Math.max(0.1, (100 - (rating / 2900) * 99)).toFixed(1);
+    if (el.lcPercentile) el.lcPercentile.textContent = `Top ${percentileVal}%`;
+
+    const totalCleared = solvedChallengesCount + clearedQuestsCount;
+    if (el.lcTotalCleared) el.lcTotalCleared.textContent = totalCleared;
+
+    const totalTasks = state.quests.length + CHALLENGES.length;
+    const acceptRate = totalTasks ? Math.min(100, Math.round((totalCleared / totalTasks) * 100)) : 100;
+    if (el.lcAcceptanceRate) el.lcAcceptanceRate.textContent = `${acceptRate}%`;
+
+    // Calendar Heatmap Strip Stats
+    const activeDaysCount = Object.keys(state.dailyExp).filter((k) => state.dailyExp[k] > 0).length || (state.exp > 0 ? 1 : 0);
+    if (el.lcCalActiveDays) el.lcCalActiveDays.textContent = activeDaysCount;
+    if (el.lcCalCurrentStreak) el.lcCalCurrentStreak.textContent = `${state.streak || 0} ${state.streak === 1 ? "day" : "days"}`;
+
+    // Compute max streak from date keys in state.dailyExp
+    const sortedDates = Object.keys(state.dailyExp)
+      .filter((k) => state.dailyExp[k] > 0)
+      .sort();
+    let maxStreakCount = state.streak || 0;
+    let tempStreak = 0;
+    let prevTime = null;
+    for (const dStr of sortedDates) {
+      const curTime = new Date(dStr + "T00:00:00").getTime();
+      if (prevTime !== null && curTime - prevTime === 86400000) {
+        tempStreak++;
+      } else {
+        tempStreak = 1;
+      }
+      if (tempStreak > maxStreakCount) maxStreakCount = tempStreak;
+      prevTime = curTime;
+    }
+    if (el.lcCalMaxStreak) el.lcCalMaxStreak.textContent = `${Math.max(1, maxStreakCount)} ${maxStreakCount === 1 ? "day" : "days"}`;
+
+    const totalSubmissions = totalCleared + state.activity.length;
+    if (el.lcCalTotalSubs) el.lcCalTotalSubs.textContent = Math.max(totalCleared, totalSubmissions);
+  }
+
   function renderActivity() {
     if (!state.activity.length) {
       el.activityList.innerHTML = `<li class="empty-state"><svg viewBox="0 0 24 24" class="empty-icon"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3Zm1 4v6l5 3-.75 1.3L12 14V7h2Z"/></svg><p>Your history will appear here once you start earning EXP.</p></li>`;
@@ -835,14 +1032,70 @@ const ACHIEVEMENT_GROUPS = [
     }
     el.activityList.innerHTML = state.activity
       .slice(0, 10)
-      .map(
-        (a) => `
-        <li class="activity-item">
-          <span class="activity-dot"></span>
-          <span>${escapeHtml(a.text)}</span>
-          <span class="activity-time">${timeAgo(a.time)}</span>
-        </li>`
-      )
+      .map((a) => {
+        const raw = a.text || "";
+        let status = "Accepted";
+        let statusClass = "lc-status-accepted";
+        let diffLabel = "Task";
+        let diffClass = "lc-diff-quest";
+        let title = raw;
+        let expText = "";
+
+        // Check patterns
+        const trialMatch = raw.match(/^\+(\d+)\s*EXP\s*—\s*Cleared\s*trial:\s*(.+)$/i);
+        const questMatch = raw.match(/^\+(\d+)\s*EXP\s*—\s*Completed\s*quest:\s*(.+)$/i);
+        const achieveMatch = raw.match(/^Achievement\s*unlocked:\s*(.+)$/i);
+        const levelMatch = raw.match(/^Reached\s*Level\s*(.+)$/i);
+        const expMatch = raw.match(/^\+(\d+)\s*EXP\s*—\s*(.+)$/i);
+
+        if (trialMatch) {
+          status = "Accepted";
+          statusClass = "lc-status-accepted";
+          expText = `+${trialMatch[1]} EXP`;
+          title = trialMatch[2].trim();
+          const found = CHALLENGES.find((c) => c.title.toLowerCase() === title.toLowerCase());
+          const d = (found ? found.difficulty : "Medium").toLowerCase();
+          diffLabel = d.charAt(0).toUpperCase() + d.slice(1);
+          diffClass = d === "easy" ? "lc-diff-easy" : d === "hard" ? "lc-diff-hard" : "lc-diff-med";
+        } else if (questMatch) {
+          status = "Accepted";
+          statusClass = "lc-status-accepted";
+          expText = `+${questMatch[1]} EXP`;
+          title = questMatch[2].trim();
+          diffLabel = "Quest";
+          diffClass = "lc-diff-quest";
+        } else if (achieveMatch) {
+          status = "Unlocked";
+          statusClass = "lc-status-achieve";
+          title = achieveMatch[1].trim();
+          diffLabel = "Badge";
+          diffClass = "lc-diff-gold";
+        } else if (levelMatch) {
+          status = "Rank Up";
+          statusClass = "lc-status-level";
+          title = `Reached Level ${levelMatch[1].trim()}`;
+          diffLabel = "Level";
+          diffClass = "lc-diff-cyan";
+        } else if (expMatch) {
+          status = "Accepted";
+          statusClass = "lc-status-accepted";
+          expText = `+${expMatch[1]} EXP`;
+          title = expMatch[2].trim();
+        }
+
+        return `
+        <li class="lc-sub-item">
+          <div class="lc-sub-left">
+            <span class="lc-sub-status ${statusClass}">${escapeHtml(status)}</span>
+            <span class="lc-sub-title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>
+          </div>
+          <div class="lc-sub-right">
+            <span class="lc-sub-diff ${diffClass}">${escapeHtml(diffLabel)}</span>
+            ${expText ? `<span class="lc-sub-exp">${escapeHtml(expText)}</span>` : ""}
+            <span class="lc-sub-time">${timeAgo(a.time)}</span>
+          </div>
+        </li>`;
+      })
       .join("");
   }
  
@@ -2337,6 +2590,20 @@ const ACHIEVEMENT_GROUPS = [
   const retroCloseBtn = $("#retroCloseBtn");
   if (retroCloseBtn) {
     retroCloseBtn.addEventListener("click", () => showToast("Nice try — this window doesn't close. 1998 forever."));
+  }
+
+  // LeetCode Progress Mode Toggles
+  if (el.lcModeTrialsBtn) {
+    el.lcModeTrialsBtn.addEventListener("click", () => {
+      lcProgressMode = "trials";
+      renderLeetCodeProgress();
+    });
+  }
+  if (el.lcModeAllBtn) {
+    el.lcModeAllBtn.addEventListener("click", () => {
+      lcProgressMode = "all";
+      renderLeetCodeProgress();
+    });
   }
  
   // ---------------------------------------------------------
