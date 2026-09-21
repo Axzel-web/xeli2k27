@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XELI // Leveling System</title>
+<meta name="description" content="A retro hunter leveling system with quests, trials, and rank progression." />
+<meta property="og:title" content="XELI // Leveling System" />
+<meta property="og:description" content="A retro hunter leveling system with quests, trials, and rank progression." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=VT323&family=Tahoma&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/xeli.css">
+</head>
+<body>
+
+<div class="noise-layer" aria-hidden="true"></div>
+
+<div class="retro-titlebar">
+  <span class="retro-titlebar-text">⚔ XELI LEVELING SYSTEM — v1.0</span>
+  <div class="retro-titlebar-btns">
+    <button class="retro-btn" type="button" title="1998 vibes only" aria-hidden="true" tabindex="-1">_</button>
+    <button class="retro-btn" type="button" title="1998 vibes only" aria-hidden="true" tabindex="-1">□</button>
+    <button class="retro-btn retro-btn-close" type="button" id="retroCloseBtn" title="Try it">×</button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark" id="brandLogo" title="XELI Leveling System">
+        <img src="/assets/xeli_leveling_logo.jpg" alt="XELI Leveling Emblem" class="brand-logo-img" referrerPolicy="no-referrer" />
+      </span>
+      <div class="brand-text">
+        <span class="brand-name">XELI</span>
+        <span class="brand-sub">LEVELING SYSTEM</span>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="Main navigation">
+      <button class="nav-item is-active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z"/></svg>
+        <span>Status</span>
+      </button>
+      <button class="nav-item" data-view="quests">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 3v2H4v16h16V9h2v14H2V3h7Zm10 6-9 9-4-4 1.4-1.4L10 15.2 17.6 7.6 19 9Z"/></svg>
+        <span>Quests</span>
+      </button>
+      <button class="nav-item" data-view="lab">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 2v6.35L4.2 17.6A2 2 0 0 0 6 20.6h12a2 2 0 0 0 1.8-3L15 8.35V2H9Zm2 2h2v4.87l.28.57L17.8 18.6H6.2l4.52-9.16.28-.57V4Z"/></svg>
+        <span>Challenge Lab</span>
+      </button>
+      <button class="nav-item" data-view="roadmap">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 13h2v-2H3v2Zm4 0h2v-2H7v2Zm4 8h2V3h-2v18Zm4-8h2v-2h-2v2Zm4 0h2v-2h-2v2Z"/></svg>
+        <span>Rank Path</span>
+      </button>
+      <button class="nav-item" data-view="achievements">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 2 9.2 5H5v4.2L2 12l3 2.8V19h4.2L12 22l2.8-3H19v-4.2L22 12l-3-2.8V5h-4.2L12 2Zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/></svg>
+        <span>Achievements</span>
+      </button>
+    </nav>
+
+    <div class="hunter-mini" id="hunterMiniCard" role="button" tabindex="0" title="Click to Switch Hunter / Log On">
+      <div class="mini-ring" id="miniRing">
+        <img class="mini-avatar-thumb" id="miniAvatarThumb" src="/assets/rank_e_level_1_5.png" alt="Mini Avatar" referrerPolicy="no-referrer" />
+        <span class="mini-rank" id="miniRank">E</span>
+      </div>
+      <div class="mini-info">
+        <div class="mini-name-row">
+          <span class="mini-name" id="miniName">Hunter</span>
+          <span class="mini-auth-dot" id="miniAuthDot" title="Terminal Authorization Active">●</span>
+        </div>
+        <span class="mini-level">LV. <b id="miniLevel">1</b> · <span id="miniGuild" class="mini-guild-tag">Association</span></span>
+      </div>
+    </div>
+
+    <!-- Supabase Cloud Connection Badge -->
+    <div class="supabase-sidebar-badge" id="openSupabaseModalSidebar" role="button" tabindex="0" title="Supabase Cloud Account & Real-Time Sync (efkkzgsuyttdfatihfxb)">
+      <div class="supabase-badge-left">
+        <span class="supabase-status-dot" id="supabaseSidebarDot"></span>
+        <div>
+          <span class="supabase-badge-label">Supabase Cloud</span>
+          <div class="supabase-badge-project">efkkzgsuyttdfatihfxb</div>
+        </div>
+      </div>
+      <span class="supabase-badge-state" id="supabaseSidebarState">ONLINE</span>
+    </div>
+
+    <!-- Retro BGM Cassette Box -->
+    <div class="bgm-player-panel" id="bgmPlayerPanel">
+      <div class="bgm-panel-head">
+        <span class="bgm-cassette-icon">📼</span>
+        <div class="bgm-panel-titles">
+          <span class="bgm-label">BGM TAPE // 1998</span>
+          <span class="bgm-track-name" title="XELI Leveling Soundtrack">XELI // Hunter Theme</span>
+        </div>
+        <div class="bgm-led" id="bgmStatusLed" title="Music Status"></div>
+      </div>
+      <div class="bgm-panel-controls">
+        <button class="bgm-ctrl-btn" id="bgmPlayPauseBtn" type="button" title="Play or Pause Background Music">
+          <span id="bgmPlayIcon">▶</span> <span id="bgmPlayText">Play BGM</span>
+        </button>
+        <div class="bgm-vol-wrap" title="BGM Volume">
+          <span class="bgm-vol-label">VOL</span>
+          <input type="range" id="bgmVolRange" min="0" max="100" value="65" class="bgm-range-slider" aria-label="Background music volume">
+        </div>
+      </div>
+      <div class="bgm-bars" id="bgmBars" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="main">
+
+    <header class="topbar">
+      <h1 class="topbar-title" id="viewTitle">Hunter Status</h1>
+      <div class="topbar-stats">
+        <div class="pill">
+          <span class="pill-label">Streak</span>
+          <span class="pill-value" id="statStreak">0d</span>
+        </div>
+        <div class="pill">
+          <span class="pill-label">Total EXP</span>
+          <span class="pill-value" id="statTotalExp">0</span>
+        </div>
+        <button class="btn btn-ghost btn-reset" id="openSupabaseModal" title="Supabase Cloud Connection & Sync (efkkzgsuyttdfatihfxb)">
+          <span class="supabase-status-dot" id="supabaseTopStatusDot"></span>
+          <span id="supabaseBtnLabel">Supabase: Online</span>
+        </button>
+        <button class="btn btn-ghost btn-reset" id="openLoginModal" title="Hunter Logon / Authorization">
+          <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 2C9.24 2 7 4.24 7 7v3H6c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8c0-1.1-.9-2-2-2h-1V7c0-2.76-2.24-5-5-5zm0 2c1.66 0 3 1.34 3 3v3H9V7c0-1.66 1.34-3 3-3zm0 10c1.1 0 2 .9 2 2 0 .74-.4 1.38-1 1.72V19h-2v-1.28c-.6-.34-1-.98-1-1.72 0-1.1.9-2 2-2z"/></svg>
+          <span id="loginBtnLabel">Log On...</span>
+        </button>
+        <button class="btn btn-ghost btn-reset" id="quickLogOutBtn" style="display:none;" title="Sign out of active Supabase Hunter session">
+          <svg viewBox="0 0 24 24" class="btn-icon"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+          <span>Log Out</span>
+        </button>
+        <button class="btn btn-ghost btn-reset" id="toggleBgmBtn" title="Toggle background music">
+          <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          <span id="bgmBtnLabel">BGM: Off</span>
+        </button>
+        <button class="btn btn-ghost btn-reset" id="toggleSoundBtn" title="Toggle click sounds">
+          <svg viewBox="0 0 24 24" class="btn-icon"><path d="M4 9v6h4l5 5V4L8 9H4Zm11.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4Z"/></svg>
+          <span id="soundBtnLabel">Sound: On</span>
+        </button>
+        <button class="btn btn-ghost btn-reset" id="openBackupModal" title="Export or import your progress">
+          <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 17 7.3 12.3l1.4-1.4L12 13.6V3h0ZM5 19h14v2H5v-2Z"/></svg>
+          Backup
+        </button>
+        <button class="btn btn-ghost btn-reset" id="openResetModal" title="Reset all progress">
+          <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 5V2L7 6l5 4V7c3.31 0 6 2.69 6 6a6 6 0 0 1-6 6 6 6 0 0 1-6-6H4a8 8 0 0 0 8 8 8 8 0 0 0 8-8 8 8 0 0 0-8-8Z"/></svg>
+          Reset
+        </button>
+      </div>
+    </header>
+
+    <!-- ---------- DASHBOARD ---------- -->
+    <section class="view is-active" id="view-dashboard">
+
+      <div class="status-card">
+        <div class="status-glow" aria-hidden="true"></div>
+
+        <div class="status-left">
+          <div class="hunter-avatar" id="hunterAvatar" role="img" aria-label="Hunter Avatar" title="Hunter Avatar · Level 1–5 E-Rank">
+            <img id="hunterAvatarImg" class="hunter-avatar-img" src="/assets/rank_e_level_1_5.png" alt="Hunter Avatar (Level 1-5 E-Rank)" referrerPolicy="no-referrer" />
+            <svg viewBox="0 0 200 200" class="hunter-avatar-svg" id="hunterAvatarSvg" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+              <defs>
+                <radialGradient id="avatarBg" cx="50%" cy="32%" r="78%">
+                  <stop offset="0%" stop-color="#1c1c1f"/>
+                  <stop offset="100%" stop-color="#0a0a0b"/>
+                </radialGradient>
+                <linearGradient id="hoodRim" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#ffffff" stop-opacity=".4"/>
+                  <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <circle cx="100" cy="100" r="98" fill="url(#avatarBg)"/>
+              <path d="M28 202 C28 148 54 116 100 116 C146 116 172 148 172 202 Z" fill="#050506"/>
+              <path class="avatar-hood" d="M100 28 C58 28 42 65 45 97 C47 121 67 134 100 134 C133 134 153 121 155 97 C158 65 142 28 100 28 Z" fill="#050506" stroke="url(#hoodRim)" stroke-width="2.5"/>
+              <path d="M64 86 C64 59 80 46 100 46 C120 46 136 59 136 86 C136 107 120 120 100 120 C80 120 64 107 64 86 Z" fill="#000000"/>
+              <g class="avatar-eyes">
+                <rect x="79" y="87" width="15" height="4" rx="2" fill="var(--paper)"/>
+                <rect x="106" y="87" width="15" height="4" rx="2" fill="var(--paper)"/>
+              </g>
+            </svg>
+          </div>
+          <div class="rank-badge" id="rankBadgeBig">
+            <span id="rankLetterBig">E</span>
+          </div>
+          <span class="rank-caption">RANK</span>
+        </div>
+
+        <div class="status-mid">
+          <div class="status-row">
+            <input class="hunter-name-input" id="hunterNameInput" value="Hunter" maxlength="18" aria-label="Hunter name">
+            <span class="status-title" id="hunterTitle">The Awakened</span>
+          </div>
+
+          <div class="level-line">
+            <span class="level-word">LEVEL</span>
+            <span class="level-number" id="levelNumber">1</span>
+            <span class="level-max">/ 100</span>
+          </div>
+
+          <div class="exp-track" role="progressbar" aria-label="Experience progress" aria-valuemin="0" aria-valuemax="100" id="expTrack">
+            <div class="exp-fill" id="expFill"></div>
+          </div>
+          <div class="exp-numbers">
+            <span id="expCurrent">0</span>
+            <span class="exp-slash">/</span>
+            <span id="expRequired">100</span>
+            <span class="exp-word">EXP</span>
+          </div>
+          <span class="exp-hint" id="expHint"></span>
+        </div>
+
+        <div class="status-right">
+          <div class="stat-block">
+            <span class="stat-num" id="statQuests">0</span>
+            <span class="stat-label">Quests Cleared</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-num" id="statChallenges">0</span>
+            <span class="stat-label">Trials Solved</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2><svg viewBox="0 0 24 24" class="panel-icon"><path d="M9 3v2H4v16h16V9h2v14H2V3h7Zm10 6-9 9-4-4 1.4-1.4L10 15.2 17.6 7.6 19 9Z"/></svg>Active Quests</h2>
+            <button class="link-btn" data-view="quests">View all →</button>
+          </div>
+          <div class="mini-list" id="dashQuestList">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" class="empty-icon"><path d="M9 3v2H4v16h16V9h2v14H2V3h7Zm10 6-9 9-4-4 1.4-1.4L10 15.2 17.6 7.6 19 9Z"/></svg>
+              <p>No active quests. Head to the Quests tab to log one.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2><svg viewBox="0 0 24 24" class="panel-icon"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3Zm1 4v6l5 3-.75 1.3L12 14V7h2Z"/></svg>Recent Activity</h2>
+          </div>
+          <ul class="activity-list" id="activityList">
+            <li class="empty-state">
+              <svg viewBox="0 0 24 24" class="empty-icon"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3Zm1 4v6l5 3-.75 1.3L12 14V7h2Z"/></svg>
+              <p>Your history will appear here once you start earning EXP.</p>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel calendar-panel">
+        <div class="panel-head">
+          <h2><svg viewBox="0 0 24 24" class="panel-icon"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7ZM5 9h14v11H5V9Z"/></svg>Progress Calendar</h2>
+          <span class="calendar-caption" id="calendarCaption">0 EXP earned in the last year</span>
+        </div>
+        <div class="calendar-scroll">
+          <div class="calendar-wrap">
+            <div class="calendar-months" id="calendarMonths"></div>
+            <div class="calendar-body">
+              <div class="calendar-daylabels">
+                <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
+              </div>
+              <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+          </div>
+        </div>
+        <div class="calendar-legend">
+          <span>Less</span>
+          <span class="cal-cell" data-level="0"></span>
+          <span class="cal-cell" data-level="1"></span>
+          <span class="cal-cell" data-level="2"></span>
+          <span class="cal-cell" data-level="3"></span>
+          <span class="cal-cell" data-level="4"></span>
+          <span>More</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- QUESTS ---------- -->
+    <section class="view" id="view-quests">
+      <div class="view-toolbar">
+        <div class="tabs" id="questTabs">
+          <button class="tab is-active" data-filter="active">Active</button>
+          <button class="tab" data-filter="completed">Completed</button>
+          <button class="tab" data-filter="all">All</button>
+        </div>
+        <button class="btn btn-primary" id="openQuestModal">
+          <svg viewBox="0 0 24 24" class="btn-icon"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6Z"/></svg>
+          New Quest
+        </button>
+      </div>
+
+      <div class="quest-grid" id="questGrid">
+        <p class="empty-note">No quests yet. Create your first quest to start earning EXP.</p>
+      </div>
+    </section>
+
+    <!-- ---------- CHALLENGE LAB ---------- -->
+    <section class="view" id="view-lab">
+      <div class="view-toolbar">
+        <div class="tabs" id="labTabs">
+          <button class="tab is-active" data-cat="networking">Networking</button>
+          <button class="tab" data-cat="coding">Coding · Python</button>
+          <button class="tab" data-cat="sysadmin">System &amp; Sysadmin</button>
+        </div>
+      </div>
+      <p class="lab-sub">Clear a trial to earn a one-time EXP bonus. Trials run for real — code executes in an in-browser Python engine, no server required.</p>
+      <div class="challenge-grid" id="challengeGrid"></div>
+    </section>
+
+    <!-- ---------- ROADMAP ---------- -->
+    <section class="view" id="view-roadmap">
+      <div class="panel roadmap-panel">
+        <div class="panel-head">
+          <h2>Rank Progression</h2>
+        </div>
+        <div class="roadmap-track" id="roadmapTrack">
+          <div class="roadmap-fill" id="roadmapFill"></div>
+          <div class="roadmap-marker" id="roadmapMarker"><span id="roadmapMarkerLv">1</span></div>
+        </div>
+        <div class="roadmap-zones">
+          <div class="zone" data-rank="E"><span class="zone-rank">E</span><span class="zone-range">1–20</span></div>
+          <div class="zone" data-rank="D"><span class="zone-rank">D</span><span class="zone-range">21–40</span></div>
+          <div class="zone" data-rank="C"><span class="zone-rank">C</span><span class="zone-range">41–60</span></div>
+          <div class="zone" data-rank="B"><span class="zone-rank">B</span><span class="zone-range">61–80</span></div>
+          <div class="zone" data-rank="A"><span class="zone-rank">A</span><span class="zone-range">81–95</span></div>
+          <div class="zone" data-rank="S"><span class="zone-rank">S</span><span class="zone-range">96–100</span></div>
+        </div>
+        <p class="roadmap-note">Every rank raises the shine of your interface — an S-Rank hunter's system glows brightest of all.</p>
+      </div>
+    </section>
+
+    <!-- ---------- ACHIEVEMENTS ---------- -->
+    <section class="view" id="view-achievements">
+      <div class="panel achievement-summary">
+        <div class="ach-summary-top">
+          <div>
+            <h2 class="ach-summary-title">Badge Collection</h2>
+            <span class="ach-summary-sub">No EXP attached — just proof of the grind.</span>
+          </div>
+          <span class="ach-summary-count" id="achUnlockedCount">0/0</span>
+        </div>
+        <div class="ach-summary-track">
+          <div class="ach-summary-fill" id="achProgressFill"></div>
+        </div>
+        <span class="ach-summary-label" id="achProgressLabel">0 of 0 unlocked</span>
+      </div>
+      <div id="achievementGrid"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== MODAL: BACKUP & RESTORE ===================== -->
+<div class="modal-overlay" id="modalBackup">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="backupTitle">
+    <div class="modal-head">
+      <h3 id="backupTitle">Backup & Restore</h3>
+      <button class="icon-btn" data-close="modalBackup" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="backup-block">
+        <div class="backup-block-head">
+          <span class="backup-icon"><svg viewBox="0 0 24 24"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 17 7.3 12.3l1.4-1.4L12 13.6V3h0ZM5 19h14v2H5v-2Z"/></svg></span>
+          <h4 class="lab-heading">Export</h4>
+        </div>
+        <p class="lab-body">Download your progress as a file — quests, EXP, cleared trials, badges, everything.</p>
+        <button class="btn btn-primary btn-block" id="exportProgressBtn">Download Backup File</button>
+      </div>
+      <div class="backup-divider"></div>
+      <div class="backup-block">
+        <div class="backup-block-head">
+          <span class="backup-icon"><svg viewBox="0 0 24 24"><path d="M12 21 7.3 16.3l1.4-1.4L12 18.2l3.3-3.3 1.4 1.4L12 21ZM12 3v10.6h2V3h-2ZM5 5h14v2H5V5Z"/></svg></span>
+          <h4 class="lab-heading">Import</h4>
+        </div>
+        <p class="lab-body">Restore from a backup file. This replaces your current progress.</p>
+        <label class="backup-file-picker" for="importFileInput">
+          <svg viewBox="0 0 24 24" class="backup-file-icon"><path d="M9 2v6.35L4.2 17.6A2 2 0 0 0 6 20.6h12a2 2 0 0 0 1.8-3L15 8.35V2H9Zm2 2h2v4.87l.28.57L17.8 18.6H6.2l4.52-9.16.28-.57V4Z"/></svg>
+          <span id="backupFileStatus">Choose a backup file…</span>
+        </label>
+        <input type="file" id="importFileInput" accept="application/json" class="backup-file-input">
+        <button class="btn btn-ghost btn-block" id="importProgressBtn" disabled>Restore From File</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: RESET CONFIRM ===================== -->
+<div class="modal-overlay" id="modalReset">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
+    <div class="modal-head">
+      <h3 id="resetTitle">Reset Progress?</h3>
+      <button class="icon-btn" data-close="modalReset" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="ch-prompt">This wipes your level, EXP, rank, quests, cleared trials, and activity — back to Level 1, Rank E. This can't be undone.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close="modalReset">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmResetBtn">Reset Progress</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: NEW QUEST ===================== -->
+<div class="modal-overlay" id="modalQuest">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalQuestTitle">
+    <div class="modal-head">
+      <h3 id="modalQuestTitle">Log a New Quest</h3>
+      <button class="icon-btn" data-close="modalQuest" aria-label="Close">✕</button>
+    </div>
+    <form id="questForm" class="modal-body">
+      <label class="field">
+        <span>Quest name</span>
+        <input type="text" id="questTitle" placeholder="e.g. Finish project outline" required maxlength="60">
+      </label>
+      <label class="field">
+        <span>Notes (optional)</span>
+        <textarea id="questNotes" rows="2" placeholder="Any details that help you remember the task"></textarea>
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span>Category</span>
+          <select id="questCategory">
+            <option>General</option>
+            <option>Work</option>
+            <option>Study</option>
+            <option>Fitness</option>
+            <option>Personal</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Difficulty</span>
+          <select id="questDifficulty">
+            <option value="25">Easy · 25 EXP</option>
+            <option value="50" selected>Normal · 50 EXP</option>
+            <option value="100">Hard · 100 EXP</option>
+            <option value="200">Elite · 200 EXP</option>
+          </select>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close="modalQuest">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Quest</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MODAL: QUEST DETAIL ===================== -->
+<div class="modal-overlay" id="modalQuestDetail">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="qdTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="qdTitle">Quest</h3>
+        <span class="ch-meta" id="qdMeta"></span>
+      </div>
+      <button class="icon-btn" data-close="modalQuestDetail" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="ch-prompt" id="qdNotes"></p>
+      <div class="modal-actions" id="qdActions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: CHALLENGE DETAIL ===================== -->
+<div class="modal-overlay" id="modalChallenge">
+  <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="chTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="chTitle">Challenge</h3>
+        <span class="ch-meta" id="chMeta"></span>
+      </div>
+      <button class="icon-btn" data-close="modalChallenge" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" id="chBody"></div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: RETRO HUNTER LOGON ===================== -->
+<div class="modal-overlay" id="modalLogin">
+  <div class="modal modal-login-dialog" role="dialog" aria-modal="true" aria-labelledby="loginDialogTitle">
+    <div class="modal-head login-dialog-head">
+      <div class="login-head-title">
+        <span class="login-head-icon" aria-hidden="true">🔑</span>
+        <h3 id="loginDialogTitle">Log On to XELI Hunter Terminal</h3>
+      </div>
+      <div class="login-head-btns">
+        <button class="retro-btn" type="button" id="loginHelpBtn" title="Help Topics">?</button>
+        <button class="retro-btn retro-btn-close" type="button" data-close="modalLogin" title="Cancel">×</button>
+      </div>
+    </div>
+    
+    <div class="modal-body login-dialog-body">
+      <div class="login-banner">
+        <div class="login-graphic" aria-hidden="true">
+          <svg viewBox="0 0 54 54" class="login-svg">
+            <rect x="4" y="6" width="36" height="26" fill="#000" stroke="#808080" stroke-width="1.5"/>
+            <rect x="7" y="9" width="30" height="20" fill="#008080"/>
+            <path d="M14 13h16v3H24v10h-4V16h-6z" fill="#fff"/>
+            <rect x="18" y="32" width="8" height="4" fill="#808080"/>
+            <rect x="10" y="36" width="24" height="3" fill="#000"/>
+            <circle cx="38" cy="34" r="8" fill="#e6a100" stroke="#000" stroke-width="1.5"/>
+            <circle cx="38" cy="34" r="4" fill="#c0c0c0"/>
+            <path d="M34 38l-12 12h-4v-4l2-2v-2l2-2h3l3-3" fill="#e6a100" stroke="#000" stroke-width="1.5"/>
+          </svg>
+          <span class="login-graphic-label">SECURE<br/>1998</span>
+        </div>
+        
+        <div class="login-instructions-wrap">
+          <p class="login-instructions">
+            Log on to synchronize your Hunter Level, Quests, Heatmap, and Trials to the <b>XELI Awakening Cloud</b>.
+          </p>
+        </div>
+      </div>
+
+      <div id="loginActiveUserBanner" class="login-active-user-banner" style="display:none;">
+        <span class="active-user-dot"></span>
+        <span id="loginActiveUserText">Authenticated as hunter@domain.com</span>
+      </div>
+
+      <!-- Google OAuth Quick Button -->
+      <div class="login-oauth-wrap">
+        <button type="button" class="btn login-google-btn" id="loginGoogleBtn" title="Continue using Google OAuth 2.0">
+          <svg class="google-icon" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span>Continue with Google</span>
+        </button>
+      </div>
+
+      <div class="login-divider">
+        <span>or sign in with email &amp; passkey</span>
+      </div>
+
+      <form id="loginForm" class="login-form">
+        <div class="login-field-row">
+          <label for="loginEmail" class="login-label"><u>E</u>mail:</label>
+          <input type="email" id="loginEmail" class="login-input" required autocomplete="email" placeholder="hunter@domain.com" />
+        </div>
+
+        <div class="login-field-row">
+          <label for="loginPassword" class="login-label"><u>P</u>assword:</label>
+          <div class="login-input-group">
+            <input type="password" id="loginPassword" class="login-input" maxlength="48" autocomplete="current-password" placeholder="••••••••" />
+            <button type="button" class="btn login-toggle-pwd-btn" id="togglePasswordVisibilityBtn" title="Reveal / conceal passkey">👁</button>
+          </div>
+        </div>
+
+        <div class="login-field-row" id="loginHunterNameRow">
+          <label for="loginHunterName" class="login-label"><u>H</u>unter Name:</label>
+          <input type="text" id="loginHunterName" class="login-input" maxlength="28" placeholder="Hunter (for new signups)" value="Hunter" />
+        </div>
+
+        <div class="login-status-bar" id="loginStatusBar">
+          <span class="login-status-dot" id="loginStatusDot"></span>
+          <span id="loginStatusMsg">Ready. Choose an authentication method.</span>
+        </div>
+
+        <div class="login-btn-row">
+          <button type="submit" class="btn btn-primary login-btn-action" id="loginSignInBtn">Sign In</button>
+          <button type="button" class="btn login-btn-action" id="loginSignUpBtn">Sign Up</button>
+          <button type="button" class="btn login-btn-action" id="loginGuestBtn" title="Play offline using browser storage only">Continue as Guest</button>
+          <button type="button" class="btn login-btn-action" id="loginSignOutBtn" style="display:none;" title="Sign out active Supabase session">Log Out</button>
+          <button type="button" class="btn login-btn-action" data-close="modalLogin">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: SUPABASE CLOUD CONNECTION & SYNC ===================== -->
+<div class="modal-overlay" id="modalSupabase">
+  <div class="modal modal-supabase" role="dialog" aria-modal="true" aria-labelledby="supabaseModalTitle">
+    <div class="modal-head supabase-head">
+      <div class="login-head-title">
+        <span class="login-head-icon" aria-hidden="true">⚡</span>
+        <h3 id="supabaseModalTitle">Supabase Cloud Link // efkkzgsuyttdfatihfxb</h3>
+      </div>
+      <button class="retro-btn retro-btn-close" type="button" data-close="modalSupabase" aria-label="Close">×</button>
+    </div>
+
+    <div class="modal-body" style="padding:10px;">
+      <!-- Connection Status Card -->
+      <div class="supabase-card">
+        <div class="supabase-card-title">
+          <span class="supabase-status-dot" id="supabaseModalStatusDot"></span>
+          <span>Supabase Cloud Project Connectivity</span>
+        </div>
+        <div class="supabase-info-grid">
+          <span class="supabase-info-label">Project URL:</span>
+          <span class="supabase-info-value" id="supabaseProjectUrlVal">https://efkkzgsuyttdfatihfxb.supabase.co</span>
+          <span class="supabase-info-label">Project Ref:</span>
+          <span class="supabase-info-value">efkkzgsuyttdfatihfxb</span>
+          <span class="supabase-info-label">API Status:</span>
+          <span class="supabase-info-value" id="supabaseAuthApiStatus">Connected (Latency: <span id="supabasePingVal">...</span>)</span>
+          <span class="supabase-info-label">Cloud Status:</span>
+          <span class="supabase-info-value" id="supabaseCloudStatusVal" style="color:#008000; font-weight:bold;">Active &amp; Ready</span>
+        </div>
+      </div>
+
+      <!-- Account / Session Box -->
+      <div class="supabase-account-box" id="supabaseAuthBox">
+        <div id="supabaseSignedOutSection">
+          <div class="supabase-card-title">
+            <span>Hunter Cloud Account (Supabase Auth)</span>
+          </div>
+          <p class="ch-prompt" style="margin-bottom:8px; font-size:11px;">
+            Sign in with your Supabase account or register to enable real-time cloud backup &amp; cross-device sync for your Hunter stats, quests, and rank progression.
+          </p>
+          <form id="supabaseAuthForm" class="supabase-auth-form">
+            <div class="supabase-form-row">
+              <label for="supabaseEmail"><u>E</u>mail:</label>
+              <input type="email" id="supabaseEmail" class="supabase-input" placeholder="hunter@example.com" value="xeligirl910@gmail.com" required autocomplete="email" />
+            </div>
+            <div class="supabase-form-row">
+              <label for="supabasePassword"><u>P</u>assword:</label>
+              <input type="password" id="supabasePassword" class="supabase-input" placeholder="••••••••" required autocomplete="current-password" />
+            </div>
+            <div class="supabase-btn-group">
+              <button type="submit" class="btn btn-primary" id="supabaseSignInBtn">Sign In</button>
+              <button type="button" class="btn" id="supabaseSignUpBtn">Create Account</button>
+              <button type="button" class="btn btn-ghost" id="supabaseMagicLinkBtn" title="Send a one-click login link to your email">Magic Link</button>
+            </div>
+            <div id="supabaseAuthMsg" style="font-size:11px; margin-top:4px; font-family:'Courier New',monospace; color:#000080;"></div>
+          </form>
+        </div>
+
+        <div id="supabaseSignedInSection" style="display:none;">
+          <div class="supabase-card-title">
+            <span style="color:#008000;">● Active Supabase Account</span>
+          </div>
+          <div class="supabase-info-grid" style="margin-bottom:8px;">
+            <span class="supabase-info-label">Account Email:</span>
+            <span class="supabase-info-value" id="supabaseUserEmailVal">xeligirl910@gmail.com</span>
+            <span class="supabase-info-label">User ID:</span>
+            <span class="supabase-info-value" id="supabaseUserIdVal" style="font-size:9.5px;"></span>
+            <span class="supabase-info-label">Last Cloud Sync:</span>
+            <span class="supabase-info-value" id="supabaseLastSyncedVal">Never</span>
+          </div>
+          <div class="supabase-btn-group" style="justify-content:flex-start;">
+            <button type="button" class="btn btn-primary" id="supabaseManualPushBtn" title="Upload current local progress to Supabase Cloud">
+              ⬆ Upload to Cloud
+            </button>
+            <button type="button" class="btn" id="supabaseManualPullBtn" title="Download latest progress from Supabase Cloud">
+              ⬇ Restore from Cloud
+            </button>
+            <button type="button" class="btn" id="supabaseSignOutBtn">
+              Sign Out
+            </button>
+          </div>
+          <div id="supabaseSyncMsg" style="font-size:11px; margin-top:6px; font-family:'Courier New',monospace;"></div>
+        </div>
+      </div>
+
+      <!-- Auto-Sync setting -->
+      <label class="login-checkbox-item" style="margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+        <input type="checkbox" id="supabaseAutoSyncCheckbox" checked />
+        <span><b>Auto-Sync:</b> Automatically save Hunter progress to Supabase Cloud on quest clear or EXP gain</span>
+      </label>
+
+      <!-- Optional Database Table SQL schema -->
+      <details class="supabase-sql-details">
+        <summary class="supabase-sql-summary">Complete Backend SQL Schema (Tables, RLS &amp; RPCs)</summary>
+        <div class="supabase-sql-content">
+          <p style="margin-bottom:4px;">
+            Paste this migration into your <b>Supabase SQL Editor</b> (or run <code>supabase_migration.sql</code>) to deploy all tables, RLS policies, triggers, and RPC procedures:
+          </p>
+          <pre class="supabase-sql-code" id="supabaseSqlCode">-- 1. Profiles Table &amp; Helpers
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT 'Hunter',
+  level INT NOT NULL DEFAULT 1 CHECK (level BETWEEN 1 AND 100),
+  exp INT NOT NULL DEFAULT 0 CHECK (exp &gt;= 0),
+  total_exp INT NOT NULL DEFAULT 0 CHECK (total_exp &gt;= 0),
+  streak INT NOT NULL DEFAULT 0 CHECK (streak &gt;= 0),
+  last_active_day DATE,
+  sound_enabled BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2. Quests
+CREATE TABLE IF NOT EXISTS public.quests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  notes TEXT,
+  category TEXT NOT NULL DEFAULT 'General',
+  exp INT NOT NULL DEFAULT 25,
+  done BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ
+);
+
+-- 3. Solved Challenges
+CREATE TABLE IF NOT EXISTS public.solved_challenges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  challenge_id TEXT NOT NULL,
+  solved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_user_challenge UNIQUE (user_id, challenge_id)
+);
+
+-- 4. Daily EXP Heatmap
+CREATE TABLE IF NOT EXISTS public.daily_exp (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  day DATE NOT NULL,
+  exp_earned INT NOT NULL DEFAULT 0,
+  CONSTRAINT uq_user_day UNIQUE (user_id, day)
+);
+
+-- 5. Activity Log (trimmed to 30 rows)
+CREATE TABLE IF NOT EXISTS public.activity_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 6. Unlocked Achievements
+CREATE TABLE IF NOT EXISTS public.unlocked_achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  achievement_id TEXT NOT NULL,
+  unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_user_achievement UNIQUE (user_id, achievement_id)
+);
+
+-- Full migration file with RLS &amp; RPCs: supabase_migration.sql</pre>
+          <button type="button" class="btn" id="copySupabaseSqlBtn" style="font-size:10px; padding:2px 8px;">Copy SQL</button>
+        </div>
+      </details>
+
+      <div class="modal-actions" style="margin-top:12px;">
+        <button type="button" class="btn btn-primary" data-close="modalSupabase">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: RETRO LOGON HELP ===================== -->
+<div class="modal-overlay" id="modalLoginHelp">
+  <div class="modal modal-login-help" role="dialog" aria-modal="true" aria-labelledby="loginHelpTitle">
+    <div class="modal-head login-dialog-head">
+      <div class="login-head-title">
+        <span class="login-head-icon" aria-hidden="true">❓</span>
+        <h3 id="loginHelpTitle">XELI Terminal Security — Help</h3>
+      </div>
+      <button class="retro-btn retro-btn-close" type="button" data-close="modalLoginHelp" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body login-help-body">
+      <p class="ch-prompt">
+        <b>XELI Hunter Terminal Security Help Topics:</b><br><br>
+        • <b>User Name:</b> Identifies your Hunter avatar on quests, daily streaks, and the terminal leaderboard.<br>
+        • <b>Security Passkey:</b> Verifies your clearance on this device. Any custom passcode can be entered.<br>
+        • <b>Guild / Realm:</b> Determines your division alignment (e.g., Shadow Monarch, Hunter Association, White Tiger) displayed on your hunter license.<br>
+        • <b>Switching Accounts:</b> You may log off or change callsigns anytime via the <b>Log On / Log Off</b> header button or by clicking your mini-badge in the left navigation panel.
+      </p>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button type="button" class="btn btn-primary" data-close="modalLoginHelp">Close Help</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== LEVEL UP OVERLAY ===================== -->
+<div class="levelup-overlay" id="levelupOverlay">
+  <div class="levelup-card">
+    <span class="levelup-tag">LEVEL UP</span>
+    <div class="levelup-avatar-preview" id="levelupAvatarPreview">
+      <img id="levelupAvatarImg" class="levelup-avatar-img" src="/assets/rank_e_level_1_5.png" alt="Hunter Avatar" referrerPolicy="no-referrer" />
+    </div>
+    <span class="levelup-number" id="levelupNumber">2</span>
+    <span class="levelup-rankline" id="levelupRankline"></span>
+  </div>
+</div>
+
+<!-- ===================== TOASTS ===================== -->
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- ===================== BACKGROUND MUSIC (YOUTUBE EMBED) ===================== -->
+<div id="youtubeBgmWrap" class="youtube-bgm-wrap" aria-hidden="true">
+  <div id="youtubeBgmPlayer"></div>
+</div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="/src/xeli.js"></script>
+</body>
+</html>

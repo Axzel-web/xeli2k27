@@ -1,0 +1,2518 @@
+import {
+  supabase,
+  checkSupabaseConnection,
+  getCurrentSupabaseUser,
+  signUpSupabase,
+  signInSupabase,
+  signOutSupabase,
+  signInWithGoogle,
+  getSupabaseSession,
+  onSupabaseAuthStateChange,
+  saveProgressToSupabase,
+  loadProgressFromSupabase,
+} from "./supabase.js";
+
+/* ============================================================
+   XELI — Challenge Lab data
+   type: "code"  -> runs in Pyodide against hidden test cases
+   type: "input" -> free-text answer, graded by exact/normalized match
+   type: "mcq"   -> multiple choice
+   type: "lab"   -> real hands-on exercise (e.g. Packet Tracer, terminal).
+                    Self-checked via checklist + short reflection, then
+                    the user claims the EXP once every item is done.
+   ============================================================ */
+ 
+const CHALLENGES = [
+ 
+  // ------------------------- NETWORKING -------------------------
+  {
+    id: "net-cli-modes-exploration",
+    cat: "networking",
+    title: "Router CLI Navigation",
+    difficulty: "Easy",
+    exp: 120,
+    type: "lab",
+    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
+    sections: [
+      {
+        heading: "1. Mode Navigation",
+        body: "Move between CLI modes:",
+        checklist: [
+          "User EXEC → Privileged EXEC (enable)",
+          "Privileged EXEC → Global Config (configure terminal)",
+          "exit back down, then up again",
+          "end from Global Config → Privileged EXEC",
+        ],
+      },
+      {
+        heading: "2. Explore Commands",
+        body: "At Router#, use ? and Tab-completion.",
+        checklist: ["Explored ? at Router#", "Tried Tab-completion"],
+        reflection: {
+          label: "5 commands you discovered:",
+          count: 5,
+          placeholder: "Command",
+        },
+      },
+    ],
+  },
+  {
+    id: "net-hostname-banner-passwords",
+    cat: "networking",
+    title: "Hostname, Banner & Passwords",
+    difficulty: "Easy",
+    exp: 140,
+    type: "lab",
+    intro: "Hands-on Packet Tracer lab. Do it on the router and switch, then check off what you did.",
+    sections: [
+      {
+        heading: "1. Hostname & Banner",
+        body: "Set identity and a login warning on both devices.",
+        checklist: [
+          "Set hostname on router (e.g. R1)",
+          "Created banner motd with a warning message on router",
+          "Set hostname on switch (e.g. SW1)",
+          "Created banner motd on switch",
+        ],
+      },
+      {
+        heading: "2. Passwords (3 Types)",
+        body: "Set on both devices, then verify.",
+        checklist: [
+          "Set enable secret on router and switch",
+          "Set console password + login on both",
+          "Set vty password + login on both",
+          "Reopened CLI — login asked for password",
+          "Ran enable — asked for password",
+        ],
+      },
+    ],
+  },
+  {
+    id: "net-ip-interface-description",
+    cat: "networking",
+    title: "IP Addressing & Interface Description",
+    difficulty: "Easy",
+    exp: 130,
+    type: "lab",
+    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
+    sections: [
+      {
+        heading: "1. IP Address & No Shutdown",
+        body: "Assign an IP to an interface, enable it, verify status.",
+        checklist: [
+          "Assigned an IP address to an interface",
+          "Enabled the interface with no shutdown",
+          "Verified up/up status with show ip interface brief",
+        ],
+      },
+      {
+        heading: "2. Interface Descriptions",
+        body: "Label two interfaces with what they connect to.",
+        checklist: [
+          "Added a description to interface 1 (e.g. Link to Switch1)",
+          "Added a description to interface 2 (e.g. Link to PC-LAN)",
+        ],
+      },
+    ],
+  },
+ 
+  {
+    id: "net-save-manage-config",
+    cat: "networking",
+    title: "Saving & Managing Config",
+    difficulty: "Medium",
+    exp: 150,
+    type: "lab",
+    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
+    sections: [
+      {
+        heading: "1. Save & Verify Persistence",
+        body: "Make a change, save it, reload, confirm it stuck.",
+        checklist: [
+          "Made a config change (e.g. edited the banner text)",
+          "Ran copy running-config startup-config",
+          "Reloaded the device",
+          "Verified the change was still there after reboot",
+        ],
+      },
+      {
+        heading: "2. Running vs Startup",
+        body: "Make another change but don't save it yet.",
+        checklist: [
+          "Made a second change without saving",
+          "Compared show running-config vs show startup-config",
+          "Confirmed the new change only appears in running-config",
+        ],
+      },
+    ],
+  },
+ 
+  {
+    id: "net-ping-traceroute",
+    cat: "networking",
+    title: "Ping & Traceroute",
+    difficulty: "Medium",
+    exp: 150,
+    type: "lab",
+    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
+    sections: [
+      {
+        heading: "1. Ping Test",
+        body: "Build a 2-router topology, assign IPs, ping R1 to R2.",
+        checklist: [
+          "Built the 2-router topology",
+          "Assigned IPs and enabled interfaces",
+          "Pinged R1 to R2 successfully",
+        ],
+      },
+      {
+        heading: "2. Traceroute + Explanation",
+        body: "Traceroute the same destination, then explain what's different.",
+        checklist: ["Ran traceroute to the same destination"],
+        reflection: {
+          type: "note",
+          label: "In your own words (2-3 sentences): what's different between the traceroute output and the ping output?",
+          placeholder: "Your explanation…",
+        },
+      },
+    ],
+  },
+ 
+  {
+    id: "net-ssh-access",
+    cat: "networking",
+    title: "SSH Remote Access",
+    difficulty: "Medium",
+    exp: 160,
+    type: "lab",
+    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
+    sections: [
+      {
+        heading: "1. SSH Setup",
+        body: "Configure the router for SSH.",
+        checklist: [
+          "Set hostname and domain-name",
+          "Generated the crypto key",
+          "Created a local username",
+          "Set transport input ssh + login local on vty lines",
+        ],
+      },
+      {
+        heading: "2. Test SSH & Confirm Telnet Disabled",
+        body: "Connect from another device, then confirm Telnet is blocked.",
+        checklist: [
+          "SSH'd into the router from a PC — connected successfully",
+          "Tried Telnet to the same IP — it failed",
+        ],
+      },
+    ],
+  },
+ 
+  {
+    id: "net-full-topology-build",
+    cat: "networking",
+    title: "Full Topology Build",
+    difficulty: "Hard",
+    exp: 220,
+    type: "lab",
+    intro: "Hands-on Packet Tracer lab. Do it on the router, then check off what you did.",
+    sections: [
+      {
+        heading: "1. Full Config — 2 Routers + 1 PC",
+        body: "Combine everything: identity, security, interfaces, SSH, save.",
+        checklist: [
+          "Set hostname, banner, and passwords on both routers",
+          "Assigned IP + no shutdown + description on interfaces",
+          "Enabled SSH access on both routers",
+          "Saved config with copy running-config startup-config",
+          "Configured the PC's IP",
+        ],
+      },
+      {
+        heading: "2. Bonus: IP Addressing Table",
+        body: "Document the topology.",
+        reflection: {
+          type: "note",
+          label: "List device, interface, IP address, and subnet mask for every device in your topology.",
+          placeholder: "e.g. R1 — Gi0/0 — 10.0.0.1 — 255.255.255.0",
+        },
+      },
+    ],
+  },
+ 
+  {
+    id: "net-binary-subnetting",
+    cat: "networking",
+    title: "Binary & Subnetting Practice",
+    difficulty: "Medium",
+    exp: 150,
+    type: "lab",
+    intro: "Hands-on paper + calculator lab. Work it out, then check off what you did.",
+    sections: [
+      {
+        heading: "1. Binary Conversion (5 IPs)",
+        body: "Pick 5 random IPs, convert each octet to binary by hand, then verify.",
+        checklist: [
+          "Converted 5 IP addresses to binary by hand",
+          "Verified all conversions with a calculator or online tool",
+        ],
+        reflection: {
+          type: "list",
+          count: 5,
+          label: "Your 5 IPs (for the record):",
+          placeholder: "IP address",
+        },
+      },
+      {
+        heading: "2. Find Network / Broadcast / Range for a /24",
+        body: "Pick any /24 network and work out its addressing.",
+        reflection: {
+          type: "note",
+          label: "Your /24 network, plus its network address, broadcast address, and usable host range.",
+          placeholder: "e.g. 10.20.30.0/24 → network … broadcast … range …",
+        },
+      },
+    ],
+  },
+];
+ 
+/* ============================================================
+   ACHIEVEMENTS — prestige badges, no EXP attached on purpose.
+   check(state) returns true once the condition is met.
+   ============================================================ */
+const ACHIEVEMENTS = [
+  {
+    id: "first-quest",
+    group: "quests",
+    title: "First Blood",
+    desc: "Complete your first quest.",
+    check: (s) => s.quests.filter((q) => q.done).length >= 1,
+  },
+  {
+    id: "ten-quests",
+    group: "quests",
+    title: "Quest Veteran",
+    desc: "Complete 10 quests.",
+    check: (s) => s.quests.filter((q) => q.done).length >= 10,
+  },
+  {
+    id: "first-trial",
+    group: "trials",
+    title: "First Trial",
+    desc: "Clear your first Challenge Lab trial.",
+    check: (s) => s.solvedChallenges.length >= 1,
+  },
+  {
+    id: "five-trials",
+    group: "trials",
+    title: "Trial Adept",
+    desc: "Clear 5 Challenge Lab trials.",
+    check: (s) => s.solvedChallenges.length >= 5,
+  },
+  {
+    id: "streak-7",
+    group: "streaks",
+    title: "7-Day Grind",
+    desc: "Reach a 7-day streak.",
+    check: (s) => s.streak >= 7,
+  },
+  {
+    id: "streak-30",
+    group: "streaks",
+    title: "Iron Will",
+    desc: "Reach a 30-day streak.",
+    check: (s) => s.streak >= 30,
+  },
+  {
+    id: "level-10",
+    group: "levels",
+    title: "Double Digits",
+    desc: "Reach Level 10.",
+    check: (s) => s.level >= 10,
+  },
+  {
+    id: "level-50",
+    group: "levels",
+    title: "Halfway There",
+    desc: "Reach Level 50.",
+    check: (s) => s.level >= 50,
+  },
+  {
+    id: "level-100",
+    group: "levels",
+    title: "Apex Hunter",
+    desc: "Reach Level 100.",
+    check: (s) => s.level >= 100,
+  },
+  {
+    id: "rank-d",
+    group: "ranks",
+    title: "Rising Hunter",
+    desc: "Reach Rank D.",
+    check: (s) => s.level >= 21,
+  },
+  {
+    id: "rank-b",
+    group: "ranks",
+    title: "Elite Hunter",
+    desc: "Reach Rank B.",
+    check: (s) => s.level >= 61,
+  },
+];
+ 
+/* Group metadata — label + icon shown as the section header for each cluster */
+const ACHIEVEMENT_GROUPS = [
+  { key: "quests", label: "Quests", icon: '<path d="M9 3v2H4v16h16V9h2v14H2V3h7Zm10 6-9 9-4-4 1.4-1.4L10 15.2 17.6 7.6 19 9Z"/>' },
+  { key: "trials", label: "Challenge Lab", icon: '<path d="M13 2 3 14h7l-1 8 11-14h-7l1-6Z"/>' },
+  { key: "streaks", label: "Streaks", icon: '<path d="M12 2c1 3-2 4-2 7a3 3 0 0 0 6 0c1 2 2 4 2 6a6 6 0 1 1-12 0c0-4 3-7 3-9 0-1.5.5-3 1-4a4 4 0 0 0 2 0Z"/>' },
+  { key: "levels", label: "Levels", icon: '<path d="m12 2 2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.5 5.9 20.6l1.4-6.8-5.1-4.7 6.9-.8L12 2Z"/>' },
+  { key: "ranks", label: "Ranks", icon: '<path d="M12 2 4 5v6c0 5 3.4 8.9 8 11 4.6-2.1 8-6 8-11V5l-8-3Zm0 2.2 6 2.2v4.6c0 3.9-2.5 7-6 8.8-3.5-1.8-6-4.9-6-8.8V6.4l6-2.2Z"/>' },
+];
+ 
+ 
+/* ============================================================
+   XELI LEVELING SYSTEM — app logic
+   ============================================================ */
+(() => {
+  "use strict";
+ 
+  const STORAGE_KEY = "xeli_leveling_state_v1";
+  const MAX_LEVEL = 100;
+ 
+  const RANKS = [
+    { rank: "E", min: 1,  max: 20,  title: "The Awakened" },
+    { rank: "D", min: 21, max: 40,  title: "Rising Hunter" },
+    { rank: "C", min: 41, max: 60,  title: "Seasoned Hunter" },
+    { rank: "B", min: 61, max: 80,  title: "Elite Hunter" },
+    { rank: "A", min: 81, max: 95,  title: "National-Level Hunter" },
+    { rank: "S", min: 96, max: 100, title: "Sovereign of the System" },
+  ];
+ 
+  const DIFF_LABELS = { 25: "Easy", 50: "Normal", 100: "Hard", 200: "Elite" };
+ 
+  // ---------------------------------------------------------
+  // STATE
+  // ---------------------------------------------------------
+  function defaultState() {
+    return {
+      name: "Hunter",
+      level: 1,
+      exp: 0,
+      totalExp: 0,
+      streak: 0,
+      lastActiveDay: null,
+      quests: [],          // {id,title,notes,category,exp,done,createdAt}
+      solvedChallenges: [], // challenge ids
+      activity: [],         // {text, time}
+      dailyExp: {},          // { "YYYY-MM-DD": expEarnedThatDay }
+      unlockedAchievements: [], // achievement ids
+      soundEnabled: true,
+      bgmEnabled: true,
+      bgmVolume: 65,
+      guild: "Hunter Association",
+      isLoggedIn: true,
+      rememberMe: true,
+      password: "hunter1998",
+      supabaseAutoSync: true,
+      lastSupabaseSync: null,
+    };
+  }
+ 
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      const parsed = JSON.parse(raw);
+      return { ...defaultState(), ...parsed };
+    } catch (e) {
+      console.warn("Could not read saved state, starting fresh.", e);
+      return defaultState();
+    }
+  }
+ 
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (typeof triggerSupabaseAutoSync === "function") {
+      triggerSupabaseAutoSync();
+    }
+  }
+ 
+  function sanitizeState(obj) {
+    const merged = { ...defaultState(), ...obj };
+    if (typeof merged.level !== "number" || isNaN(merged.level)) merged.level = 1;
+    if (typeof merged.exp !== "number" || isNaN(merged.exp)) merged.exp = 0;
+    if (typeof merged.totalExp !== "number" || isNaN(merged.totalExp)) merged.totalExp = 0;
+    if (typeof merged.streak !== "number" || isNaN(merged.streak)) merged.streak = 0;
+    if (!Array.isArray(merged.quests)) merged.quests = [];
+    if (!Array.isArray(merged.solvedChallenges)) merged.solvedChallenges = [];
+    if (!Array.isArray(merged.activity)) merged.activity = [];
+    if (!Array.isArray(merged.unlockedAchievements)) merged.unlockedAchievements = [];
+    if (typeof merged.soundEnabled !== "boolean") merged.soundEnabled = true;
+    if (typeof merged.bgmEnabled !== "boolean") merged.bgmEnabled = true;
+    if (typeof merged.bgmVolume !== "number" || isNaN(merged.bgmVolume)) merged.bgmVolume = 65;
+    if (typeof merged.dailyExp !== "object" || merged.dailyExp === null) merged.dailyExp = {};
+    if (typeof merged.name !== "string" || !merged.name.trim()) merged.name = "Hunter";
+    if (typeof merged.guild !== "string" || !merged.guild.trim()) merged.guild = "Hunter Association";
+    if (typeof merged.isLoggedIn !== "boolean") merged.isLoggedIn = true;
+    if (typeof merged.rememberMe !== "boolean") merged.rememberMe = true;
+    if (typeof merged.password !== "string") merged.password = "hunter1998";
+    if (typeof merged.supabaseAutoSync !== "boolean") merged.supabaseAutoSync = true;
+    if (typeof merged.lastSupabaseSync !== "string" && merged.lastSupabaseSync !== null) merged.lastSupabaseSync = null;
+    return merged;
+  }
+ 
+  let state = loadState();
+ 
+  // ---------------------------------------------------------
+  // SOUND ENGINE — synthesized retro "hacker terminal" beeps.
+  // No audio files; everything is generated with Web Audio oscillators.
+  // ---------------------------------------------------------
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+ 
+  function beep(freq, duration, type, volume, delay) {
+    if (!state.soundEnabled) return;
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || "square";
+    osc.frequency.value = freq;
+    const start = ctx.currentTime + (delay || 0);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(volume || 0.04, start + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + (duration || 0.05));
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + (duration || 0.05) + 0.03);
+  }
+ 
+  function playClick() {
+    beep(680 + Math.random() * 260, 0.04, "square", 0.03);
+  }
+  function playSuccess() {
+    beep(660, 0.08, "square", 0.05, 0);
+    beep(990, 0.12, "square", 0.05, 0.08);
+  }
+  function playError() {
+    beep(260, 0.05, "sawtooth", 0.06, 0);
+    beep(160, 0.16, "sawtooth", 0.06, 0.05);
+  }
+  function playLevelUp() {
+    [523, 659, 784, 1046].forEach((f, i) => beep(f, 0.12, "square", 0.055, i * 0.09));
+  }
+  function playUnlock() {
+    beep(784, 0.07, "square", 0.05, 0);
+    beep(1046, 0.14, "square", 0.05, 0.07);
+  }
+  function playPower() {
+    beep(520, 0.05, "square", 0.05, 0);
+    beep(320, 0.05, "square", 0.05, 0.06);
+    beep(160, 0.14, "square", 0.05, 0.12);
+  }
+  function playLogonChime() {
+    if (!state.soundEnabled) return;
+    const notes = [
+      { f: 392.0, d: 0.26, t: 0.0, type: "triangle", v: 0.06 },  // G4
+      { f: 523.25, d: 0.28, t: 0.08, type: "triangle", v: 0.07 },// C5
+      { f: 659.25, d: 0.32, t: 0.18, type: "triangle", v: 0.07 },// E5
+      { f: 783.99, d: 0.42, t: 0.3, type: "triangle", v: 0.08 }, // G5
+      { f: 1046.5, d: 0.65, t: 0.42, type: "sine", v: 0.09 },    // C6
+    ];
+    notes.forEach((n) => beep(n.f, n.d, n.type, n.v, n.t));
+  }
+  function playLogoffSound() {
+    if (!state.soundEnabled) return;
+    beep(523.25, 0.12, "triangle", 0.06, 0.0);
+    beep(392.0, 0.14, "triangle", 0.06, 0.1);
+    beep(261.63, 0.24, "sine", 0.07, 0.22);
+  }
+ 
+  // Every click on an interactive element gets a little terminal blip.
+  // Capture phase so it always fires, even if the target calls stopPropagation().
+  document.addEventListener(
+    "click",
+    (e) => {
+      const elTarget = e.target.closest(
+        "button, .nav-item, .tab, .quest-card, .challenge-card, .mcq-option, .qc-btn, .icon-btn, .retro-btn, .link-btn"
+      );
+      if (elTarget) playClick();
+    },
+    true
+  );
+ 
+  // ---------------------------------------------------------
+  // LEVEL / RANK MATH
+  // ---------------------------------------------------------
+  function requiredForLevel(level) {
+    return Math.round(100 + (level - 1) * 35);
+  }
+ 
+  function rankInfoForLevel(level) {
+    return RANKS.find((r) => level >= r.min && level <= r.max) || RANKS[0];
+  }
+
+  const RANK_AVATARS = [
+    {
+      min: 1,
+      max: 5,
+      rank: "E",
+      stageTitle: "E-Rank Hunter (Lv. 1–5)",
+      badge: "Lv. 1–5",
+      url: "/assets/rank_e_level_1_5.png",
+      description: "Weakest Hunter of All Mankind · Initial Awakening Stage",
+    },
+  ];
+
+  function getHunterAvatar(level) {
+    const matched = RANK_AVATARS.find((a) => level >= a.min && level <= a.max);
+    if (matched) return matched;
+    // For other levels in E-Rank (Lv 6-20), maintain the E-Rank visual progression
+    if (level <= 20) {
+      return {
+        min: 1,
+        max: 20,
+        rank: "E",
+        stageTitle: "E-Rank Hunter",
+        badge: `Lv. ${level}`,
+        url: "/assets/rank_e_level_1_5.png",
+        description: "E-Rank Awakened Hunter Stage",
+      };
+    }
+    return null;
+  }
+ 
+  function expHintText(rankInfo) {
+    if (state.level >= MAX_LEVEL) return "Max level reached — Rank S achieved.";
+    const nextRank = RANKS[RANKS.indexOf(rankInfo) + 1];
+    const levelsToNext = rankInfo.max - state.level + 1;
+    if (!nextRank) return `${levelsToNext} level${levelsToNext === 1 ? "" : "s"} to Level 100.`;
+    return `${levelsToNext} level${levelsToNext === 1 ? "" : "s"} to Rank ${nextRank.rank}.`;
+  }
+ 
+  function addExp(amount, reason) {
+    const beforeRank = rankInfoForLevel(state.level).rank;
+    state.totalExp += amount;
+    logDailyExp(amount);
+ 
+    if (state.level >= MAX_LEVEL) {
+      state.exp = requiredForLevel(MAX_LEVEL);
+      saveState();
+      logActivity(`+${amount} EXP — ${reason}`);
+      render();
+      return;
+    }
+ 
+    state.exp += amount;
+    let leveled = false;
+    while (state.level < MAX_LEVEL && state.exp >= requiredForLevel(state.level)) {
+      state.exp -= requiredForLevel(state.level);
+      state.level += 1;
+      leveled = true;
+    }
+    if (state.level >= MAX_LEVEL) {
+      state.level = MAX_LEVEL;
+      state.exp = Math.min(state.exp, requiredForLevel(MAX_LEVEL));
+    }
+ 
+    logActivity(`+${amount} EXP — ${reason}`);
+    touchStreak();
+    saveState();
+    render();
+ 
+    if (leveled) {
+      const afterRank = rankInfoForLevel(state.level).rank;
+      playLevelUp();
+      showLevelUp(state.level, beforeRank !== afterRank ? afterRank : null);
+    } else {
+      playSuccess();
+      showToast(`+${amount} EXP <b>${escapeHtml(reason)}</b>`);
+    }
+  }
+ 
+  function touchStreak() {
+    const today = new Date().toDateString();
+    if (state.lastActiveDay === today) return;
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    state.streak = state.lastActiveDay === yesterday ? state.streak + 1 : 1;
+    state.lastActiveDay = today;
+  }
+ 
+  function dateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+ 
+  function logDailyExp(amount) {
+    const key = dateKey(new Date());
+    state.dailyExp[key] = (state.dailyExp[key] || 0) + amount;
+  }
+ 
+  function logActivity(text) {
+    state.activity.unshift({ text, time: Date.now() });
+    state.activity = state.activity.slice(0, 30);
+  }
+ 
+  // ---------------------------------------------------------
+  // UTIL
+  // ---------------------------------------------------------
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+ 
+  function timeAgo(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return "just now";
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    return `${d}d ago`;
+  }
+ 
+  function uid() {
+    return Math.random().toString(36).slice(2, 10);
+  }
+ 
+  function deepEqual(a, b) {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+ 
+  // ---------------------------------------------------------
+  // DOM refs
+  // ---------------------------------------------------------
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+ 
+  const el = {
+    miniRing: $("#miniRing"), miniRank: $("#miniRank"), miniName: $("#miniName"), miniLevel: $("#miniLevel"),
+    miniAvatarThumb: $("#miniAvatarThumb"),
+    statStreak: $("#statStreak"), statTotalExp: $("#statTotalExp"),
+    viewTitle: $("#viewTitle"),
+    rankBadgeBig: $("#rankBadgeBig"), rankLetterBig: $("#rankLetterBig"),
+    hunterAvatar: $("#hunterAvatar"), hunterAvatarImg: $("#hunterAvatarImg"), hunterAvatarSvg: $("#hunterAvatarSvg"),
+    hunterNameInput: $("#hunterNameInput"), hunterTitle: $("#hunterTitle"),
+    levelNumber: $("#levelNumber"), expFill: $("#expFill"), expTrack: $("#expTrack"),
+    expCurrent: $("#expCurrent"), expRequired: $("#expRequired"), expHint: $("#expHint"),
+    statQuests: $("#statQuests"), statChallenges: $("#statChallenges"),
+    dashQuestList: $("#dashQuestList"), activityList: $("#activityList"),
+    questGrid: $("#questGrid"), questTabs: $("#questTabs"),
+    challengeGrid: $("#challengeGrid"), labTabs: $("#labTabs"),
+    roadmapTrack: $("#roadmapTrack"), roadmapFill: $("#roadmapFill"),
+    roadmapMarker: $("#roadmapMarker"), roadmapMarkerLv: $("#roadmapMarkerLv"),
+    calendarGrid: $("#calendarGrid"), calendarMonths: $("#calendarMonths"), calendarCaption: $("#calendarCaption"),
+    achievementGrid: $("#achievementGrid"), achUnlockedCount: $("#achUnlockedCount"),
+    achProgressFill: $("#achProgressFill"), achProgressLabel: $("#achProgressLabel"),
+    toastStack: $("#toastStack"),
+    levelupOverlay: $("#levelupOverlay"), levelupNumber: $("#levelupNumber"), levelupRankline: $("#levelupRankline"),
+    levelupAvatarPreview: $("#levelupAvatarPreview"), levelupAvatarImg: $("#levelupAvatarImg"),
+  };
+ 
+  let questFilter = "active";
+  let labCategory = "networking";
+ 
+  // ---------------------------------------------------------
+  // RENDER: header / hero / sidebar
+  // ---------------------------------------------------------
+  function render() {
+    const rankInfo = rankInfoForLevel(state.level);
+    const required = requiredForLevel(state.level);
+    const pct = state.level >= MAX_LEVEL ? 100 : Math.min(100, (state.exp / required) * 100);
+ 
+    document.body.setAttribute("data-rank", rankInfo.rank);
+ 
+    el.miniRank.textContent = rankInfo.rank;
+    el.miniName.textContent = state.name;
+    el.miniLevel.textContent = state.level;
+
+    const miniGuildEl = $("#miniGuild");
+    if (miniGuildEl) {
+      miniGuildEl.textContent = state.guild ? state.guild.split(" ")[0] : "Association";
+    }
+    const miniAuthDot = $("#miniAuthDot");
+    if (miniAuthDot) {
+      if (state.isLoggedIn) {
+        miniAuthDot.classList.remove("is-off");
+        miniAuthDot.title = "Terminal Authorization Active";
+      } else {
+        miniAuthDot.classList.add("is-off");
+        miniAuthDot.title = "Terminal Authorization Required (Logged Off)";
+      }
+    }
+
+    const loginBtnLabel = $("#loginBtnLabel");
+    if (loginBtnLabel) {
+      if (state.isLoggedIn) {
+        const shortName = state.name.length > 8 ? state.name.slice(0, 7) + "…" : state.name;
+        loginBtnLabel.textContent = `Log Off (${shortName})`;
+      } else {
+        loginBtnLabel.textContent = "Log On...";
+      }
+    }
+ 
+    el.statStreak.textContent = `${state.streak}d`;
+    el.statTotalExp.textContent = state.totalExp.toLocaleString();
+ 
+    el.rankLetterBig.textContent = rankInfo.rank;
+
+    // Hunter Avatar based on Level (Lv. 1-5 E-Rank custom image)
+    const avatarData = getHunterAvatar(state.level);
+    if (el.hunterAvatarImg && el.hunterAvatarSvg) {
+      if (avatarData && avatarData.url) {
+        el.hunterAvatarImg.src = avatarData.url;
+        el.hunterAvatarImg.alt = `${avatarData.stageTitle} Avatar`;
+        el.hunterAvatarImg.style.display = "block";
+        el.hunterAvatarSvg.style.display = "none";
+        if (el.hunterAvatar) {
+          el.hunterAvatar.title = `${avatarData.stageTitle} (Current: Lv. ${state.level})`;
+        }
+        if (el.miniAvatarThumb) {
+          el.miniAvatarThumb.src = avatarData.url;
+          el.miniAvatarThumb.style.display = "block";
+        }
+      } else {
+        el.hunterAvatarImg.style.display = "none";
+        el.hunterAvatarSvg.style.display = "block";
+        if (el.miniAvatarThumb) el.miniAvatarThumb.style.display = "none";
+      }
+    }
+
+    el.hunterNameInput.value = state.name;
+    el.hunterTitle.textContent = `${rankInfo.title} · ${state.guild || "Hunter Association"}`;
+    el.levelNumber.textContent = state.level;
+    el.expFill.style.width = pct + "%";
+    el.expCurrent.textContent = state.level >= MAX_LEVEL ? required : state.exp;
+    el.expRequired.textContent = required;
+    el.expTrack.setAttribute("aria-valuenow", Math.round(pct));
+    el.expHint.textContent = expHintText(rankInfo);
+ 
+    el.statQuests.textContent = state.quests.filter((q) => q.done).length;
+    el.statChallenges.textContent = state.solvedChallenges.length;
+ 
+    renderDashQuestList();
+    renderActivity();
+    renderQuests();
+    renderChallenges();
+    renderRoadmap(rankInfo);
+    renderCalendar();
+    renderAchievements();
+    checkAchievements();
+  }
+ 
+  function renderDashQuestList() {
+    const active = state.quests.filter((q) => !q.done).slice(0, 5);
+    if (!active.length) {
+      el.dashQuestList.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" class="empty-icon"><path d="M9 3v2H4v16h16V9h2v14H2V3h7Zm10 6-9 9-4-4 1.4-1.4L10 15.2 17.6 7.6 19 9Z"/></svg><p>No active quests. Head to the Quests tab to log one.</p></div>`;
+      return;
+    }
+    el.dashQuestList.innerHTML = active
+      .map((q) => `
+        <div class="mini-quest">
+          <span>${escapeHtml(q.title)}</span>
+          <span class="mq-exp">+${q.exp} EXP</span>
+        </div>`)
+      .join("");
+  }
+ 
+  function renderActivity() {
+    if (!state.activity.length) {
+      el.activityList.innerHTML = `<li class="empty-state"><svg viewBox="0 0 24 24" class="empty-icon"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3Zm1 4v6l5 3-.75 1.3L12 14V7h2Z"/></svg><p>Your history will appear here once you start earning EXP.</p></li>`;
+      return;
+    }
+    el.activityList.innerHTML = state.activity
+      .slice(0, 10)
+      .map(
+        (a) => `
+        <li class="activity-item">
+          <span class="activity-dot"></span>
+          <span>${escapeHtml(a.text)}</span>
+          <span class="activity-time">${timeAgo(a.time)}</span>
+        </li>`
+      )
+      .join("");
+  }
+ 
+  // ---------------------------------------------------------
+  // RENDER: quests
+  // ---------------------------------------------------------
+  function renderQuests() {
+    let list = state.quests;
+    if (questFilter === "active") list = list.filter((q) => !q.done);
+    if (questFilter === "completed") list = list.filter((q) => q.done);
+ 
+    if (!list.length) {
+      const msg =
+        questFilter === "completed"
+          ? "No quests completed yet. Clear one to see it here."
+          : "No quests yet. Create your first quest to start earning EXP.";
+      el.questGrid.innerHTML = `<p class="empty-note">${msg}</p>`;
+      return;
+    }
+ 
+    el.questGrid.innerHTML = list
+      .slice()
+      .reverse()
+      .map((q) => `
+        <div class="quest-card ${q.done ? "is-done" : ""}" data-id="${q.id}" tabindex="0" role="button" aria-label="Open ${escapeHtml(q.title)}">
+          <div class="qc-top">
+            <div>
+              <span class="qc-cat">${escapeHtml(q.category)}</span>
+              <div class="qc-title">${escapeHtml(q.title)}</div>
+            </div>
+            <span class="diff-tag">${DIFF_LABELS[q.exp] || "Custom"}</span>
+          </div>
+          ${q.notes ? `<p class="qc-notes">${escapeHtml(q.notes)}</p>` : ""}
+          <div class="qc-bottom">
+            <span class="qc-exp">${q.done ? "Cleared" : `+${q.exp} EXP`}</span>
+            <div class="qc-actions">
+              ${
+                q.done
+                  ? ""
+                  : `<button class="qc-btn" data-complete="${q.id}" title="Mark complete" aria-label="Mark complete">
+                      <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg>
+                    </button>`
+              }
+              <button class="qc-btn danger" data-delete="${q.id}" title="Delete quest" aria-label="Delete quest">
+                <svg viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7L6 7Zm3-4h6l1 2H8l1-2ZM9 10v8m6-8v8"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>`)
+      .join("");
+  }
+ 
+  function addQuest(data) {
+    state.quests.push({
+      id: uid(),
+      title: data.title,
+      notes: data.notes,
+      category: data.category,
+      exp: Number(data.exp),
+      done: false,
+      createdAt: Date.now(),
+    });
+    saveState();
+    render();
+  }
+ 
+  function updateQuest(id, data) {
+    const q = state.quests.find((x) => x.id === id);
+    if (!q) return;
+    q.title = data.title;
+    q.notes = data.notes;
+    q.category = data.category;
+    q.exp = Number(data.exp);
+    saveState();
+    render();
+  }
+ 
+  function completeQuest(id) {
+    const q = state.quests.find((x) => x.id === id);
+    if (!q || q.done) return;
+    q.done = true;
+    addExp(q.exp, `Quest cleared: ${q.title}`);
+  }
+ 
+  function deleteQuest(id) {
+    state.quests = state.quests.filter((x) => x.id !== id);
+    saveState();
+    render();
+  }
+ 
+  // ---------------------------------------------------------
+  // RENDER: challenge lab
+  // ---------------------------------------------------------
+  const CATEGORY_ICON = {
+    coding: '<path d="M9 7 3 12l6 5 1.4-1.4L5.8 12l4.6-3.6L9 7Zm6 0-1.4 1.4L18.2 12l-4.6 3.6L15 17l6-5-6-5Z"/>',
+    networking: '<path d="M12 3 3 8v2h2v9h4v-6h6v6h4v-9h2V8L12 3Zm0 2.3 6 3.4v.3H6v-.3l6-3.4Z"/>',
+    sysadmin: '<path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v12h14V6H5Zm1.6 2 3.6 3-3.6 3-1.2-1.4L8.4 11 5.4 9.4 6.6 8Zm5.4 6h6v2h-6v-2Z"/>',
+  };
+ 
+  function renderChallenges() {
+    const items = CHALLENGES.filter((c) => c.cat === labCategory);
+    if (!items.length) {
+      el.challengeGrid.innerHTML = `<p class="empty-note">No trials in this track yet.</p>`;
+      return;
+    }
+    el.challengeGrid.innerHTML = items
+      .map((c) => {
+        const solved = state.solvedChallenges.includes(c.id);
+        return `
+        <button class="challenge-card ${solved ? "is-solved" : ""}" data-id="${c.id}">
+          <div class="cc-top">
+            <div class="cc-left">
+              <span class="cc-icon"><svg viewBox="0 0 24 24">${CATEGORY_ICON[c.cat] || ""}</svg></span>
+              <span class="diff-tag">${c.difficulty}</span>
+            </div>
+            <span class="cc-check">
+              <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg>
+            </span>
+          </div>
+          <span class="cc-title">${escapeHtml(c.title)}</span>
+          <div class="cc-divider"></div>
+          <div class="cc-bottom">
+            <span class="cc-exp-pill ${solved ? "is-cleared" : ""}">${solved ? "Cleared" : `+${c.exp} EXP`}</span>
+          </div>
+        </button>`;
+      })
+      .join("");
+  }
+ 
+  // ---------------------------------------------------------
+  // RENDER: roadmap
+  // ---------------------------------------------------------
+  function renderRoadmap(rankInfo) {
+    const pct = ((state.level - 1) / (MAX_LEVEL - 1)) * 100;
+    el.roadmapFill.style.width = pct + "%";
+    el.roadmapMarker.style.left = pct + "%";
+    el.roadmapMarkerLv.textContent = state.level;
+    $$(".zone").forEach((z) => z.classList.toggle("is-current", z.dataset.rank === rankInfo.rank));
+  }
+ 
+  // ---------------------------------------------------------
+  // RENDER: progress calendar (GitHub-style heatmap)
+  // ---------------------------------------------------------
+  const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const CELL_STEP = 14; // 11px cell + 3px gap
+ 
+  function expToLevel(exp) {
+    if (!exp) return 0;
+    if (exp < 50) return 1;
+    if (exp < 100) return 2;
+    if (exp < 200) return 3;
+    return 4;
+  }
+ 
+  function buildCalendarWeeks() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const totalDays = 371; // 53 full weeks
+    const rangeStart = new Date(today);
+    rangeStart.setDate(rangeStart.getDate() - (totalDays - 1));
+    rangeStart.setDate(rangeStart.getDate() - rangeStart.getDay()); // snap back to Sunday
+ 
+    const weeks = [];
+    let cursor = new Date(rangeStart);
+    while (cursor <= today) {
+      const week = [];
+      for (let i = 0; i < 7; i++) {
+        week.push(new Date(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+    return { weeks, today };
+  }
+ 
+  function renderCalendar() {
+    const { weeks, today } = buildCalendarWeeks();
+ 
+    // ----- grid cells -----
+    const cellsHtml = [];
+    for (const week of weeks) {
+      for (const day of week) {
+        if (day > today) {
+          cellsHtml.push(`<span class="cal-cell is-future"></span>`);
+          continue;
+        }
+        const key = dateKey(day);
+        const exp = state.dailyExp[key] || 0;
+        const level = expToLevel(exp);
+        const label = `${day.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}: ${exp} EXP`;
+        cellsHtml.push(`<span class="cal-cell" data-level="${level}" title="${escapeHtml(label)}"></span>`);
+      }
+    }
+    el.calendarGrid.innerHTML = cellsHtml.join("");
+ 
+    // ----- month labels (skip a label if it would collide with the previous one) -----
+    const labels = [];
+    let lastMonth = null;
+    let lastLabelIndex = -Infinity;
+    const MIN_LABEL_GAP = 3; // columns
+    weeks.forEach((week, i) => {
+      const firstOfWeek = week[0];
+      const m = firstOfWeek.getMonth();
+      if (m !== lastMonth) {
+        lastMonth = m;
+        if (i - lastLabelIndex >= MIN_LABEL_GAP) {
+          labels.push(`<span class="calendar-month-label" style="left:${i * CELL_STEP}px">${MONTH_ABBR[m]}</span>`);
+          lastLabelIndex = i;
+        }
+      }
+    });
+    el.calendarMonths.innerHTML = labels.join("");
+    el.calendarMonths.style.width = weeks.length * CELL_STEP + "px";
+ 
+    // ----- total for range -----
+    let total = 0;
+    for (const week of weeks) {
+      for (const day of week) {
+        if (day > today) continue;
+        total += state.dailyExp[dateKey(day)] || 0;
+      }
+    }
+    el.calendarCaption.textContent = `${total.toLocaleString()} EXP earned in the last year`;
+  }
+ 
+  // ---------------------------------------------------------
+  // RENDER: achievements
+  // ---------------------------------------------------------
+  function renderAchievements() {
+    const unlocked = state.unlockedAchievements;
+    const total = ACHIEVEMENTS.length;
+    const pct = total ? (unlocked.length / total) * 100 : 0;
+    el.achUnlockedCount.textContent = `${unlocked.length}/${total}`;
+    if (el.achProgressFill) el.achProgressFill.style.width = pct + "%";
+    if (el.achProgressLabel) el.achProgressLabel.textContent = `${unlocked.length} of ${total} unlocked`;
+ 
+    el.achievementGrid.innerHTML = ACHIEVEMENT_GROUPS.map((group) => {
+      const items = ACHIEVEMENTS.filter((a) => a.group === group.key);
+      if (!items.length) return "";
+      const cardsHtml = items
+        .map((a) => {
+          const isUnlocked = unlocked.includes(a.id);
+          return `
+            <div class="achievement-card ${isUnlocked ? "is-unlocked" : ""}">
+              ${!isUnlocked ? `<span class="ach-lock"><svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v3H7a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-1V6a4 4 0 0 0-4-4Zm2 7H10V6a2 2 0 1 1 4 0v3Z"/></svg></span>` : ""}
+              <span class="ach-icon"><svg viewBox="0 0 24 24">${group.icon}</svg></span>
+              <span class="ach-title">${escapeHtml(a.title)}</span>
+              <span class="ach-desc">${escapeHtml(a.desc)}</span>
+            </div>`;
+        })
+        .join("");
+      return `
+        <div class="ach-group">
+          <div class="ach-group-head">
+            <svg viewBox="0 0 24 24" class="ach-group-icon">${group.icon}</svg>
+            <span>${group.label}</span>
+          </div>
+          <div class="achievement-grid">${cardsHtml}</div>
+        </div>`;
+    }).join("");
+  }
+ 
+  function checkAchievements() {
+    let unlockedSomething = false;
+    ACHIEVEMENTS.forEach((a) => {
+      if (state.unlockedAchievements.includes(a.id)) return;
+      if (a.check(state)) {
+        state.unlockedAchievements.push(a.id);
+        logActivity(`Achievement unlocked: ${a.title}`);
+        showToast(`🏅 Achievement unlocked — <b>${escapeHtml(a.title)}</b>`);
+        playUnlock();
+        unlockedSomething = true;
+      }
+    });
+    if (unlockedSomething) {
+      saveState();
+      renderAchievements();
+    }
+  }
+ 
+  // ---------------------------------------------------------
+  // NAVIGATION
+  // ---------------------------------------------------------
+  const VIEW_TITLES = {
+    dashboard: "Hunter Status",
+    quests: "Quest Log",
+    lab: "Challenge Lab",
+    roadmap: "Rank Path",
+    achievements: "Achievements",
+  };
+ 
+  function switchView(view) {
+    $$(".nav-item").forEach((b) => b.classList.toggle("is-active", b.dataset.view === view));
+    $$(".view").forEach((v) => v.classList.remove("is-active"));
+    $(`#view-${view}`).classList.add("is-active");
+    el.viewTitle.textContent = VIEW_TITLES[view] || "Xeli";
+  }
+ 
+  $$("[data-view]").forEach((btn) => btn.addEventListener("click", () => switchView(btn.dataset.view)));
+ 
+  // ---------------------------------------------------------
+  // MODALS
+  // ---------------------------------------------------------
+  function openModal(id) {
+    $(`#${id}`).classList.add("is-open");
+  }
+  function closeModal(id) {
+    $(`#${id}`).classList.remove("is-open");
+  }
+  $$("[data-close]").forEach((btn) =>
+    btn.addEventListener("click", () => closeModal(btn.dataset.close))
+  );
+  $$(".modal-overlay").forEach((overlay) =>
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.classList.remove("is-open");
+    })
+  );
+ 
+  // ---------------------------------------------------------
+  // QUEST FORM (create + edit share the same modal)
+  // ---------------------------------------------------------
+  let editingQuestId = null;
+ 
+  function openQuestForm(quest) {
+    editingQuestId = quest ? quest.id : null;
+    $("#modalQuestTitle").textContent = quest ? "Edit Quest" : "Log a New Quest";
+    $("#questForm button[type='submit']").textContent = quest ? "Save Changes" : "Add Quest";
+    $("#questTitle").value = quest ? quest.title : "";
+    $("#questNotes").value = quest ? quest.notes || "" : "";
+    $("#questCategory").value = quest ? quest.category : "General";
+    $("#questDifficulty").value = quest ? String(quest.exp) : "50";
+    openModal("modalQuest");
+    $("#questTitle").focus();
+  }
+ 
+  $("#openQuestModal").addEventListener("click", () => openQuestForm(null));
+ 
+  $("#questForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const title = $("#questTitle").value.trim();
+    if (!title) return;
+    const data = {
+      title,
+      notes: $("#questNotes").value.trim(),
+      category: $("#questCategory").value,
+      exp: $("#questDifficulty").value,
+    };
+    if (editingQuestId) {
+      updateQuest(editingQuestId, data);
+      showToast(`Quest updated: <b>${escapeHtml(title)}</b>`);
+    } else {
+      addQuest(data);
+      showToast(`Quest logged: <b>${escapeHtml(title)}</b>`);
+    }
+    editingQuestId = null;
+    e.target.reset();
+    closeModal("modalQuest");
+  });
+ 
+  $("#questGrid").addEventListener("click", (e) => {
+    const completeId = e.target.closest("[data-complete]")?.dataset.complete;
+    const deleteId = e.target.closest("[data-delete]")?.dataset.delete;
+    if (completeId) { e.stopPropagation(); completeQuest(completeId); return; }
+    if (deleteId) { e.stopPropagation(); deleteQuest(deleteId); return; }
+    const card = e.target.closest(".quest-card");
+    if (card) openQuestDetail(card.dataset.id);
+  });
+ 
+  $("#questGrid").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const card = e.target.closest(".quest-card");
+    if (!card) return;
+    e.preventDefault();
+    openQuestDetail(card.dataset.id);
+  });
+ 
+  // ---------------------------------------------------------
+  // QUEST DETAIL MODAL
+  // ---------------------------------------------------------
+  function openQuestDetail(id) {
+    const q = state.quests.find((x) => x.id === id);
+    if (!q) return;
+    $("#qdTitle").textContent = q.title;
+    $("#qdMeta").textContent = `${q.category} · ${DIFF_LABELS[q.exp] || "Custom"} · ${q.exp} EXP${q.done ? " · Cleared" : ""}`;
+    $("#qdNotes").textContent = q.notes || "No notes added for this quest.";
+ 
+    const actions = $("#qdActions");
+    actions.innerHTML = `
+      ${q.done ? "" : `<button class="btn btn-primary" id="qdComplete">Mark Complete</button>`}
+      <button class="btn btn-ghost" id="qdEdit">Edit</button>
+      <button class="btn btn-ghost" id="qdDelete">Delete</button>
+    `;
+    if (!q.done) {
+      $("#qdComplete").addEventListener("click", () => {
+        completeQuest(q.id);
+        closeModal("modalQuestDetail");
+      });
+    }
+    $("#qdEdit").addEventListener("click", () => {
+      closeModal("modalQuestDetail");
+      openQuestForm(q);
+    });
+    $("#qdDelete").addEventListener("click", () => {
+      deleteQuest(q.id);
+      closeModal("modalQuestDetail");
+    });
+ 
+    openModal("modalQuestDetail");
+  }
+ 
+  $("#questTabs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab");
+    if (!btn) return;
+    questFilter = btn.dataset.filter;
+    $$("#questTabs .tab").forEach((t) => t.classList.toggle("is-active", t === btn));
+    renderQuests();
+  });
+ 
+  // ---------------------------------------------------------
+  // HUNTER NAME
+  // ---------------------------------------------------------
+  el.hunterNameInput.addEventListener("change", () => {
+    const val = el.hunterNameInput.value.trim() || "Hunter";
+    state.name = val;
+    saveState();
+    render();
+  });
+ 
+  // ---------------------------------------------------------
+  // LAB TABS
+  // ---------------------------------------------------------
+  $("#labTabs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab");
+    if (!btn) return;
+    labCategory = btn.dataset.cat;
+    $$("#labTabs .tab").forEach((t) => t.classList.toggle("is-active", t === btn));
+    renderChallenges();
+  });
+ 
+  // ---------------------------------------------------------
+  // CHALLENGE MODAL
+  // ---------------------------------------------------------
+  let pyodidePromise = null;
+  function getPyodide() {
+    if (!pyodidePromise) {
+      pyodidePromise = window.loadPyodide();
+    }
+    return pyodidePromise;
+  }
+ 
+  $("#challengeGrid").addEventListener("click", (e) => {
+    const card = e.target.closest("[data-id]");
+    if (!card) return;
+    const challenge = CHALLENGES.find((c) => c.id === card.dataset.id);
+    if (challenge) openChallenge(challenge);
+  });
+ 
+  function openChallenge(c) {
+    const solved = state.solvedChallenges.includes(c.id);
+    $("#chTitle").textContent = c.title;
+    $("#chMeta").textContent = `${labLabel(c.cat)} · ${c.difficulty} · ${c.exp} EXP${solved ? " · Cleared" : ""}`;
+ 
+    const body = $("#chBody");
+    const type = c.type || "code";
+ 
+    if (type === "code") {
+      body.innerHTML = `
+        <p class="ch-prompt">${c.prompt}</p>
+        <textarea class="code-editor" id="codeEditor" spellcheck="false">${escapeHtml(c.starter)}</textarea>
+        <div class="run-row">
+          <button class="btn btn-primary" id="runCodeBtn">▶ Run Trial</button>
+          <span class="run-status" id="runStatus"></span>
+        </div>
+        <div class="console" id="consoleOut"></div>
+      `;
+      // allow tab key in editor
+      const editor = $("#codeEditor");
+      editor.addEventListener("keydown", (e2) => {
+        if (e2.key === "Tab") {
+          e2.preventDefault();
+          const s = editor.selectionStart, en = editor.selectionEnd;
+          editor.value = editor.value.slice(0, s) + "    " + editor.value.slice(en);
+          editor.selectionStart = editor.selectionEnd = s + 4;
+        }
+      });
+      $("#runCodeBtn").addEventListener("click", () => runCodeChallenge(c));
+    } else if (type === "mcq") {
+      body.innerHTML = `
+        <p class="ch-prompt">${c.prompt}</p>
+        <div class="mcq-list" id="mcqList">
+          ${c.options
+            .map(
+              (opt, i) => `
+            <label class="mcq-option" data-index="${i}">
+              <input type="radio" name="mcq" value="${i}">
+              <span>${escapeHtml(opt)}</span>
+            </label>`
+            )
+            .join("")}
+        </div>
+        <div class="result-banner" id="resultBanner"></div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="submitAnswerBtn">Submit Answer</button>
+        </div>
+      `;
+      $$(".mcq-option").forEach((opt) =>
+        opt.addEventListener("click", () => {
+          $$(".mcq-option").forEach((o) => o.classList.remove("is-selected"));
+          opt.classList.add("is-selected");
+          opt.querySelector("input").checked = true;
+        })
+      );
+      $("#submitAnswerBtn").addEventListener("click", () => {
+        const chosen = document.querySelector('input[name="mcq"]:checked');
+        if (!chosen) return;
+        const idx = Number(chosen.value);
+        const pass = idx === c.answerIndex;
+        $$(".mcq-option").forEach((o, i) => {
+          if (i === c.answerIndex) o.classList.add("is-correct");
+          else if (i === idx && !pass) o.classList.add("is-wrong");
+        });
+        showResult(pass, c);
+      });
+    } else if (type === "input") {
+      body.innerHTML = `
+        <p class="ch-prompt">${c.prompt}</p>
+        <div class="field input-answer">
+          <span>Your answer</span>
+          <input type="text" id="answerInput" autocomplete="off" placeholder="Type your answer...">
+        </div>
+        <div class="result-banner" id="resultBanner"></div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="submitAnswerBtn">Submit Answer</button>
+        </div>
+      `;
+      const submit = () => {
+        const val = $("#answerInput").value.trim().toLowerCase().replace(/\s+/g, " ");
+        const expected = c.answer.trim().toLowerCase().replace(/\s+/g, " ");
+        showResult(val === expected, c);
+      };
+      $("#submitAnswerBtn").addEventListener("click", submit);
+      $("#answerInput").addEventListener("keydown", (e2) => {
+        if (e2.key === "Enter") submit();
+      });
+    } else if (type === "lab") {
+      renderLabChallenge(c, solved);
+    }
+ 
+    openModal("modalChallenge");
+  }
+ 
+  function renderLabChallenge(c, solved) {
+    const body = $("#chBody");
+    let checkIndex = 0;
+ 
+    const sectionsHtml = c.sections
+      .map((section) => {
+        const checklistHtml = (section.checklist || [])
+          .map((item) => {
+            const id = `labcheck-${checkIndex++}`;
+            return `
+              <label class="lab-check-item" for="${id}">
+                <input type="checkbox" id="${id}" class="lab-check" ${solved ? "checked disabled" : ""}>
+                <span>${escapeHtml(item)}</span>
+              </label>`;
+          })
+          .join("");
+ 
+        let reflectionHtml = "";
+        if (section.reflection) {
+          const r = section.reflection;
+          const fieldHtml =
+            r.type === "note"
+              ? `<textarea class="lab-reflection-input lab-note" rows="3"
+                  placeholder="${escapeHtml(r.placeholder || "")}" ${solved ? "disabled" : ""}></textarea>`
+              : `<div class="lab-reflection-grid">
+                  ${Array.from({ length: r.count || 1 })
+                    .map(
+                      (_, i) => `
+                    <input type="text" class="lab-reflection-input" data-idx="${i}"
+                      placeholder="${escapeHtml(r.placeholder || "")} ${i + 1}"
+                      ${solved ? "disabled" : ""}>`
+                    )
+                    .join("")}
+                </div>`;
+          reflectionHtml = `
+            <div class="lab-reflection">
+              <span class="lab-reflection-label">${escapeHtml(r.label)}</span>
+              ${fieldHtml}
+            </div>`;
+        }
+ 
+        return `
+          <div class="lab-section">
+            <h4 class="lab-heading">${escapeHtml(section.heading)}</h4>
+            <p class="lab-body">${section.body}</p>
+            ${checklistHtml ? `<div class="lab-checklist">${checklistHtml}</div>` : ""}
+            ${reflectionHtml}
+          </div>`;
+      })
+      .join("");
+ 
+    body.innerHTML = `
+      <p class="ch-prompt">${c.intro}</p>
+      ${sectionsHtml}
+      <div class="result-banner" id="resultBanner"></div>
+      <div class="lab-claim-row">
+        <span class="lab-progress" id="labProgress"></span>
+        <button class="btn btn-primary" id="submitLabBtn" ${solved ? "disabled" : ""}>
+          ${solved ? "EXP Claimed" : "Claim EXP"}
+        </button>
+      </div>
+    `;
+ 
+    if (solved) {
+      $("#labProgress").textContent = "All steps complete";
+      return;
+    }
+ 
+    const totalItems = () => $$(".lab-check").length + $$(".lab-reflection-input").length;
+    const doneItems = () =>
+      $$(".lab-check").filter((cb) => cb.checked).length +
+      $$(".lab-reflection-input").filter((inp) => inp.value.trim().length > 0).length;
+ 
+    const validate = () => {
+      const done = doneItems();
+      const total = totalItems();
+      $("#labProgress").textContent = `${done}/${total} done`;
+      $("#submitLabBtn").disabled = done < total;
+    };
+ 
+    $$(".lab-check").forEach((cb) => cb.addEventListener("change", validate));
+    $$(".lab-reflection-input").forEach((inp) => inp.addEventListener("input", validate));
+    validate();
+ 
+    $("#submitLabBtn").addEventListener("click", () => {
+      if (doneItems() < totalItems()) return;
+      showResult(true, c);
+      $$(".lab-check, .lab-reflection-input").forEach((elx) => (elx.disabled = true));
+      $("#submitLabBtn").disabled = true;
+      $("#submitLabBtn").textContent = "EXP Claimed";
+      $("#labProgress").textContent = "All steps complete";
+    });
+  }
+ 
+  function labLabel(cat) {
+    return { coding: "Coding · Python", networking: "Networking", sysadmin: "System & Sysadmin" }[cat] || cat;
+  }
+ 
+  function showResult(pass, c) {
+    const banner = $("#resultBanner");
+    banner.classList.add("is-open");
+    if (pass) {
+      banner.classList.remove("lose");
+      banner.classList.add("win");
+      banner.innerHTML = c.type === "lab" ? `<b>Claimed.</b> EXP added.` : `<b>Correct.</b> Trial cleared.`;
+      awardChallenge(c);
+    } else {
+      banner.classList.remove("win");
+      banner.classList.add("lose");
+      banner.innerHTML = `<b>Not quite.</b> Review the prompt and try again.`;
+      playError();
+    }
+  }
+ 
+  async function runCodeChallenge(c) {
+    const btn = $("#runCodeBtn");
+    const status = $("#runStatus");
+    const consoleOut = $("#consoleOut");
+    const code = $("#codeEditor").value;
+ 
+    btn.disabled = true;
+    consoleOut.classList.add("is-open");
+    status.textContent = "Booting Python engine…";
+    consoleOut.textContent = "";
+ 
+    try {
+      const pyodide = await getPyodide();
+      status.textContent = "Running trial…";
+ 
+      let defineError = null;
+      try {
+        await pyodide.runPythonAsync(code);
+      } catch (err) {
+        defineError = err;
+      }
+ 
+      if (defineError) {
+        consoleOut.innerHTML = `<span class="bad-line">${escapeHtml(String(defineError.message || defineError))}</span>`;
+        status.textContent = "Syntax / runtime error.";
+        playError();
+        btn.disabled = false;
+        return;
+      }
+ 
+      let passCount = 0;
+      const lines = [];
+      for (let i = 0; i < c.tests.length; i++) {
+        const test = c.tests[i];
+        try {
+          pyodide.globals.set("__args", pyodide.toPy(test.args));
+          const pyResult = await pyodide.runPythonAsync("solve(*__args)");
+          let jsResult;
+          try {
+            jsResult = pyResult && typeof pyResult.toJs === "function" ? pyResult.toJs({ dict_converter: Object.fromEntries }) : pyResult;
+          } catch (convErr) {
+            jsResult = pyResult;
+          }
+          const pass = deepEqual(jsResult, test.expected);
+          if (pass) passCount++;
+          lines.push(
+            `${pass ? "PASS" : "FAIL"}  test ${i + 1}: solve(${test.args.map((a) => JSON.stringify(a)).join(", ")}) → ${JSON.stringify(
+              jsResult
+            )}${pass ? "" : `  expected ${JSON.stringify(test.expected)}`}`
+          );
+        } catch (err) {
+          lines.push(`FAIL  test ${i + 1}: runtime error — ${err.message || err}`);
+        }
+      }
+ 
+      consoleOut.innerHTML = lines
+        .map((l) => `<span class="${l.startsWith("PASS") ? "ok-line" : "bad-line"}">${escapeHtml(l)}</span>`)
+        .join("\n");
+ 
+      const allPass = passCount === c.tests.length;
+      status.textContent = `${passCount}/${c.tests.length} tests passed.`;
+      btn.disabled = false;
+ 
+      if (allPass) {
+        consoleOut.innerHTML += `\n<span class="ok-line">All tests passed. Trial cleared.</span>`;
+        awardChallenge(c);
+      } else {
+        playError();
+      }
+    } catch (fatal) {
+      status.textContent = "Engine failed to load.";
+      consoleOut.innerHTML = `<span class="bad-line">${escapeHtml(String(fatal.message || fatal))}</span>`;
+      btn.disabled = false;
+    }
+  }
+ 
+  function awardChallenge(c) {
+    if (state.solvedChallenges.includes(c.id)) {
+      showToast(`Already cleared — practice run only.`);
+      return;
+    }
+    state.solvedChallenges.push(c.id);
+    renderChallenges();
+    addExp(c.exp, `Trial cleared: ${c.title}`);
+  }
+ 
+  // ---------------------------------------------------------
+  // LEVEL UP / TOASTS
+  // ---------------------------------------------------------
+  function showLevelUp(level, newRank) {
+    el.levelupNumber.textContent = level;
+    el.levelupRankline.textContent = newRank ? `Rank ascended to ${newRank}` : "";
+    const avatarData = getHunterAvatar(level);
+    if (el.levelupAvatarImg && el.levelupAvatarPreview) {
+      if (avatarData && avatarData.url) {
+        el.levelupAvatarImg.src = avatarData.url;
+        el.levelupAvatarPreview.style.display = "block";
+      } else {
+        el.levelupAvatarPreview.style.display = "none";
+      }
+    }
+    el.levelupOverlay.classList.add("is-open");
+    setTimeout(() => el.levelupOverlay.classList.remove("is-open"), 2400);
+  }
+  el.levelupOverlay.addEventListener("click", () => el.levelupOverlay.classList.remove("is-open"));
+
+  if (el.hunterAvatar) {
+    el.hunterAvatar.addEventListener("click", () => {
+      const avatarData = getHunterAvatar(state.level);
+      showToast(`🪪 <b>${avatarData ? escapeHtml(avatarData.stageTitle) : "Hunter Avatar"}</b>: ${avatarData && avatarData.description ? escapeHtml(avatarData.description) : "System clearance verified."}`);
+      beep(560, 0.08, "square", 0.05, 0);
+    });
+  }
+ 
+  function showToast(html) {
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.innerHTML = html;
+    el.toastStack.appendChild(t);
+    setTimeout(() => {
+      t.classList.add("leaving");
+      setTimeout(() => t.remove(), 300);
+    }, 3200);
+  }
+ 
+  // ---------------------------------------------------------
+  // BACKUP & RESTORE
+  // ---------------------------------------------------------
+  $("#openBackupModal").addEventListener("click", () => {
+    $("#backupFileStatus").textContent = "Choose a backup file…";
+    $("#importFileInput").value = "";
+    $("#importProgressBtn").disabled = true;
+    openModal("modalBackup");
+  });
+ 
+  $("#exportProgressBtn").addEventListener("click", () => {
+    const dataStr = JSON.stringify(state, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `xeli-progress-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast("Backup file downloaded.");
+  });
+ 
+  let pendingImportFile = null;
+  $("#importFileInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    pendingImportFile = file || null;
+    $("#backupFileStatus").textContent = file ? file.name : "Choose a backup file…";
+    $("#importProgressBtn").disabled = !file;
+  });
+ 
+  $("#importProgressBtn").addEventListener("click", () => {
+    if (!pendingImportFile) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (typeof parsed !== "object" || parsed === null || typeof parsed.level !== "number") {
+          throw new Error("Not a valid XELI backup file.");
+        }
+        state = sanitizeState(parsed);
+        saveState();
+        render();
+        closeModal("modalBackup");
+        showToast("Progress restored from backup.");
+      } catch (err) {
+        $("#backupFileStatus").textContent = "Invalid backup file.";
+        $("#importProgressBtn").disabled = true;
+      }
+    };
+    reader.readAsText(pendingImportFile);
+  });
+ 
+  // ---------------------------------------------------------
+  // SOUND TOGGLE
+  // ---------------------------------------------------------
+  function syncSoundLabel() {
+    const label = $("#soundBtnLabel");
+    if (label) label.textContent = state.soundEnabled ? "Sound: On" : "Sound: Off";
+  }
+  $("#toggleSoundBtn").addEventListener("click", () => {
+    state.soundEnabled = !state.soundEnabled;
+    saveState();
+    syncSoundLabel();
+    if (state.soundEnabled) playSuccess();
+  });
+  syncSoundLabel();
+ 
+  // ---------------------------------------------------------
+  // RESET PROGRESS
+  // ---------------------------------------------------------
+  // ---------------------------------------------------------
+  // SUPABASE CLOUD CONNECTION & SYNC CORE
+  // ---------------------------------------------------------
+  let currentSupabaseUser = null;
+  let supabaseSyncTimeout = null;
+
+  function formatAuthError(err) {
+    if (!err) return "An unknown error occurred during authentication.";
+    const msg = err.message || String(err);
+    if (msg.includes("Invalid login credentials") || msg.includes("invalid_credentials") || msg.includes("invalid_grant")) {
+      return "Invalid email or passkey. Please verify credentials.";
+    }
+    if (msg.includes("User already registered") || msg.includes("already_exists") || msg.includes("unique constraint")) {
+      return "This email is already registered. Please click 'Sign In' instead.";
+    }
+    if (msg.includes("Password should be at least 6 characters")) {
+      return "Security passkey must be at least 6 characters long.";
+    }
+    if (msg.includes("Email rate limit exceeded") || msg.includes("over_email_send_rate_limit")) {
+      return "Too many requests. Please wait a moment before trying again.";
+    }
+    if (msg.includes("Email not confirmed")) {
+      return "Please confirm your email address via the link sent to your inbox.";
+    }
+    if (msg.includes("popup_closed") || msg.includes("OAuth cancelled") || msg.includes("access_denied")) {
+      return "Google sign-in was cancelled or access was denied.";
+    }
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      return "Network communication error. Check your connection to Supabase.";
+    }
+    return msg;
+  }
+
+  async function updateSupabaseConnectionStatus(conn) {
+    const topDot = $("#supabaseTopStatusDot");
+    const sideDot = $("#supabaseSidebarDot");
+    const modalDot = $("#supabaseModalStatusDot");
+    const pingVal = $("#supabasePingVal");
+    const topLabel = $("#supabaseBtnLabel");
+    const sideState = $("#supabaseSidebarState");
+    const cloudStatusVal = $("#supabaseCloudStatusVal");
+
+    const dots = [topDot, sideDot, modalDot].filter(Boolean);
+    if (conn.ok) {
+      dots.forEach((d) => {
+        d.classList.remove("is-checking", "is-offline");
+        d.classList.add("is-connected");
+      });
+      if (pingVal) pingVal.textContent = `${conn.latency}ms`;
+      if (topLabel) topLabel.textContent = `Supabase: Online (${conn.latency}ms)`;
+      if (sideState) {
+        sideState.textContent = "ONLINE";
+        sideState.style.color = "#008000";
+      }
+      if (cloudStatusVal) cloudStatusVal.textContent = "Connected (Project efkkzgsuyttdfatihfxb)";
+    } else {
+      dots.forEach((d) => {
+        d.classList.remove("is-connected", "is-checking");
+        d.classList.add("is-offline");
+      });
+      if (pingVal) pingVal.textContent = "Offline";
+      if (topLabel) topLabel.textContent = "Supabase: Offline";
+      if (sideState) {
+        sideState.textContent = "OFFLINE";
+        sideState.style.color = "#aa0000";
+      }
+      if (cloudStatusVal) cloudStatusVal.textContent = `Offline: ${conn.error || "Network error"}`;
+    }
+  }
+
+  function updateSupabaseAuthUi() {
+    const signedOutSec = $("#supabaseSignedOutSection");
+    const signedInSec = $("#supabaseSignedInSection");
+    const userEmailVal = $("#supabaseUserEmailVal");
+    const userIdVal = $("#supabaseUserIdVal");
+    const lastSyncVal = $("#supabaseLastSyncedVal");
+    const autoSyncCheckbox = $("#supabaseAutoSyncCheckbox");
+    const loginBtnLabel = $("#loginBtnLabel");
+    const quickLogOutBtn = $("#quickLogOutBtn");
+    const loginActiveUserBanner = $("#loginActiveUserBanner");
+    const loginActiveUserText = $("#loginActiveUserText");
+    const loginSignOutBtn = $("#loginSignOutBtn");
+
+    if (autoSyncCheckbox) {
+      autoSyncCheckbox.checked = state.supabaseAutoSync !== false;
+    }
+
+    if (currentSupabaseUser) {
+      if (signedOutSec) signedOutSec.style.display = "none";
+      if (signedInSec) signedInSec.style.display = "block";
+      if (userEmailVal) userEmailVal.textContent = currentSupabaseUser.email || "Hunter";
+      if (userIdVal) userIdVal.textContent = currentSupabaseUser.id || "";
+      if (lastSyncVal) {
+        lastSyncVal.textContent = state.lastSupabaseSync
+          ? new Date(state.lastSupabaseSync).toLocaleTimeString() + " (" + timeAgo(new Date(state.lastSupabaseSync).getTime()) + ")"
+          : "Not yet synced";
+      }
+      if (loginBtnLabel) {
+        const displayName = currentSupabaseUser.user_metadata?.full_name || currentSupabaseUser.user_metadata?.name || currentSupabaseUser.email?.split("@")[0] || state.name;
+        loginBtnLabel.textContent = `${displayName} (Cloud)`;
+      }
+      if (quickLogOutBtn) quickLogOutBtn.style.display = "inline-flex";
+      if (loginActiveUserBanner) {
+        loginActiveUserBanner.style.display = "flex";
+        if (loginActiveUserText) {
+          loginActiveUserText.textContent = `Authenticated as: ${currentSupabaseUser.email || state.name} (Cloud Connected)`;
+        }
+      }
+      if (loginSignOutBtn) loginSignOutBtn.style.display = "inline-flex";
+    } else {
+      if (signedOutSec) signedOutSec.style.display = "block";
+      if (signedInSec) signedInSec.style.display = "none";
+      const isGuest = localStorage.getItem("xeli_guest_mode") === "true";
+      if (loginBtnLabel) loginBtnLabel.textContent = isGuest ? `${state.name} (Guest)` : "Log On...";
+      if (quickLogOutBtn) quickLogOutBtn.style.display = isGuest ? "inline-flex" : "none";
+      if (loginActiveUserBanner) loginActiveUserBanner.style.display = "none";
+      if (loginSignOutBtn) loginSignOutBtn.style.display = "none";
+    }
+  }
+
+  async function syncToSupabaseCloud(silent = false) {
+    if (!currentSupabaseUser) {
+      if (!silent) showToast("Please sign in with Supabase first to sync to cloud.");
+      return;
+    }
+    const syncMsg = $("#supabaseSyncMsg");
+    if (syncMsg && !silent) syncMsg.textContent = "Uploading hunter progress to Supabase Cloud...";
+    try {
+      const res = await saveProgressToSupabase(state);
+      state.lastSupabaseSync = res.timestamp;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      updateSupabaseAuthUi();
+      if (!silent) {
+        showToast("☁️ <b>Supabase Cloud Saved</b>: Progress synced successfully!");
+        if (syncMsg) syncMsg.textContent = `Uploaded at ${new Date(res.timestamp).toLocaleTimeString()}.`;
+        playSuccess();
+      }
+    } catch (err) {
+      console.warn("Cloud save failed:", err);
+      if (!silent) {
+        showToast(`Cloud save error: ${err.message}`);
+        if (syncMsg) syncMsg.textContent = `Upload failed: ${err.message}`;
+        playError();
+      }
+    }
+  }
+
+  async function restoreFromSupabaseCloud(silent = false) {
+    if (!currentSupabaseUser) {
+      if (!silent) showToast("Sign in to Supabase first.");
+      return;
+    }
+    const syncMsg = $("#supabaseSyncMsg");
+    if (syncMsg && !silent) syncMsg.textContent = "Downloading latest progress from Supabase Cloud...";
+    try {
+      const cloudData = await loadProgressFromSupabase();
+      if (cloudData) {
+        state = sanitizeState({ ...state, ...cloudData });
+        state.lastSupabaseSync = cloudData.syncedAt || new Date().toISOString();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        render();
+        updateSupabaseAuthUi();
+        if (!silent) {
+          showToast(`⚡ Restored Level <b>${state.level}</b> (${state.totalExp.toLocaleString()} EXP) from Supabase Cloud!`);
+          if (syncMsg) syncMsg.textContent = `Restored from cloud (${new Date(state.lastSupabaseSync).toLocaleTimeString()}).`;
+          playLevelUp();
+        }
+      } else {
+        if (!silent) {
+          showToast("No cloud save found for this account yet. Uploading current progress to cloud...");
+          syncToSupabaseCloud(false);
+        }
+      }
+    } catch (err) {
+      console.warn("Cloud restore failed:", err);
+      if (!silent) {
+        showToast(`Restore error: ${err.message}`);
+        if (syncMsg) syncMsg.textContent = `Restore failed: ${err.message}`;
+        playError();
+      }
+    }
+  }
+
+  function triggerSupabaseAutoSync() {
+    if (!state.supabaseAutoSync || !currentSupabaseUser) return;
+    clearTimeout(supabaseSyncTimeout);
+    supabaseSyncTimeout = setTimeout(() => {
+      syncToSupabaseCloud(true);
+    }, 3000);
+  }
+
+  async function handleUserLoggedIn(user, showNotice = false) {
+    currentSupabaseUser = user;
+    state.isLoggedIn = true;
+    localStorage.removeItem("xeli_guest_mode");
+
+    const metaName = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.hunter_name;
+    if (metaName && (!state.name || state.name === "Hunter")) {
+      state.name = metaName;
+    }
+
+    state.activity.unshift({
+      text: `Hunter Authorized: ${user.email || state.name} (Awakening Cloud)`,
+      time: Date.now(),
+    });
+    if (state.activity.length > 50) state.activity.pop();
+
+    saveState();
+    render();
+    updateSupabaseAuthUi();
+    closeModal("modalLogin");
+
+    if (showNotice) {
+      playLogonChime();
+      showToast(`⚡ <b>Authenticated</b>: Welcome, Hunter <b>${escapeHtml(state.name)}</b>!`);
+    }
+
+    await restoreFromSupabaseCloud(true);
+  }
+
+  async function handleUserLoggedOut(showMessage = true) {
+    currentSupabaseUser = null;
+    state.isLoggedIn = false;
+    localStorage.removeItem("xeli_guest_mode");
+    saveState();
+    render();
+    updateSupabaseAuthUi();
+    if (showMessage) {
+      playLogoffSound();
+      showToast("🔒 Logged off terminal. Progress stored locally.");
+    }
+    openHunterLogonModal();
+  }
+
+  // ---------------------------------------------------------
+  // RETRO WINDOWS 95/98 HUNTER LOGON CONTROLLER
+  // ---------------------------------------------------------
+  const loginForm = $("#loginForm");
+  const loginEmail = $("#loginEmail");
+  const loginPassword = $("#loginPassword");
+  const loginHunterName = $("#loginHunterName");
+  const loginStatusDot = $("#loginStatusDot");
+  const loginStatusMsg = $("#loginStatusMsg");
+  const loginSignInBtn = $("#loginSignInBtn");
+  const loginSignUpBtn = $("#loginSignUpBtn");
+  const loginGoogleBtn = $("#loginGoogleBtn");
+  const loginGuestBtn = $("#loginGuestBtn");
+  const loginSignOutBtn = $("#loginSignOutBtn");
+  const quickLogOutBtn = $("#quickLogOutBtn");
+  const togglePasswordVisibilityBtn = $("#togglePasswordVisibilityBtn");
+
+  function setInlineLoginStatus(msg, isError = false) {
+    if (!loginStatusMsg || !loginStatusDot) return;
+    if (isError) {
+      loginStatusDot.classList.add("is-error");
+    } else {
+      loginStatusDot.classList.remove("is-error");
+    }
+    loginStatusMsg.textContent = msg;
+  }
+
+  function openHunterLogonModal() {
+    if (loginEmail) {
+      if (currentSupabaseUser?.email) {
+        loginEmail.value = currentSupabaseUser.email;
+      } else if (!loginEmail.value) {
+        loginEmail.value = "";
+      }
+    }
+    if (loginPassword) loginPassword.value = "";
+    if (loginHunterName) loginHunterName.value = state.name || "Hunter";
+
+    updateSupabaseAuthUi();
+
+    if (currentSupabaseUser) {
+      setInlineLoginStatus(`Active session: ${currentSupabaseUser.email || state.name}`, false);
+    } else {
+      const isGuest = localStorage.getItem("xeli_guest_mode") === "true";
+      if (isGuest) {
+        setInlineLoginStatus("Guest Mode active (offline browser storage only).", false);
+      } else {
+        setInlineLoginStatus("Ready. Choose an authentication method.", false);
+      }
+    }
+
+    openModal("modalLogin");
+    setTimeout(() => {
+      if (loginEmail && !currentSupabaseUser) {
+        loginEmail.focus();
+      }
+    }, 100);
+  }
+
+  // Open from topbar button
+  const openLoginModalBtn = $("#openLoginModal");
+  if (openLoginModalBtn) {
+    openLoginModalBtn.addEventListener("click", () => openHunterLogonModal());
+  }
+
+  // Open from sidebar mini-badge click
+  const hunterMiniCard = $("#hunterMiniCard");
+  if (hunterMiniCard) {
+    hunterMiniCard.addEventListener("click", () => openHunterLogonModal());
+    hunterMiniCard.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openHunterLogonModal();
+      }
+    });
+  }
+
+  // Password visibility toggle
+  if (togglePasswordVisibilityBtn && loginPassword) {
+    togglePasswordVisibilityBtn.addEventListener("click", () => {
+      const isPwd = loginPassword.type === "password";
+      loginPassword.type = isPwd ? "text" : "password";
+      togglePasswordVisibilityBtn.textContent = isPwd ? "🔒" : "👁";
+      togglePasswordVisibilityBtn.title = isPwd ? "Conceal passkey" : "Reveal passkey";
+    });
+  }
+
+  // "Continue with Google" OAuth Button
+  if (loginGoogleBtn) {
+    loginGoogleBtn.addEventListener("click", async () => {
+      setInlineLoginStatus("Opening Google OAuth 2.0 gateway...", false);
+      loginGoogleBtn.disabled = true;
+      try {
+        await signInWithGoogle();
+      } catch (err) {
+        console.error("Google OAuth error:", err);
+        setInlineLoginStatus(formatAuthError(err), true);
+        playError();
+        loginGoogleBtn.disabled = false;
+      }
+    });
+  }
+
+  // "Sign In" with Email & Password
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = (loginEmail?.value || "").trim();
+      const password = (loginPassword?.value || "").trim();
+
+      if (!email || !password) {
+        setInlineLoginStatus("Please enter both email and security passkey.", true);
+        playError();
+        return;
+      }
+
+      setInlineLoginStatus("Authenticating credentials with Supabase Cloud...", false);
+      if (loginSignInBtn) loginSignInBtn.disabled = true;
+
+      try {
+        const res = await signInSupabase(email, password);
+        await handleUserLoggedIn(res.user, true);
+      } catch (err) {
+        console.error("Sign in failed:", err);
+        setInlineLoginStatus(formatAuthError(err), true);
+        playError();
+      } finally {
+        if (loginSignInBtn) loginSignInBtn.disabled = false;
+      }
+    });
+  }
+
+  // "Sign Up" with Email, Password & Hunter Name
+  if (loginSignUpBtn) {
+    loginSignUpBtn.addEventListener("click", async () => {
+      const email = (loginEmail?.value || "").trim();
+      const password = (loginPassword?.value || "").trim();
+      const hunterName = (loginHunterName?.value || "").trim() || "Hunter";
+
+      if (!email || !password) {
+        setInlineLoginStatus("Enter an email and a passkey to create a Hunter account.", true);
+        playError();
+        return;
+      }
+      if (password.length < 6) {
+        setInlineLoginStatus("Security passkey must be at least 6 characters long.", true);
+        playError();
+        return;
+      }
+
+      setInlineLoginStatus("Provisioning new Hunter license on Awakening Cloud...", false);
+      loginSignUpBtn.disabled = true;
+
+      try {
+        const res = await signUpSupabase(email, password, hunterName);
+        if (res.user) {
+          state.name = hunterName;
+          await handleUserLoggedIn(res.user, true);
+        } else {
+          setInlineLoginStatus("Account created! Please check your email if confirmation is required.", false);
+          showToast("Account created! Please check your inbox.");
+        }
+      } catch (err) {
+        console.error("Sign up failed:", err);
+        setInlineLoginStatus(formatAuthError(err), true);
+        playError();
+      } finally {
+        loginSignUpBtn.disabled = false;
+      }
+    });
+  }
+
+  // "Continue as Guest" Button (Local storage only, zero Supabase calls)
+  if (loginGuestBtn) {
+    loginGuestBtn.addEventListener("click", () => {
+      localStorage.setItem("xeli_guest_mode", "true");
+      closeModal("modalLogin");
+      updateSupabaseAuthUi();
+      playUnlock();
+      showToast("🕹️ <b>Guest Mode Active</b>: Playing offline with local browser storage.");
+    });
+  }
+
+  // "Log Out" action handlers (inside modal and topbar)
+  async function performLogOut() {
+    try {
+      await signOutSupabase();
+    } catch (err) {
+      console.warn("Sign out notice:", err);
+    }
+    await handleUserLoggedOut(true);
+  }
+
+  if (loginSignOutBtn) {
+    loginSignOutBtn.addEventListener("click", performLogOut);
+  }
+  if (quickLogOutBtn) {
+    quickLogOutBtn.addEventListener("click", performLogOut);
+  }
+
+  $("#openResetModal").addEventListener("click", () => openModal("modalReset"));
+ 
+  $("#confirmResetBtn").addEventListener("click", () => {
+    playPower();
+    state = defaultState();
+    saveState();
+    render();
+    closeModal("modalReset");
+    showToast("Progress reset — back to <b>Level 1, Rank E</b>.");
+  });
+ 
+  // ---------------------------------------------------------
+  // BACKGROUND MUSIC (YOUTUBE INTEGRATION)
+  // Target video: https://youtu.be/Z-VfaG9ZN_U
+  // ---------------------------------------------------------
+  const YOUTUBE_BGM_ID = "Z-VfaG9ZN_U";
+  let ytPlayer = null;
+  let ytPlayerReady = false;
+  let bgmIsPlaying = false;
+
+  const bgmPlayPauseBtn = $("#bgmPlayPauseBtn");
+  const bgmPlayIcon = $("#bgmPlayIcon");
+  const bgmPlayText = $("#bgmPlayText");
+  const bgmVolRange = $("#bgmVolRange");
+  const bgmStatusLed = $("#bgmStatusLed");
+  const bgmBars = $("#bgmBars");
+  const toggleBgmBtn = $("#toggleBgmBtn");
+  const bgmBtnLabel = $("#bgmBtnLabel");
+
+  function updateBgmUi() {
+    const isPlaying = bgmIsPlaying && state.bgmEnabled;
+    if (bgmStatusLed) {
+      if (isPlaying) bgmStatusLed.classList.add("is-active");
+      else bgmStatusLed.classList.remove("is-active");
+    }
+    if (bgmBars) {
+      if (isPlaying) bgmBars.classList.add("is-active");
+      else bgmBars.classList.remove("is-active");
+    }
+    if (bgmPlayIcon) bgmPlayIcon.textContent = isPlaying ? "⏸" : "▶";
+    if (bgmPlayText) bgmPlayText.textContent = isPlaying ? "Pause" : "Play BGM";
+    if (bgmBtnLabel) bgmBtnLabel.textContent = isPlaying ? "BGM: Playing" : (state.bgmEnabled ? "BGM: Ready" : "BGM: Off");
+    if (bgmVolRange) bgmVolRange.value = state.bgmVolume;
+  }
+
+  function startBgmPlayback() {
+    state.bgmEnabled = true;
+    saveState();
+    if (ytPlayer && ytPlayerReady && typeof ytPlayer.playVideo === "function") {
+      try {
+        ytPlayer.setVolume(state.bgmVolume);
+        ytPlayer.playVideo();
+      } catch (e) {
+        console.warn("Could not play YouTube BGM yet:", e);
+      }
+    }
+    updateBgmUi();
+  }
+
+  function pauseBgmPlayback() {
+    state.bgmEnabled = false;
+    saveState();
+    if (ytPlayer && ytPlayerReady && typeof ytPlayer.pauseVideo === "function") {
+      try {
+        ytPlayer.pauseVideo();
+      } catch (e) {
+        console.warn("Could not pause YouTube BGM:", e);
+      }
+    }
+    bgmIsPlaying = false;
+    updateBgmUi();
+  }
+
+  function toggleBgm() {
+    if (bgmIsPlaying && state.bgmEnabled) {
+      pauseBgmPlayback();
+      showToast("Background music paused.");
+    } else {
+      startBgmPlayback();
+      showToast("Background music playing: <b>XELI Hunter Theme</b>");
+    }
+  }
+
+  if (bgmPlayPauseBtn) {
+    bgmPlayPauseBtn.addEventListener("click", toggleBgm);
+  }
+  if (toggleBgmBtn) {
+    toggleBgmBtn.addEventListener("click", toggleBgm);
+  }
+
+  if (bgmVolRange) {
+    bgmVolRange.addEventListener("input", (e) => {
+      const vol = parseInt(e.target.value, 10);
+      state.bgmVolume = vol;
+      saveState();
+      if (ytPlayer && ytPlayerReady && typeof ytPlayer.setVolume === "function") {
+        ytPlayer.setVolume(vol);
+      }
+    });
+  }
+
+  function initYouTubeBgm() {
+    const onYtReady = () => {
+      try {
+        ytPlayer = new window.YT.Player("youtubeBgmPlayer", {
+          height: "1",
+          width: "1",
+          videoId: YOUTUBE_BGM_ID,
+          playerVars: {
+            autoplay: 1,
+            loop: 1,
+            playlist: YOUTUBE_BGM_ID,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            playsinline: 1,
+          },
+          events: {
+            onReady: (event) => {
+              ytPlayerReady = true;
+              try {
+                event.target.setVolume(state.bgmVolume);
+                if (state.bgmEnabled) {
+                  event.target.playVideo();
+                }
+              } catch (e) {
+                // Autoplay may wait for user gesture in some browsers
+              }
+              updateBgmUi();
+            },
+            onStateChange: (event) => {
+              // YT.PlayerState: 1 = playing, 2 = paused, 0 = ended, 3 = buffering
+              if (event.data === 1) {
+                bgmIsPlaying = true;
+              } else if (event.data === 2 || event.data === 0) {
+                bgmIsPlaying = false;
+              }
+              updateBgmUi();
+            },
+            onError: (err) => {
+              console.warn("YouTube BGM error:", err);
+            },
+          },
+        });
+      } catch (err) {
+        console.warn("YouTube player init error:", err);
+      }
+    };
+
+    if (window.YT && window.YT.Player) {
+      onYtReady();
+    } else {
+      window.onYouTubeIframeAPIReady = onYtReady;
+    }
+  }
+
+  // Handle browser unmuted autoplay policy on first interaction
+  let userInteracted = false;
+  function onFirstUserGesture() {
+    if (userInteracted) return;
+    userInteracted = true;
+    if (state.bgmEnabled && ytPlayer && ytPlayerReady && !bgmIsPlaying) {
+      try {
+        ytPlayer.playVideo();
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+  document.addEventListener("click", onFirstUserGesture, { passive: true });
+  document.addEventListener("keydown", onFirstUserGesture, { passive: true });
+
+  initYouTubeBgm();
+  updateBgmUi();
+
+  // ---------------------------------------------------------
+  // RETRO TITLEBAR EASTER EGG
+  // ---------------------------------------------------------
+  const retroCloseBtn = $("#retroCloseBtn");
+  if (retroCloseBtn) {
+    retroCloseBtn.addEventListener("click", () => showToast("Nice try — this window doesn't close. 1998 forever."));
+  }
+ 
+  // ---------------------------------------------------------
+  // SUPABASE CLOUD SYNC & DIAGNOSTICS MODAL CONTROLLER
+  // ---------------------------------------------------------
+  async function initSupabaseController() {
+    // 1. Connection latency test
+    const conn = await checkSupabaseConnection();
+    updateSupabaseConnectionStatus(conn);
+
+    // 2. Auth session check via getSupabaseSession() to restore on page reload
+    try {
+      const session = await getSupabaseSession();
+      if (session && session.user) {
+        await handleUserLoggedIn(session.user, false);
+      } else {
+        const isGuest = localStorage.getItem("xeli_guest_mode") === "true";
+        if (!isGuest && !state.isLoggedIn) {
+          openHunterLogonModal();
+        }
+      }
+    } catch (e) {
+      console.warn("Supabase session check error:", e);
+    }
+
+    // 3. Auth state listener (reacts to OAuth redirect return, token refresh, and sign out)
+    onSupabaseAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        if (!currentSupabaseUser || currentSupabaseUser.id !== session.user.id) {
+          await handleUserLoggedIn(session.user, true);
+        }
+      } else if (event === "SIGNED_OUT") {
+        if (currentSupabaseUser) {
+          await handleUserLoggedOut(false);
+        }
+      }
+    });
+
+    // 4. Bind UI Event Handlers for Supabase Diagnostics Modal
+    const openSupabaseModalBtn = $("#openSupabaseModal");
+    if (openSupabaseModalBtn) {
+      openSupabaseModalBtn.addEventListener("click", () => openModal("modalSupabase"));
+    }
+    const openSupabaseModalSidebar = $("#openSupabaseModalSidebar");
+    if (openSupabaseModalSidebar) {
+      openSupabaseModalSidebar.addEventListener("click", () => openModal("modalSupabase"));
+      openSupabaseModalSidebar.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openModal("modalSupabase");
+        }
+      });
+    }
+
+    const authForm = $("#supabaseAuthForm");
+    const emailInput = $("#supabaseEmail");
+    const passwordInput = $("#supabasePassword");
+    const authMsg = $("#supabaseAuthMsg");
+    const signInBtn = $("#supabaseSignInBtn");
+    const signUpBtn = $("#supabaseSignUpBtn");
+
+    if (authForm) {
+      authForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = (emailInput?.value || "").trim();
+        const password = (passwordInput?.value || "").trim();
+        if (!email || !password) return;
+
+        if (authMsg) authMsg.textContent = "Connecting to Supabase...";
+        if (signInBtn) signInBtn.disabled = true;
+
+        try {
+          const res = await signInSupabase(email, password);
+          await handleUserLoggedIn(res.user, true);
+          if (authMsg) authMsg.textContent = "Authenticated successfully!";
+        } catch (err) {
+          console.error(err);
+          if (authMsg) authMsg.textContent = `Sign in error: ${formatAuthError(err)}`;
+          playError();
+        } finally {
+          if (signInBtn) signInBtn.disabled = false;
+        }
+      });
+    }
+
+    if (signUpBtn) {
+      signUpBtn.addEventListener("click", async () => {
+        const email = (emailInput?.value || "").trim();
+        const password = (passwordInput?.value || "").trim();
+        if (!email || !password) {
+          if (authMsg) authMsg.textContent = "Please enter an email and password to create an account.";
+          return;
+        }
+
+        if (authMsg) authMsg.textContent = "Creating Supabase account...";
+        signUpBtn.disabled = true;
+
+        try {
+          const res = await signUpSupabase(email, password, state.name);
+          if (res.user) {
+            await handleUserLoggedIn(res.user, true);
+          }
+          if (authMsg) authMsg.textContent = "Account created successfully!";
+        } catch (err) {
+          console.error(err);
+          if (authMsg) authMsg.textContent = `Sign up error: ${formatAuthError(err)}`;
+          playError();
+        } finally {
+          signUpBtn.disabled = false;
+        }
+      });
+    }
+
+    const magicLinkBtn = $("#supabaseMagicLinkBtn");
+    if (magicLinkBtn) {
+      magicLinkBtn.addEventListener("click", async () => {
+        const email = (emailInput?.value || "").trim();
+        if (!email) {
+          if (authMsg) authMsg.textContent = "Please enter an email address for magic link delivery.";
+          return;
+        }
+        if (authMsg) authMsg.textContent = "Sending Magic Link email...";
+        magicLinkBtn.disabled = true;
+        try {
+          await signInWithMagicLink(email);
+          if (authMsg) authMsg.textContent = "Magic Link sent! Please check your inbox.";
+          showToast(`⚡ Magic link dispatched to <b>${escapeHtml(email)}</b>. Check your inbox!`);
+          playSuccess();
+        } catch (err) {
+          console.error(err);
+          if (authMsg) authMsg.textContent = `Magic link error: ${err.message}`;
+          playError();
+        } finally {
+          magicLinkBtn.disabled = false;
+        }
+      });
+    }
+
+    const signOutBtn = $("#supabaseSignOutBtn");
+    if (signOutBtn) {
+      signOutBtn.addEventListener("click", async () => {
+        try {
+          await signOutSupabase();
+          currentSupabaseUser = null;
+          updateSupabaseAuthUi();
+          playLogoffSound();
+          showToast("Signed out of Supabase Cloud account.");
+        } catch (err) {
+          console.error(err);
+          showToast(`Sign out error: ${err.message}`);
+        }
+      });
+    }
+
+    const manualPushBtn = $("#supabaseManualPushBtn");
+    if (manualPushBtn) {
+      manualPushBtn.addEventListener("click", () => syncToSupabaseCloud(false));
+    }
+
+    const manualPullBtn = $("#supabaseManualPullBtn");
+    if (manualPullBtn) {
+      manualPullBtn.addEventListener("click", () => restoreFromSupabaseCloud(false));
+    }
+
+    const autoSyncCb = $("#supabaseAutoSyncCheckbox");
+    if (autoSyncCb) {
+      autoSyncCb.addEventListener("change", (e) => {
+        state.supabaseAutoSync = e.target.checked;
+        saveState();
+        showToast(state.supabaseAutoSync ? "Auto-sync to Supabase Cloud enabled." : "Auto-sync disabled.");
+      });
+    }
+
+    const copySqlBtn = $("#copySupabaseSqlBtn");
+    const sqlCode = $("#supabaseSqlCode");
+    if (copySqlBtn && sqlCode) {
+      copySqlBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(sqlCode.textContent || "");
+        copySqlBtn.textContent = "Copied to Clipboard!";
+        setTimeout(() => {
+          copySqlBtn.textContent = "Copy SQL";
+        }, 2000);
+        showToast("SQL script copied. You can paste it into the Supabase SQL editor.");
+      });
+    }
+  }
+
+  // ---------------------------------------------------------
+  // INIT
+  // ---------------------------------------------------------
+  touchStreak();
+  saveState();
+  render();
+  initSupabaseController();
+})();

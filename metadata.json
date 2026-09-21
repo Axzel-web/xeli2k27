@@ -1,0 +1,8 @@
+{
+  "name": "Remix XELI Leveling System",
+  "description": "A retro hunter leveling system with quests, trials, and rank progression.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
