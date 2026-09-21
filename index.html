@@ -76,20 +76,20 @@
       </div>
     </div>
 
-    <!-- Supabase Cloud Connection Badge -->
-    <div class="supabase-sidebar-badge" id="openSupabaseModalSidebar" role="button" tabindex="0" title="Supabase Cloud Account & Real-Time Sync (efkkzgsuyttdfatihfxb)">
+    <!-- Supabase Cloud Connection Badge (Hidden per user request) -->
+    <div class="supabase-sidebar-badge" id="openSupabaseModalSidebar" role="button" tabindex="0" title="Supabase Cloud Account & Real-Time Sync (Protected Node)" style="display:none;" aria-hidden="true">
       <div class="supabase-badge-left">
         <span class="supabase-status-dot" id="supabaseSidebarDot"></span>
         <div>
           <span class="supabase-badge-label">Supabase Cloud</span>
-          <div class="supabase-badge-project">efkkzgsuyttdfatihfxb</div>
+          <div class="supabase-badge-project" id="supabaseSidebarSub">Cloud Connected</div>
         </div>
       </div>
       <span class="supabase-badge-state" id="supabaseSidebarState">ONLINE</span>
     </div>
 
-    <!-- Retro BGM Cassette Box -->
-    <div class="bgm-player-panel" id="bgmPlayerPanel">
+    <!-- Retro BGM Cassette Box (Hidden from sidebar per user preference) -->
+    <div class="bgm-player-panel" id="bgmPlayerPanel" style="display:none;" aria-hidden="true">
       <div class="bgm-panel-head">
         <span class="bgm-cassette-icon">📼</span>
         <div class="bgm-panel-titles">
@@ -127,7 +127,7 @@
           <span class="pill-label">Total EXP</span>
           <span class="pill-value" id="statTotalExp">0</span>
         </div>
-        <button class="btn btn-ghost btn-reset" id="openSupabaseModal" title="Supabase Cloud Connection & Sync (efkkzgsuyttdfatihfxb)">
+        <button class="btn btn-ghost btn-reset" id="openSupabaseModal" title="Supabase Cloud Connection & Sync (Protected Node)" style="display:none;" aria-hidden="true">
           <span class="supabase-status-dot" id="supabaseTopStatusDot"></span>
           <span id="supabaseBtnLabel">Supabase: Online</span>
         </button>
@@ -588,7 +588,7 @@
     <div class="modal-head supabase-head">
       <div class="login-head-title">
         <span class="login-head-icon" aria-hidden="true">⚡</span>
-        <h3 id="supabaseModalTitle">Supabase Cloud Link // efkkzgsuyttdfatihfxb</h3>
+        <h3 id="supabaseModalTitle">Supabase Cloud Link // Protected Node</h3>
       </div>
       <button class="retro-btn retro-btn-close" type="button" data-close="modalSupabase" aria-label="Close">×</button>
     </div>
@@ -602,9 +602,15 @@
         </div>
         <div class="supabase-info-grid">
           <span class="supabase-info-label">Project URL:</span>
-          <span class="supabase-info-value" id="supabaseProjectUrlVal">https://efkkzgsuyttdfatihfxb.supabase.co</span>
+          <span class="supabase-info-value" id="supabaseProjectUrlVal">
+            <span id="supabaseMaskedUrl">https://••••••••••••.supabase.co</span>
+            <button type="button" class="btn btn-ghost" id="toggleMaskUrlBtn" style="font-size:9.5px; padding:1px 6px; margin-left:6px;" title="Toggle URL visibility">Reveal</button>
+          </span>
           <span class="supabase-info-label">Project Ref:</span>
-          <span class="supabase-info-value">efkkzgsuyttdfatihfxb</span>
+          <span class="supabase-info-value" id="supabaseProjectRefVal">
+            <span id="supabaseMaskedRef">••••••••••••••••</span>
+            <button type="button" class="btn btn-ghost" id="toggleMaskRefBtn" style="font-size:9.5px; padding:1px 6px; margin-left:6px;" title="Toggle Project Ref visibility">Reveal</button>
+          </span>
           <span class="supabase-info-label">API Status:</span>
           <span class="supabase-info-value" id="supabaseAuthApiStatus">Connected (Latency: <span id="supabasePingVal">...</span>)</span>
           <span class="supabase-info-label">Cloud Status:</span>
@@ -624,7 +630,7 @@
           <form id="supabaseAuthForm" class="supabase-auth-form">
             <div class="supabase-form-row">
               <label for="supabaseEmail"><u>E</u>mail:</label>
-              <input type="email" id="supabaseEmail" class="supabase-input" placeholder="hunter@example.com" value="xeligirl910@gmail.com" required autocomplete="email" />
+              <input type="email" id="supabaseEmail" class="supabase-input" placeholder="hunter@example.com" required autocomplete="email" />
             </div>
             <div class="supabase-form-row">
               <label for="supabasePassword"><u>P</u>assword:</label>
@@ -645,9 +651,12 @@
           </div>
           <div class="supabase-info-grid" style="margin-bottom:8px;">
             <span class="supabase-info-label">Account Email:</span>
-            <span class="supabase-info-value" id="supabaseUserEmailVal">xeligirl910@gmail.com</span>
+            <span class="supabase-info-value" id="supabaseUserEmailVal">—</span>
             <span class="supabase-info-label">User ID:</span>
-            <span class="supabase-info-value" id="supabaseUserIdVal" style="font-size:9.5px;"></span>
+            <span class="supabase-info-value" id="supabaseUserIdWrap" style="font-size:9.5px;">
+              <span id="supabaseUserIdVal">—</span>
+              <button type="button" class="btn btn-ghost" id="toggleMaskUserIdBtn" style="font-size:9.5px; padding:1px 6px; margin-left:6px; display:none;" title="Toggle User ID visibility">Reveal</button>
+            </span>
             <span class="supabase-info-label">Last Cloud Sync:</span>
             <span class="supabase-info-value" id="supabaseLastSyncedVal">Never</span>
           </div>

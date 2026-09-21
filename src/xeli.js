@@ -1760,7 +1760,7 @@ const ACHIEVEMENT_GROUPS = [
         sideState.textContent = "ONLINE";
         sideState.style.color = "#008000";
       }
-      if (cloudStatusVal) cloudStatusVal.textContent = "Connected (Project efkkzgsuyttdfatihfxb)";
+      if (cloudStatusVal) cloudStatusVal.textContent = "Connected (Protected Cloud Node)";
     } else {
       dots.forEach((d) => {
         d.classList.remove("is-connected", "is-checking");
@@ -1797,7 +1797,16 @@ const ACHIEVEMENT_GROUPS = [
       if (signedOutSec) signedOutSec.style.display = "none";
       if (signedInSec) signedInSec.style.display = "block";
       if (userEmailVal) userEmailVal.textContent = currentSupabaseUser.email || "Hunter";
-      if (userIdVal) userIdVal.textContent = currentSupabaseUser.id || "";
+      if (userIdVal) {
+        const fullId = currentSupabaseUser.id || "";
+        userIdVal.dataset.full = fullId;
+        userIdVal.textContent = fullId ? fullId.slice(0, 8) + "-••••-••••-••••-••••••••••••" : "—";
+        const toggleBtn = $("#toggleMaskUserIdBtn");
+        if (toggleBtn) {
+          toggleBtn.style.display = fullId ? "inline-block" : "none";
+          toggleBtn.textContent = "Reveal";
+        }
+      }
       if (lastSyncVal) {
         lastSyncVal.textContent = state.lastSupabaseSync
           ? new Date(state.lastSupabaseSync).toLocaleTimeString() + " (" + timeAgo(new Date(state.lastSupabaseSync).getTime()) + ")"
@@ -1818,6 +1827,13 @@ const ACHIEVEMENT_GROUPS = [
     } else {
       if (signedOutSec) signedOutSec.style.display = "block";
       if (signedInSec) signedInSec.style.display = "none";
+      if (userEmailVal) userEmailVal.textContent = "—";
+      if (userIdVal) {
+        userIdVal.dataset.full = "";
+        userIdVal.textContent = "—";
+        const toggleBtn = $("#toggleMaskUserIdBtn");
+        if (toggleBtn) toggleBtn.style.display = "none";
+      }
       const isGuest = localStorage.getItem("xeli_guest_mode") === "true";
       if (loginBtnLabel) loginBtnLabel.textContent = isGuest ? `${state.name} (Guest)` : "Log On...";
       if (quickLogOutBtn) quickLogOutBtn.style.display = isGuest ? "inline-flex" : "none";
@@ -2504,6 +2520,41 @@ const ACHIEVEMENT_GROUPS = [
           copySqlBtn.textContent = "Copy SQL";
         }, 2000);
         showToast("SQL script copied. You can paste it into the Supabase SQL editor.");
+      });
+    }
+
+    // Toggle reveal for masked Supabase Cloud details
+    const toggleMaskUrlBtn = $("#toggleMaskUrlBtn");
+    const maskedUrl = $("#supabaseMaskedUrl");
+    if (toggleMaskUrlBtn && maskedUrl) {
+      let isRevealed = false;
+      toggleMaskUrlBtn.addEventListener("click", () => {
+        isRevealed = !isRevealed;
+        maskedUrl.textContent = isRevealed ? "https://efkkzgsuyttdfatihfxb.supabase.co" : "https://••••••••••••.supabase.co";
+        toggleMaskUrlBtn.textContent = isRevealed ? "Hide" : "Reveal";
+      });
+    }
+
+    const toggleMaskRefBtn = $("#toggleMaskRefBtn");
+    const maskedRef = $("#supabaseMaskedRef");
+    if (toggleMaskRefBtn && maskedRef) {
+      let isRevealed = false;
+      toggleMaskRefBtn.addEventListener("click", () => {
+        isRevealed = !isRevealed;
+        maskedRef.textContent = isRevealed ? "efkkzgsuyttdfatihfxb" : "••••••••••••••••";
+        toggleMaskRefBtn.textContent = isRevealed ? "Hide" : "Reveal";
+      });
+    }
+
+    const toggleMaskUserIdBtn = $("#toggleMaskUserIdBtn");
+    const userIdValEl = $("#supabaseUserIdVal");
+    if (toggleMaskUserIdBtn && userIdValEl) {
+      let isRevealed = false;
+      toggleMaskUserIdBtn.addEventListener("click", () => {
+        isRevealed = !isRevealed;
+        const fullId = userIdValEl.dataset.full || "";
+        userIdValEl.textContent = isRevealed ? fullId : (fullId ? fullId.slice(0, 8) + "-••••-••••-••••-••••••••••••" : "—");
+        toggleMaskUserIdBtn.textContent = isRevealed ? "Hide" : "Reveal";
       });
     }
   }
