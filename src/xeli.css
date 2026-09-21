@@ -2536,6 +2536,436 @@ body, button, input, select, textarea{ font-family:'Tahoma','Segoe UI',Verdana,s
   }
 }
  
+/* ============================================================
+   CLI LAB & CISCO TERMINAL SIMULATOR
+   ============================================================ */
+.modal.modal-cli-lab {
+  max-width: 1080px !important;
+  width: 96vw !important;
+}
+
+.cli-lab-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 14px;
+  align-items: stretch;
+  min-height: 480px;
+}
+
+@media (max-width: 880px) {
+  .cli-lab-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sidebar / Instructions */
+.cli-lab-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: #c0c0c0 !important;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080, inset 2px 2px 0 #dfdfdf, inset -2px -2px 0 #000 !important;
+  color: #000;
+  font-family: 'Tahoma', sans-serif !important;
+}
+
+.cli-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.cli-track-pill {
+  font-size: 10px;
+  background: #000080;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  box-shadow: inset 1px 1px 0 #4d4dff, inset -1px -1px 0 #000;
+}
+
+.cli-exp-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: #008000;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 2px;
+  box-shadow: inset 1px 1px 0 #4dff4d, inset -1px -1px 0 #000;
+}
+
+.cli-scenario-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #000;
+  margin: 0 0 6px 0;
+  font-family: 'Tahoma', sans-serif !important;
+}
+
+.cli-scenario-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #222;
+  margin: 0;
+}
+
+/* Objectives Box */
+.cli-objectives-box {
+  background: #dfdfdf;
+  padding: 10px;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff !important;
+}
+
+.cli-obj-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.cli-obj-heading {
+  font-size: 11px;
+  font-weight: 700;
+  color: #000;
+  letter-spacing: .04em;
+}
+
+.cli-progress-counter {
+  font-size: 11px;
+  font-weight: 700;
+  color: #000080;
+  font-family: 'Courier New', monospace;
+}
+
+.cli-progress-bar-wrap {
+  width: 100%;
+  height: 10px;
+  background: #808080;
+  box-shadow: inset 1px 1px 0 #000, inset -1px -1px 0 #fff;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.cli-progress-bar-fill {
+  height: 100%;
+  background: #000080;
+  transition: width .3s ease;
+}
+
+.cli-goals-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cli-goal-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #ececec;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080;
+  font-size: 11.5px;
+  transition: all .2s ease;
+}
+
+.cli-goal-item.is-satisfied {
+  background: #e6ffe6;
+  border-left: 3px solid #008000;
+  color: #004d00;
+  font-weight: 600;
+}
+
+.cli-goal-icon {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  color: #808080;
+  flex-shrink: 0;
+  margin-top: -1px;
+}
+
+.cli-goal-item.is-satisfied .cli-goal-icon {
+  color: #008000;
+}
+
+.cli-goal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cli-goal-text {
+  line-height: 1.35;
+}
+
+.cli-goal-hint {
+  font-size: 10px;
+  color: #555;
+  font-family: 'Courier New', monospace;
+}
+
+/* Cheat Sheet Accordion */
+.cli-cheatsheet-box {
+  background: #ececec;
+  padding: 6px 8px;
+  font-size: 11px;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff;
+}
+
+.cli-cheatsheet-summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #000080;
+  outline: none;
+}
+
+.cli-cheatsheet-content {
+  margin-top: 6px;
+  line-height: 1.6;
+  font-family: 'Courier New', monospace;
+  font-size: 10.5px;
+  max-height: 130px;
+  overflow-y: auto;
+}
+
+.cli-cheatsheet-content code {
+  color: #000;
+  font-weight: 700;
+  background: #dfdfdf;
+  padding: 1px 4px;
+}
+
+.cli-cheatsheet-content span {
+  color: #555;
+  font-family: 'Tahoma', sans-serif;
+}
+
+/* Action Footer */
+.cli-action-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #808080;
+  box-shadow: 0 -1px 0 #fff inset;
+}
+
+.cli-reset-btn {
+  flex: 1;
+  font-size: 11px !important;
+  padding: 6px 8px !important;
+}
+
+.cli-claim-btn {
+  flex: 2;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  padding: 6px 12px !important;
+}
+
+.cli-claim-btn.is-ready {
+  background: #008000 !important;
+  color: #fff !important;
+  animation: pulseClaim 1.5s infinite;
+}
+
+@keyframes pulseClaim {
+  0%, 100% { box-shadow: inset 1px 1px 0 #4dff4d, inset -1px -1px 0 #000, 0 0 8px rgba(0,128,0,.6); }
+  50% { box-shadow: inset 1px 1px 0 #80ff80, inset -1px -1px 0 #000, 0 0 14px rgba(0,200,0,.9); }
+}
+
+/* Cisco Terminal Window */
+.cli-terminal-window {
+  background: #c0c0c0;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080, inset 2px 2px 0 #dfdfdf, inset -2px -2px 0 #000 !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cli-term-titlebar {
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #fff;
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Tahoma', sans-serif !important;
+  font-size: 11px;
+  font-weight: 700;
+  user-select: none;
+}
+
+.cli-term-title-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cli-term-icon {
+  font-size: 12px;
+}
+
+.cli-term-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.cli-win-btn {
+  width: 16px;
+  height: 14px;
+  background: #c0c0c0;
+  color: #000;
+  border: none;
+  font-family: 'Tahoma', sans-serif;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080;
+}
+
+.cli-win-btn:active {
+  box-shadow: inset -1px -1px 0 #fff, inset 1px 1px 0 #808080;
+}
+
+/* Quick Toolbar */
+.cli-term-toolbar {
+  background: #dfdfdf;
+  padding: 3px 6px;
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid #808080;
+  box-shadow: inset 0 -1px 0 #fff;
+  flex-wrap: wrap;
+}
+
+.cli-tool-btn {
+  background: #c0c0c0;
+  border: none;
+  font-family: 'Tahoma', sans-serif;
+  font-size: 10px;
+  padding: 2px 6px;
+  cursor: pointer;
+  color: #000;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080;
+}
+
+.cli-tool-btn:hover {
+  background: #e6e6e6;
+}
+
+.cli-tool-btn:active {
+  box-shadow: inset -1px -1px 0 #fff, inset 1px 1px 0 #808080;
+}
+
+/* Terminal Screen */
+.cli-term-screen {
+  background: #0a0e14;
+  color: #e0e6ed;
+  font-family: 'Courier New', Consolas, 'Lucida Console', monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 12px 14px;
+  height: 440px;
+  overflow-y: auto;
+  box-shadow: inset 2px 2px 0 #000, inset -1px -1px 0 #404040;
+  cursor: text;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cli-term-screen::-webkit-scrollbar {
+  width: 14px;
+  background: #1a1a1a;
+}
+.cli-term-screen::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080;
+}
+
+.cli-line-cmd {
+  margin: 2px 0;
+}
+
+.cli-line-prompt {
+  color: #00ff66;
+  font-weight: 700;
+}
+
+.cli-line-cmd-text {
+  color: #ffffff;
+}
+
+.cli-line-output {
+  margin: 2px 0 6px 0;
+  color: #c0cad6;
+  font-family: inherit;
+  font-size: inherit;
+  white-space: pre-wrap;
+}
+
+.cli-term-prompt-line {
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-height: 18px;
+  margin-top: 4px;
+}
+
+.cli-term-prompt {
+  color: #00ff66;
+  font-weight: 700;
+  white-space: pre;
+}
+
+.cli-term-input-display {
+  color: #ffffff;
+  white-space: pre;
+  min-width: 1px;
+}
+
+.cli-term-cursor {
+  color: #00ff66;
+  font-weight: 700;
+  margin-left: 1px;
+  animation: cliBlink 1s step-start infinite;
+}
+
+@keyframes cliBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cli-term-hidden-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: auto;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  z-index: 10;
+}
+
 @media (prefers-reduced-motion:reduce){
   *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
 }

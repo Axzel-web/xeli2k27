@@ -11,6 +11,7 @@ import {
   saveProgressToSupabase,
   loadProgressFromSupabase,
 } from "./supabase.js";
+import { renderCliLabChallenge } from "./cli-lab-ui.js";
 
 /* ============================================================
    XELI — Challenge Lab data
@@ -25,6 +26,127 @@ import {
 const CHALLENGES = [
  
   // ------------------------- NETWORKING -------------------------
+  // Interactive Cisco IOS CLI Labs
+  {
+    id: "net-cli-r1-core-setup",
+    cat: "networking",
+    title: "Router Identity & Security Baseline",
+    difficulty: "Easy",
+    exp: 150,
+    type: "cli-lab",
+    deviceType: "router",
+    initialHostname: "Router",
+    intro: "Connect to the Router console (tty0). Elevate to Privileged EXEC (enable) and Global Configuration mode (configure terminal) to set the hostname to R1, establish a message-of-the-day security banner, configure an encrypted enable secret, and verify your changes with show running-config.",
+    goals: [
+      {
+        id: "hostname",
+        text: "Set device hostname to R1",
+        hint: "Router(config)# hostname R1",
+        check: (device) => (device.hostname || "").trim().toUpperCase() === "R1",
+      },
+      {
+        id: "banner",
+        text: "Configure a message-of-the-day (MOTD) banner",
+        hint: "R1(config)# banner motd #Authorized Access Only#",
+        check: (device) => Boolean(device.bannerMotd && device.bannerMotd.trim().length > 0),
+      },
+      {
+        id: "secret",
+        text: "Configure an encrypted enable secret password",
+        hint: "R1(config)# enable secret class123",
+        check: (device) => Boolean(device.enableSecret && device.enableSecret.trim().length > 0),
+      },
+      {
+        id: "verify",
+        text: "Verify configuration with show running-config",
+        hint: "R1# show running-config (or R1(config)# do show run)",
+        check: (device) => Boolean(device.verifiedShowRun),
+      },
+    ],
+  },
+  {
+    id: "net-cli-ip-interface-activation",
+    cat: "networking",
+    title: "Interface Addressing & Status Verification",
+    difficulty: "Easy",
+    exp: 160,
+    type: "cli-lab",
+    deviceType: "router",
+    initialHostname: "Router",
+    intro: "Bring up GigabitEthernet0/0 on your router. Assign a valid IPv4 address and subnet mask, set an interface description, and activate the interface with no shutdown so it transitions to up / up.",
+    goals: [
+      {
+        id: "ip_assigned",
+        text: "Assign IP 192.168.1.1 255.255.255.0 to GigabitEthernet0/0",
+        hint: "Router(config-if)# ip address 192.168.1.1 255.255.255.0",
+        check: (device) => {
+          const gi0 = device.interfaces["GigabitEthernet0/0"];
+          return Boolean(gi0 && gi0.ip === "192.168.1.1" && gi0.mask === "255.255.255.0");
+        },
+      },
+      {
+        id: "description",
+        text: "Add an interface description (e.g. Link to LAN)",
+        hint: "Router(config-if)# description Link to LAN Core Switch",
+        check: (device) => {
+          const gi0 = device.interfaces["GigabitEthernet0/0"];
+          return Boolean(gi0 && gi0.description && gi0.description.trim().length > 0);
+        },
+      },
+      {
+        id: "no_shutdown",
+        text: "Enable the interface with no shutdown (Status: Up / Up)",
+        hint: "Router(config-if)# no shutdown",
+        check: (device) => {
+          const gi0 = device.interfaces["GigabitEthernet0/0"];
+          return Boolean(gi0 && gi0.adminUp && gi0.lineProtocol === "up");
+        },
+      },
+      {
+        id: "verify_brief",
+        text: "Verify interface status with show ip interface brief",
+        hint: "Router# show ip interface brief (or do sh ip int br)",
+        check: (device) => Boolean(device.verifiedShowIpIntBrief),
+      },
+    ],
+  },
+  {
+    id: "net-cli-lines-and-persistence",
+    cat: "networking",
+    title: "Console/VTY Security & Persistence",
+    difficulty: "Medium",
+    exp: 175,
+    type: "cli-lab",
+    deviceType: "router",
+    initialHostname: "Router",
+    intro: "Harden administrative access by setting passwords and requiring login on both the console port and virtual terminal (VTY) lines. Finally, persist your changes into NVRAM using copy running-config startup-config.",
+    goals: [
+      {
+        id: "console_security",
+        text: "Set password on line console 0 and enable login",
+        hint: "Router(config)# line console 0 -> password cisco -> login",
+        check: (device) => {
+          const con = device.lines["console 0"];
+          return Boolean(con && con.password && con.login);
+        },
+      },
+      {
+        id: "vty_security",
+        text: "Set password on line vty 0 4 and enable login",
+        hint: "Router(config)# line vty 0 4 -> password cisco -> login",
+        check: (device) => {
+          const vty = device.lines["vty 0 4"];
+          return Boolean(vty && vty.password && vty.login);
+        },
+      },
+      {
+        id: "save_startup",
+        text: "Save configuration with copy running-config startup-config",
+        hint: "Router# copy running-config startup-config (or write memory)",
+        check: (device) => Boolean(device.startupConfigSaved),
+      },
+    ],
+  },
   {
     id: "net-cli-modes-exploration",
     cat: "networking",
@@ -1134,6 +1256,7 @@ const ACHIEVEMENT_GROUPS = [
             <div class="cc-left">
               <span class="cc-icon"><svg viewBox="0 0 24 24">${CATEGORY_ICON[c.cat] || ""}</svg></span>
               <span class="diff-tag">${c.difficulty}</span>
+              ${c.type === "cli-lab" ? `<span class="diff-tag" style="background:#000080;color:#fff;border-color:#000080;font-weight:700;">CLI Lab</span>` : ""}
             </div>
             <span class="cc-check">
               <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg>
@@ -1328,6 +1451,10 @@ const ACHIEVEMENT_GROUPS = [
   }
   function closeModal(id) {
     $(`#${id}`).classList.remove("is-open");
+    if (id === "modalChallenge") {
+      const m = $("#modalChallenge .modal");
+      if (m) m.classList.remove("modal-cli-lab");
+    }
   }
   $$("[data-close]").forEach((btn) =>
     btn.addEventListener("click", () => closeModal(btn.dataset.close))
@@ -1484,9 +1611,20 @@ const ACHIEVEMENT_GROUPS = [
  
     const body = $("#chBody");
     const type = c.type || "code";
- 
-    if (type === "code") {
-      body.innerHTML = `
+
+    if (type === "cli-lab") {
+      const modalBox = $("#modalChallenge .modal");
+      if (modalBox) modalBox.classList.add("modal-cli-lab");
+      renderCliLabChallenge(c, solved, (claimedChallenge) => {
+        awardChallenge(claimedChallenge);
+        showToast(`Cleared ${claimedChallenge.title}! +${claimedChallenge.exp} EXP earned.`);
+      });
+    } else {
+      const modalBox = $("#modalChallenge .modal");
+      if (modalBox) modalBox.classList.remove("modal-cli-lab");
+
+      if (type === "code") {
+        body.innerHTML = `
         <p class="ch-prompt">${c.prompt}</p>
         <textarea class="code-editor" id="codeEditor" spellcheck="false">${escapeHtml(c.starter)}</textarea>
         <div class="run-row">
@@ -1567,6 +1705,7 @@ const ACHIEVEMENT_GROUPS = [
     } else if (type === "lab") {
       renderLabChallenge(c, solved);
     }
+  }
  
     openModal("modalChallenge");
   }

@@ -301,3 +301,75 @@ export function onSupabaseAuthStateChange(callback) {
   return supabase.auth.onAuthStateChange(callback);
 }
 
+// ============================================================================
+// PROFILE SETTINGS & ACCOUNT MANAGEMENT HELPERS
+// ============================================================================
+
+/**
+ * Fetch current user's profile via RPC
+ */
+export async function rpcGetMyProfile() {
+  const { data, error } = await supabase.rpc("get_my_profile");
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Update current user's profile via secure RPC
+ * Only updates passed fields; protected stats (level, exp, streak) cannot be altered.
+ */
+export async function rpcUpdateMyProfile({
+  name = null,
+  avatarUrl = null,
+  bio = null,
+  timezone = null,
+  theme = null,
+  emailNotifications = null,
+} = {}) {
+  const { data, error } = await supabase.rpc("update_my_profile", {
+    p_name: name,
+    p_avatar_url: avatarUrl,
+    p_bio: bio,
+    p_timezone: timezone,
+    p_theme: theme,
+    p_email_notifications: emailNotifications,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Self-service password update
+ * MUST be executed client-side via supabase.auth.updateUser({ password })
+ * so GoTrue handles salting, bcrypt hashing, session revocation, and security hooks.
+ */
+export async function updateMyPassword(newPassword) {
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error("Password must be at least 6 characters long.");
+  }
+  const { data, error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Delete current user's account and all associated data
+ * Invokes the secure delete_my_account Edge Function with the user's JWT.
+ */
+export async function deleteMyAccount() {
+  const { data, error } = await supabase.functions.invoke("delete_my_account", {
+    method: "POST",
+  });
+  if (error) throw error;
+  // Sign out locally upon successful deletion
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // Ignore sign-out error if session already revoked
+  }
+  return data;
+}
+
+
