@@ -116,12 +116,24 @@
 
     <header class="topbar">
       <h1 class="topbar-title" id="viewTitle">Hunter Status</h1>
-      <div class="topbar-stats">
-        <div class="pill">
+      <div class="topbar-switch-zone">
+        <!-- From Uiverse.io by JaydipPrajapati1910 - Tactile Rocker Switch -->
+        <div class="fx-block" title="Master Audio System / Sound FX">
+          <span class="fx-title">Sound FX</span>
+          <div class="toggle toggle-sm">
+            <div>
+              <input type="checkbox" id="toggles" checked aria-label="Toggle system sound effects">
+              <div data-unchecked="On" data-checked="Off"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="topbar-stats" style="display:none;" aria-hidden="true">
+        <div class="pill" style="display:none;" aria-hidden="true">
           <span class="pill-label">Streak</span>
           <span class="pill-value" id="statStreak">0d</span>
         </div>
-        <div class="pill">
+        <div class="pill" style="display:none;" aria-hidden="true">
           <span class="pill-label">Total EXP</span>
           <span class="pill-value" id="statTotalExp">0</span>
         </div>
@@ -129,27 +141,27 @@
           <span class="supabase-status-dot" id="supabaseTopStatusDot"></span>
           <span id="supabaseBtnLabel">Supabase: Online</span>
         </button>
-        <button class="btn btn-ghost btn-reset" id="openLoginModal" title="Hunter Logon / Authorization">
+        <button class="btn btn-ghost btn-reset" id="openLoginModal" title="Hunter Logon / Authorization" style="display:none;" aria-hidden="true">
           <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 2C9.24 2 7 4.24 7 7v3H6c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8c0-1.1-.9-2-2-2h-1V7c0-2.76-2.24-5-5-5zm0 2c1.66 0 3 1.34 3 3v3H9V7c0-1.66 1.34-3 3-3zm0 10c1.1 0 2 .9 2 2 0 .74-.4 1.38-1 1.72V19h-2v-1.28c-.6-.34-1-.98-1-1.72 0-1.1.9-2 2-2z"/></svg>
           <span id="loginBtnLabel">Log On...</span>
         </button>
-        <button class="btn btn-ghost btn-reset" id="quickLogOutBtn" style="display:none;" title="Sign out of active Supabase Hunter session">
+        <button class="btn btn-ghost btn-reset" id="quickLogOutBtn" style="display:none;" title="Sign out of active Supabase Hunter session" aria-hidden="true">
           <svg viewBox="0 0 24 24" class="btn-icon"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
           <span>Log Out</span>
         </button>
-        <button class="btn btn-ghost btn-reset" id="toggleBgmBtn" title="Toggle background music">
+        <button class="btn btn-ghost btn-reset" id="toggleBgmBtn" title="Toggle background music" style="display:none;" aria-hidden="true">
           <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
           <span id="bgmBtnLabel">BGM: Off</span>
         </button>
-        <button class="btn btn-ghost btn-reset" id="toggleSoundBtn" title="Toggle click sounds">
+        <button class="btn btn-ghost btn-reset" id="toggleSoundBtn" title="Toggle click sounds" style="display:none;" aria-hidden="true">
           <svg viewBox="0 0 24 24" class="btn-icon"><path d="M4 9v6h4l5 5V4L8 9H4Zm11.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4Z"/></svg>
           <span id="soundBtnLabel">Sound: On</span>
         </button>
-        <button class="btn btn-ghost btn-reset" id="openBackupModal" title="Export or import your progress">
+        <button class="btn btn-ghost btn-reset" id="openBackupModal" title="Export or import your progress" style="display:none;" aria-hidden="true">
           <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 17 7.3 12.3l1.4-1.4L12 13.6V3h0ZM5 19h14v2H5v-2Z"/></svg>
           Backup
         </button>
-        <button class="btn btn-ghost btn-reset" id="openResetModal" title="Reset all progress">
+        <button class="btn btn-ghost btn-reset" id="openResetModal" title="Reset all progress" style="display:none;" aria-hidden="true">
           <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 5V2L7 6l5 4V7c3.31 0 6 2.69 6 6a6 6 0 0 1-6 6 6 6 0 0 1-6-6H4a8 8 0 0 0 8 8 8 8 0 0 0 8-8 8 8 0 0 0-8-8Z"/></svg>
           Reset
         </button>
@@ -237,7 +249,7 @@
               <svg viewBox="0 0 24 24" class="panel-icon lc-icon"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 14.5a1.5 1.5 0 1 1-1.5-1.5 1.5 1.5 0 0 1 1.5 1.5Zm1.5-6.5a2.5 2.5 0 0 0-5 0 1 1 0 0 1-2 0 4.5 4.5 0 1 1 6.3 4.1 1 1 0 0 1-.8.9h-.5a1 1 0 0 1-1-1v-.5a1 1 0 0 1 2 0v.3a2.5 2.5 0 0 0 1-3.8Z"/></svg>
               <h2>Solved Problems</h2>
             </div>
-            <span class="lc-contest-badge">Challenge Lab</span>
+            <button class="lc-contest-badge" data-view="lab" title="Open Challenge Lab" style="cursor:pointer;border:none;">Challenge Lab →</button>
           </div>
 
           <div class="lc-solved-body">
@@ -310,7 +322,7 @@
               <svg viewBox="0 0 24 24" class="panel-icon lc-icon"><path d="M12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2Z"/></svg>
               <h2>Hunter Rating</h2>
             </div>
-            <span class="lc-contest-badge" id="lcContestLeague">Rank E · The Awakened</span>
+            <button class="lc-contest-badge" id="lcContestLeague" data-view="roadmap" title="View Rank Progression &amp; Path" style="cursor:pointer;border:none;">Rank E · The Awakened</button>
           </div>
 
           <div class="lc-contest-body">
@@ -423,6 +435,7 @@
     <!-- ---------- QUESTS ---------- -->
     <section class="view" id="view-quests">
       <div class="view-toolbar">
+        <button class="btn btn-secondary back-to-dash-btn" data-view="dashboard">← Hunter Status</button>
         <div class="tabs" id="questTabs">
           <button class="tab is-active" data-filter="active">Active</button>
           <button class="tab" data-filter="completed">Completed</button>
@@ -442,9 +455,10 @@
     <!-- ---------- CHALLENGE LAB ---------- -->
     <section class="view" id="view-lab">
       <div class="view-toolbar">
+        <button class="btn btn-secondary back-to-dash-btn" data-view="dashboard">← Hunter Status</button>
         <div class="tabs" id="labTabs">
-          <button class="tab is-active" data-cat="networking">Networking</button>
-          <button class="tab" data-cat="coding">Coding · Python</button>
+          <button class="tab is-active" data-cat="coding">Coding · Python</button>
+          <button class="tab" data-cat="networking">Networking</button>
           <button class="tab" data-cat="sysadmin">System &amp; Sysadmin</button>
         </div>
       </div>
@@ -454,6 +468,9 @@
 
     <!-- ---------- ROADMAP ---------- -->
     <section class="view" id="view-roadmap">
+      <div class="view-toolbar" style="margin-bottom: 12px;">
+        <button class="btn btn-secondary back-to-dash-btn" data-view="dashboard">← Hunter Status</button>
+      </div>
       <div class="panel roadmap-panel">
         <div class="panel-head">
           <h2>Rank Progression</h2>
@@ -476,6 +493,9 @@
 
     <!-- ---------- ACHIEVEMENTS ---------- -->
     <section class="view" id="view-achievements">
+      <div class="view-toolbar" style="margin-bottom: 12px;">
+        <button class="btn btn-secondary back-to-dash-btn" data-view="dashboard">← Hunter Status</button>
+      </div>
       <div class="panel achievement-summary">
         <div class="ach-summary-top">
           <div>
@@ -616,7 +636,18 @@
         <h3 id="chTitle">Challenge</h3>
         <span class="ch-meta" id="chMeta"></span>
       </div>
-      <button class="icon-btn" data-close="modalChallenge" aria-label="Close">✕</button>
+      <div class="modal-head-actions">
+        <button class="modal-fs-btn" id="modalChallengeFullscreenBtn" type="button" title="Full Screen Lab (F / Esc)" aria-label="Toggle Full Screen">
+          <svg class="modal-fs-icon fs-icon-expand" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+          <svg class="modal-fs-icon fs-icon-compress" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+            <path d="M4 14h6v6m10-10h-6V4m0 16v-6h6M4 10h6V4"/>
+          </svg>
+          <span class="modal-fs-text" id="modalChallengeFsText">Full Screen</span>
+        </button>
+        <button class="icon-btn" data-close="modalChallenge" aria-label="Close">✕</button>
+      </div>
     </div>
     <div class="modal-body" id="chBody"></div>
   </div>

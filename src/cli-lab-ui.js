@@ -10,6 +10,7 @@ import {
   getTabCompletion,
   getContextualHelp,
 } from "./cisco-sim.js";
+import { NetworkPacketTracer2DView } from "./packet-tracer-2d-view.js";
 
 // ============================================================================
 // Web Audio Synthesizer for Cisco CLI Retro Mechanical Typing Sounds
@@ -319,38 +320,64 @@ Type "?" for help or press [Tab] for command completion.
         </div>
       </div>
 
-      <!-- Right Panel: Cisco IOS Retro Terminal Window -->
+      <!-- Right Panel: Workspace Tabs (CLI Terminal & 2D Packet Tracer) -->
       <div class="cli-terminal-window">
-        <div class="cli-term-titlebar">
-          <div class="cli-term-title-left">
-            <span class="cli-term-icon">📟</span>
-            <span class="cli-term-title-text" id="cliTermTitle">Cisco IOS Console - ${escapeHtml(device.hostname)} (tty0)</span>
-          </div>
-          <div class="cli-term-controls">
-            <button class="cli-win-btn" id="cliTermMinBtn" title="Minimize">_</button>
-            <button class="cli-win-btn" id="cliTermMaxBtn" title="Maximize">□</button>
-            <button class="cli-win-btn" id="cliTermHelpBtn" title="Context Help">?</button>
-          </div>
+        <!-- View Mode Navigation Tabs -->
+        <div class="cli-view-tab-strip">
+          <button class="cli-view-tab-btn is-active" id="cliTabBtnSplit" type="button" title="View 2D Packet Tracer Topology & Terminal Side-by-Side">
+            ◫ Split View (Topology + Console)
+          </button>
+          <button class="cli-view-tab-btn" id="cliTabBtnPT" type="button" title="Interactive 2D Cisco Packet Tracer Workspace">
+            🧭 2D Packet Tracer (Drag & Connect)
+            <span class="cli-tab-badge">2D LIVE</span>
+          </button>
+          <button class="cli-view-tab-btn" id="cliTabBtnConsole" type="button">
+            📟 Terminal Console
+          </button>
+          <button class="cli-view-tab-btn cli-view-tab-fs" id="cliTabBtnFullscreen" type="button" title="Toggle Full Screen Lab View (F / Esc)" aria-label="Toggle Full Screen">
+            <span class="cli-fs-icon-wrap" aria-hidden="true">⛶</span>
+            <span class="cli-fs-btn-label">Full Screen</span>
+          </button>
         </div>
 
-        <!-- Quick Toolbar -->
-        <div class="cli-term-toolbar">
-          <button class="cli-tool-btn" id="cliTabBtn" type="button" title="Auto-complete command">[Tab] Complete</button>
-          <button class="cli-tool-btn" id="cliQuestionBtn" type="button" title="View valid commands in current mode">[?] Help</button>
-          <button class="cli-tool-btn" id="cliEndBtn" type="button" title="Jump to privileged EXEC">end (Ctrl+Z)</button>
-          <button class="cli-tool-btn" id="cliClearBtn" type="button" title="Clear screen">Clear</button>
-          <button class="cli-tool-btn cli-sound-toggle-btn" id="cliSoundToggleBtn" type="button" title="Toggle mechanical keyboard typing audio">🔊 Audio: On</button>
+        <!-- 2D Packet Tracer Stage Container -->
+        <div class="cli-pt-stage-panel" id="cliPtStagePanel">
+          <div id="pt2dMount"></div>
         </div>
 
-        <!-- Terminal Screen -->
-        <div class="cli-term-screen" id="cliTermScreen" tabindex="0" role="region" aria-label="Cisco Terminal Screen">
-          <div class="cli-term-history" id="cliTermHistory"></div>
-          
-          <div class="cli-term-prompt-line">
-            <span class="cli-term-prompt" id="cliPrompt">${escapeHtml(getPrompt(device))} </span>
-            <span class="cli-term-input-display" id="cliInputDisplay"></span>
-            <span class="cli-term-cursor">█</span>
-            <input type="text" class="cli-term-hidden-input" id="cliHiddenInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        <!-- Console View Wrapper -->
+        <div class="cli-console-wrapper" id="cliConsoleWrapper">
+          <div class="cli-term-titlebar">
+            <div class="cli-term-title-left">
+              <span class="cli-term-icon">📟</span>
+              <span class="cli-term-title-text" id="cliTermTitle">Cisco IOS Console - ${escapeHtml(device.hostname)} (tty0)</span>
+            </div>
+            <div class="cli-term-controls">
+              <button class="cli-win-btn" id="cliTermMinBtn" title="Minimize">_</button>
+              <button class="cli-win-btn" id="cliTermMaxBtn" title="Maximize">□</button>
+              <button class="cli-win-btn" id="cliTermHelpBtn" title="Context Help">?</button>
+            </div>
+          </div>
+
+          <!-- Quick Toolbar -->
+          <div class="cli-term-toolbar">
+            <button class="cli-tool-btn" id="cliTabBtn" type="button" title="Auto-complete command">[Tab] Complete</button>
+            <button class="cli-tool-btn" id="cliQuestionBtn" type="button" title="View valid commands in current mode">[?] Help</button>
+            <button class="cli-tool-btn" id="cliEndBtn" type="button" title="Jump to privileged EXEC">end (Ctrl+Z)</button>
+            <button class="cli-tool-btn" id="cliClearBtn" type="button" title="Clear screen">Clear</button>
+            <button class="cli-tool-btn cli-sound-toggle-btn" id="cliSoundToggleBtn" type="button" title="Toggle mechanical keyboard typing audio">🔊 Audio: On</button>
+          </div>
+
+          <!-- Terminal Screen -->
+          <div class="cli-term-screen" id="cliTermScreen" tabindex="0" role="region" aria-label="Cisco Terminal Screen">
+            <div class="cli-term-history" id="cliTermHistory"></div>
+            
+            <div class="cli-term-prompt-line">
+              <span class="cli-term-prompt" id="cliPrompt">${escapeHtml(getPrompt(device))} </span>
+              <span class="cli-term-input-display" id="cliInputDisplay"></span>
+              <span class="cli-term-cursor">█</span>
+              <input type="text" class="cli-term-hidden-input" id="cliHiddenInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+            </div>
           </div>
         </div>
       </div>
@@ -402,6 +429,98 @@ Type "?" for help or press [Tab] for command completion.
     const p = getPrompt(device);
     promptEl.textContent = p + " ";
     titleEl.textContent = `Cisco IOS Console - ${device.hostname} (tty0)`;
+    if (view2d) {
+      view2d.updateDevice(device);
+    }
+  }
+
+  // 2D Cisco Packet Tracer Interactive Topology Setup
+  const tabConsole = document.getElementById("cliTabBtnConsole");
+  const tabPT = document.getElementById("cliTabBtnPT");
+  const tabSplit = document.getElementById("cliTabBtnSplit");
+  const stagePanel = document.getElementById("cliPtStagePanel");
+  const consoleWrapper = document.getElementById("cliConsoleWrapper");
+  const termWindow = document.querySelector(".cli-terminal-window");
+  const ptMount = document.getElementById("pt2dMount");
+
+  let view2d = null;
+  if (ptMount) {
+    view2d = new NetworkPacketTracer2DView(ptMount, {
+      device,
+      challenge: c,
+      onFocusConsole: () => {
+        setViewMode("split");
+        hiddenInput.focus();
+      },
+      onPortClick: (item) => {
+        if (item.portName && item.portName.startsWith("GigabitEthernet")) {
+          hiddenInput.value = `interface ${item.portName}`;
+          inputDisplay.textContent = hiddenInput.value;
+          setViewMode("split");
+          hiddenInput.focus();
+        }
+      },
+    });
+  }
+
+  function setViewMode(mode) {
+    if (tabConsole) tabConsole.classList.toggle("is-active", mode === "console");
+    if (tabPT) tabPT.classList.toggle("is-active", mode === "pt2d");
+    if (tabSplit) tabSplit.classList.toggle("is-active", mode === "split");
+
+    if (mode === "console") {
+      if (stagePanel) stagePanel.style.display = "none";
+      if (consoleWrapper) consoleWrapper.style.display = "flex";
+      if (termWindow) termWindow.classList.remove("is-split");
+      hiddenInput.focus();
+    } else if (mode === "pt2d") {
+      if (stagePanel) stagePanel.style.display = "block";
+      if (consoleWrapper) consoleWrapper.style.display = "none";
+      if (termWindow) termWindow.classList.remove("is-split");
+      if (view2d) {
+        setTimeout(() => view2d.resizeCanvas(), 50);
+      }
+    } else if (mode === "split") {
+      if (stagePanel) stagePanel.style.display = "block";
+      if (consoleWrapper) consoleWrapper.style.display = "flex";
+      if (termWindow) termWindow.classList.add("is-split");
+      if (view2d) {
+        setTimeout(() => view2d.resizeCanvas(), 50);
+      }
+      hiddenInput.focus();
+    }
+  }
+
+  if (tabConsole) tabConsole.addEventListener("click", () => setViewMode("console"));
+  if (tabPT) tabPT.addEventListener("click", () => setViewMode("pt2d"));
+  if (tabSplit) tabSplit.addEventListener("click", () => setViewMode("split"));
+
+  const tabFullscreen = document.getElementById("cliTabBtnFullscreen");
+  if (tabFullscreen) {
+    tabFullscreen.addEventListener("click", () => {
+      const mainFsBtn = document.getElementById("modalChallengeFullscreenBtn");
+      if (mainFsBtn) {
+        mainFsBtn.click();
+      }
+    });
+  }
+
+  // Default to split mode for immediate 2D Packet Tracer + console experience
+  setViewMode("split");
+
+  // Cleanup 2D animation loop when modal is closed
+  const modalOverlay = document.getElementById("modalChallenge");
+  if (modalOverlay) {
+    const observer = new MutationObserver(() => {
+      if (!modalOverlay.classList.contains("is-open")) {
+        if (view2d) {
+          view2d.destroy();
+          view2d = null;
+        }
+        observer.disconnect();
+      }
+    });
+    observer.observe(modalOverlay, { attributes: true, attributeFilter: ["class"] });
   }
 
   // Evaluate lab goals

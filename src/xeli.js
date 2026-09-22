@@ -13,6 +13,7 @@ import {
 } from "./supabase.js";
 import { renderCliLabChallenge } from "./cli-lab-ui.js";
 import { renderBinaryLabChallenge } from "./binary-lab-ui.js";
+import { renderPythonLabChallenge } from "./python-lab-ui.js";
 
 /* ============================================================
    XELI — Challenge Lab data
@@ -494,6 +495,95 @@ const CHALLENGES = [
     type: "binary-lab",
     intro: "Hands-on interactive binary octet bit converter, CIDR subnet mask explorer, and live subnetting calculation challenges with instant validation.",
   },
+
+  // ------------------------- CODING · PYTHON -------------------------
+  {
+    id: "py-level-1-output-comments",
+    cat: "coding",
+    title: "Level 1: Output & Comments",
+    difficulty: "Easy",
+    exp: 120,
+    type: "python-lab",
+    intro: "Learn how to output text to the screen with print() and write developer notes with comments. Complete the 'About Me' profile trial.",
+    levelNumber: 1,
+    concepts: [
+      {
+        name: "print( )",
+        desc: "output text to the screen",
+        code: 'print("hello world")',
+      },
+      {
+        name: "comments",
+        desc: "it just notes for humans",
+        code: "#this is level 1",
+      },
+    ],
+    goals: [
+      {
+        id: "comment",
+        text: "Add at least one human comment (# ...)",
+        hint: "Start a line or note with '#' e.g. '# this is level 1'",
+      },
+      {
+        id: "three_prints",
+        text: "Three separate print() statements",
+        hint: "Call print() three individual times in your script",
+      },
+      {
+        id: "about_me",
+        text: "About Me — three separate print() statements (name, age, favorite food)",
+        hint: 'e.g. print("AXZEL") / print(21) / print("Pizza")',
+      },
+    ],
+    starter: `# Level 1: Output & Comments
+# Task: Add a comment explaining your code, and output your name, age, and favorite food on separate lines.
+
+`,
+  },
+  {
+    id: "py-level-2-variables-data-types",
+    cat: "coding",
+    title: "Level 2: Variables & Data Types",
+    difficulty: "Easy",
+    exp: 150,
+    type: "python-lab",
+    intro: "Master Python variables, core data types (str, int, float, bool), variable type inspection with type(), and swapping two variables in one line without a third variable.",
+    levelNumber: 2,
+    concepts: [
+      {
+        name: "Variable",
+        desc: "holds a value",
+        code: 'name = "AXZEL"\nage = 21',
+      },
+      {
+        name: "Data types",
+        desc: "str, int float and boolean",
+        code: '# str, int, float, and boolean\nname = "AXZEL"  # str\nage = 21        # int\nratio = 94.5    # float\nis_ready = True # bool',
+      },
+      {
+        name: "check any variables type",
+        desc: "Inspect any variable type with type()",
+        code: "print(type(name))\nprint(type(age))",
+      },
+    ],
+    goals: [
+      {
+        id: "variable_roundup",
+        text: "Variable Roundup: 4 variables (str, int, float, bool), each printed with its value + type()",
+        hint: "Define 4 variables of different types and display each with its type",
+      },
+      {
+        id: "swap_variables",
+        text: "Swap Without a Third Variable: swap two variables in one line",
+        hint: "Swap two variables in a single statement without using a third variable",
+      },
+    ],
+    starter: `# Level 2: Variables & Data Types
+# Task 1: Define 4 variables of different types (string, integer, float, boolean) and display each with its type.
+# Task 2: Swap two variables in a single line without using a third variable.
+
+`,
+  },
 ];
  
 /* ============================================================
@@ -912,7 +1002,7 @@ const ACHIEVEMENT_GROUPS = [
   // LEVEL / RANK MATH
   // ---------------------------------------------------------
   function requiredForLevel(level) {
-    return Math.round(100 + (level - 1) * 35);
+    return 151 + 3 * level * level;
   }
  
   function rankInfoForLevel(level) {
@@ -1095,7 +1185,7 @@ const ACHIEVEMENT_GROUPS = [
   };
 
   let questFilter = "active";
-  let labCategory = "networking";
+  let labCategory = "coding";
  
   // ---------------------------------------------------------
   // RENDER: header / hero / sidebar
@@ -1514,6 +1604,7 @@ const ACHIEVEMENT_GROUPS = [
               <span class="cc-icon"><svg viewBox="0 0 24 24">${CATEGORY_ICON[c.cat] || ""}</svg></span>
               <span class="diff-tag">${c.difficulty}</span>
               ${c.type === "cli-lab" ? `<span class="diff-tag" style="background:#000080;color:#fff;border-color:#000080;font-weight:700;">CLI Lab</span>` : ""}
+              ${c.type === "python-lab" ? `<span class="diff-tag" style="background:#005a36;color:#fff;border-color:#005a36;font-weight:700;">Python Lab</span>` : ""}
             </div>
             <span class="cc-check">
               <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg>
@@ -1709,6 +1800,7 @@ const ACHIEVEMENT_GROUPS = [
   function closeModal(id) {
     $(`#${id}`).classList.remove("is-open");
     if (id === "modalChallenge") {
+      toggleChallengeFullscreen(false);
       const m = $("#modalChallenge .modal");
       if (m) {
         m.classList.remove("modal-cli-lab");
@@ -1723,6 +1815,9 @@ const ACHIEVEMENT_GROUPS = [
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) {
         overlay.classList.remove("is-open");
+        if (overlay.id === "modalChallenge") {
+          toggleChallengeFullscreen(false);
+        }
         const m = overlay.querySelector(".modal");
         if (m) {
           m.classList.remove("modal-cli-lab");
@@ -1731,6 +1826,121 @@ const ACHIEVEMENT_GROUPS = [
       }
     })
   );
+
+  // ---------------------------------------------------------
+  // CHALLENGE LAB FULL SCREEN CONTROLLER
+  // ---------------------------------------------------------
+  function toggleChallengeFullscreen(forceState) {
+    const overlay = $("#modalChallenge");
+    const modal = $("#modalChallenge .modal");
+    const fsBtn = $("#modalChallengeFullscreenBtn");
+    const fsText = $("#modalChallengeFsText");
+    const tabFsBtn = $("#cliTabBtnFullscreen");
+    const tabFsLabel = tabFsBtn ? tabFsBtn.querySelector(".cli-fs-btn-label") : null;
+
+    if (!overlay || !modal) return;
+
+    const isCurrentlyFs = overlay.classList.contains("is-fullscreen");
+    const willBeFs = typeof forceState === "boolean" ? forceState : !isCurrentlyFs;
+
+    if (willBeFs) {
+      overlay.classList.add("is-fullscreen");
+      modal.classList.add("is-fullscreen");
+      if (fsBtn) {
+        fsBtn.classList.add("is-active");
+        fsBtn.setAttribute("title", "Exit Full Screen (Esc / F)");
+      }
+      if (fsText) fsText.textContent = "Exit Full Screen";
+      if (tabFsBtn) {
+        tabFsBtn.classList.add("is-active");
+        tabFsBtn.setAttribute("title", "Exit Full Screen (Esc / F)");
+      }
+      if (tabFsLabel) tabFsLabel.textContent = "Exit Full Screen";
+
+      // Attempt OS / Browser Fullscreen if permitted
+      try {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } catch (err) {}
+    } else {
+      overlay.classList.remove("is-fullscreen");
+      modal.classList.remove("is-fullscreen");
+      if (fsBtn) {
+        fsBtn.classList.remove("is-active");
+        fsBtn.setAttribute("title", "Full Screen Lab (F / Esc)");
+      }
+      if (fsText) fsText.textContent = "Full Screen";
+      if (tabFsBtn) {
+        tabFsBtn.classList.remove("is-active");
+        tabFsBtn.setAttribute("title", "Toggle Full Screen Lab View (F / Esc)");
+      }
+      if (tabFsLabel) tabFsLabel.textContent = "Full Screen";
+
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } catch (err) {}
+    }
+
+    if (state.soundEnabled && typeof playSuccess === "function") {
+      playSuccess();
+    }
+
+    // Trigger canvas & terminal layout re-computations
+    setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 40);
+    setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 180);
+  }
+
+  const modalChallengeFsBtn = $("#modalChallengeFullscreenBtn");
+  if (modalChallengeFsBtn) {
+    modalChallengeFsBtn.addEventListener("click", () => {
+      toggleChallengeFullscreen();
+    });
+  }
+
+  // Keyboard shortcut listener for Fullscreen toggle (F) and Escape
+  document.addEventListener("keydown", (e) => {
+    const overlay = $("#modalChallenge");
+    if (!overlay || !overlay.classList.contains("is-open")) return;
+
+    // If Escape is pressed while in fullscreen, exit fullscreen first
+    if (e.key === "Escape" && overlay.classList.contains("is-fullscreen")) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleChallengeFullscreen(false);
+      return;
+    }
+
+    // If 'f' or 'F' is pressed outside of typing fields, toggle fullscreen
+    if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      const active = document.activeElement;
+      const isInput = active && (
+        active.tagName === "INPUT" ||
+        active.tagName === "TEXTAREA" ||
+        active.isContentEditable ||
+        active.id === "cliHiddenInput"
+      );
+      if (!isInput) {
+        e.preventDefault();
+        toggleChallengeFullscreen();
+      }
+    }
+  });
+
+  // Listen to browser fullscreen changes to keep UI synchronized
+  document.addEventListener("fullscreenchange", () => {
+    const overlay = $("#modalChallenge");
+    if (!overlay) return;
+    if (!document.fullscreenElement && overlay.classList.contains("is-fullscreen")) {
+      window.dispatchEvent(new Event("resize"));
+    }
+  });
  
   // ---------------------------------------------------------
   // QUEST FORM (create + edit share the same modal)
@@ -1924,6 +2134,21 @@ const ACHIEVEMENT_GROUPS = [
         awardChallenge(claimedChallenge);
         showToast(`Cleared ${claimedChallenge.title}! +${claimedChallenge.exp} EXP earned.`);
       });
+    } else if (type === "python-lab") {
+      const modalBox = $("#modalChallenge .modal");
+      if (modalBox) {
+        modalBox.classList.add("modal-cli-lab");
+        modalBox.classList.remove("modal-binary-lab");
+      }
+      renderPythonLabChallenge(
+        c,
+        solved,
+        (claimedChallenge) => {
+          awardChallenge(claimedChallenge);
+          showToast(`Cleared ${claimedChallenge.title}! +${claimedChallenge.exp} EXP earned.`);
+        },
+        getPyodide
+      );
     } else {
       const modalBox = $("#modalChallenge .modal");
       if (modalBox) {
@@ -2016,6 +2241,12 @@ const ACHIEVEMENT_GROUPS = [
   }
  
     openModal("modalChallenge");
+    const isLab = type === "cli-lab" || type === "binary-lab" || type === "python-lab" || type === "lab";
+    if (isLab) {
+      toggleChallengeFullscreen(true);
+    } else {
+      toggleChallengeFullscreen(false);
+    }
   }
  
   function renderLabChallenge(c, solved) {
@@ -2313,18 +2544,39 @@ const ACHIEVEMENT_GROUPS = [
   });
  
   // ---------------------------------------------------------
-  // SOUND TOGGLE
+  // SOUND TOGGLE (TACTILE ROCKER SWITCH SYSTEM)
   // ---------------------------------------------------------
   function syncSoundLabel() {
     const label = $("#soundBtnLabel");
     if (label) label.textContent = state.soundEnabled ? "Sound: On" : "Sound: Off";
+    const masterSwitch = $("#toggles");
+    if (masterSwitch && masterSwitch.checked !== Boolean(state.soundEnabled)) {
+      masterSwitch.checked = Boolean(state.soundEnabled);
+    }
   }
-  $("#toggleSoundBtn").addEventListener("click", () => {
-    state.soundEnabled = !state.soundEnabled;
-    saveState();
-    syncSoundLabel();
-    if (state.soundEnabled) playSuccess();
-  });
+
+  const masterRocker = $("#toggles");
+  if (masterRocker) {
+    masterRocker.checked = Boolean(state.soundEnabled);
+    masterRocker.addEventListener("change", () => {
+      state.soundEnabled = masterRocker.checked;
+      saveState();
+      syncSoundLabel();
+      if (state.soundEnabled) {
+        playSuccess();
+      }
+    });
+  }
+
+  const soundBtn = $("#toggleSoundBtn");
+  if (soundBtn) {
+    soundBtn.addEventListener("click", () => {
+      state.soundEnabled = !state.soundEnabled;
+      saveState();
+      syncSoundLabel();
+      if (state.soundEnabled) playSuccess();
+    });
+  }
   syncSoundLabel();
  
   // ---------------------------------------------------------
