@@ -40,23 +40,23 @@
     <nav class="nav" aria-label="Main navigation">
       <button class="nav-item is-active" data-view="dashboard">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z"/></svg>
-        <span>Status</span>
+        <span class="nav-label"><span class="nav-full">Status</span><span class="nav-short">Status</span></span>
       </button>
       <button class="nav-item" data-view="quests">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 3v2H4v16h16V9h2v14H2V3h7Zm10 6-9 9-4-4 1.4-1.4L10 15.2 17.6 7.6 19 9Z"/></svg>
-        <span>Quests</span>
+        <span class="nav-label"><span class="nav-full">Quests</span><span class="nav-short">Quests</span></span>
       </button>
       <button class="nav-item" data-view="lab">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 2v6.35L4.2 17.6A2 2 0 0 0 6 20.6h12a2 2 0 0 0 1.8-3L15 8.35V2H9Zm2 2h2v4.87l.28.57L17.8 18.6H6.2l4.52-9.16.28-.57V4Z"/></svg>
-        <span>Challenge Lab</span>
+        <span class="nav-label"><span class="nav-full">Challenge Lab</span><span class="nav-short">Labs</span></span>
       </button>
-      <button class="nav-item" data-view="roadmap">
-        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 13h2v-2H3v2Zm4 0h2v-2H7v2Zm4 8h2V3h-2v18Zm4-8h2v-2h-2v2Zm4 0h2v-2h-2v2Z"/></svg>
-        <span>Rank Path</span>
+      <button class="nav-item" data-view="leaderboard">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2ZM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8Zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1Z"/></svg>
+        <span class="nav-label"><span class="nav-full">Leaderboard</span><span class="nav-short">Ranks</span></span>
       </button>
       <button class="nav-item" data-view="achievements">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 2 9.2 5H5v4.2L2 12l3 2.8V19h4.2L12 22l2.8-3H19v-4.2L22 12l-3-2.8V5h-4.2L12 2Zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/></svg>
-        <span>Achievements</span>
+        <span class="nav-label"><span class="nav-full">Achievements</span><span class="nav-short">Badges</span></span>
       </button>
     </nav>
 
@@ -467,27 +467,145 @@
     </section>
 
     <!-- ---------- ROADMAP ---------- -->
-    <section class="view" id="view-roadmap">
-      <div class="view-toolbar" style="margin-bottom: 12px;">
+    <!-- ===================== GLOBAL LEADERBOARD VIEW ===================== -->
+    <section class="view" id="view-leaderboard">
+      <div class="view-toolbar" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
         <button class="btn btn-secondary back-to-dash-btn" data-view="dashboard">← Hunter Status</button>
+        <div class="leaderboard-view-meta">
+          <span class="lb-meta-tag"><span class="live-pulse-dot" style="display:inline-block; margin-right:4px;"></span>Supabase Cloud Realtime</span>
+        </div>
       </div>
-      <div class="panel roadmap-panel">
-        <div class="panel-head">
-          <h2>Rank Progression</h2>
+
+      <!-- ---------- HUNTER LEADERBOARDS & USER RANKINGS ---------- -->
+      <div class="panel leaderboard-panel" id="leaderboardPanel">
+        <div class="panel-head leaderboard-head">
+          <div class="leaderboard-title-group">
+            <div class="leaderboard-trophy-icon">
+              <svg viewBox="0 0 24 24" class="svg-trophy"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2ZM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8Zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1Z"/></svg>
+            </div>
+            <div>
+              <h2 class="leaderboard-title">Global Leaderboard</h2>
+              <span class="leaderboard-sub">Real registered hunters from Supabase Cloud · Ranked by Total XP</span>
+            </div>
+          </div>
+          <div class="leaderboard-head-actions">
+            <span class="leaderboard-count-pill" id="leaderboardUserCount">Connecting...</span>
+            <button class="btn btn-secondary leaderboard-refresh-btn" id="leaderboardRefreshBtn" type="button" title="Fetch latest rankings from Supabase Cloud">
+              <svg viewBox="0 0 24 24" class="btn-icon-svg"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"/></svg>
+              <span>Refresh Ranks</span>
+            </button>
+          </div>
         </div>
-        <div class="roadmap-track" id="roadmapTrack">
-          <div class="roadmap-fill" id="roadmapFill"></div>
-          <div class="roadmap-marker" id="roadmapMarker"><span id="roadmapMarkerLv">1</span></div>
+
+        <!-- Current User Ranking Callout Banner -->
+        <div class="leaderboard-my-standing" id="leaderboardMyStanding">
+          <div class="my-standing-badge">
+            <span class="my-standing-label">YOUR RANKING</span>
+            <span class="my-standing-pos" id="myStandingRankPos">#--</span>
+          </div>
+          <div class="my-standing-info">
+            <div class="my-standing-name-row">
+              <span class="my-standing-name" id="myStandingName">Hunter</span>
+              <span class="lb-you-badge" id="myStandingYouBadge">YOU</span>
+            </div>
+            <div class="my-standing-meta">
+              <span class="my-standing-tier" id="myStandingTier">Bronze</span>
+              <span class="my-standing-bullet">•</span>
+              <span class="my-standing-level" id="myStandingLevel">Level 1</span>
+              <span class="my-standing-bullet">•</span>
+              <span class="my-standing-exp" id="myStandingExp">0 XP</span>
+              <span class="my-standing-bullet">•</span>
+              <span class="my-standing-rankletter" id="myStandingRankLetter">Rank E</span>
+            </div>
+          </div>
+          <div class="my-standing-actions">
+            <span class="live-pulse-dot" title="Live Synced"></span>
+            <span class="live-synced-label" id="myStandingSyncStatus">Cloud Synced</span>
+          </div>
         </div>
-        <div class="roadmap-zones">
-          <div class="zone" data-rank="E"><span class="zone-rank">E</span><span class="zone-range">1–20</span></div>
-          <div class="zone" data-rank="D"><span class="zone-rank">D</span><span class="zone-range">21–40</span></div>
-          <div class="zone" data-rank="C"><span class="zone-rank">C</span><span class="zone-range">41–60</span></div>
-          <div class="zone" data-rank="B"><span class="zone-rank">B</span><span class="zone-range">61–80</span></div>
-          <div class="zone" data-rank="A"><span class="zone-rank">A</span><span class="zone-range">81–95</span></div>
-          <div class="zone" data-rank="S"><span class="zone-rank">S</span><span class="zone-range">96–100</span></div>
+
+        <!-- Filter tabs & Search Bar -->
+        <div class="leaderboard-controls-bar">
+          <div class="leaderboard-tabs" id="leaderboardTabs">
+            <button class="lb-tab-btn is-active" data-tab="global" type="button">
+              <svg viewBox="0 0 24 24" class="lb-tab-svg"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm7.93 9h-3.18a15.65 15.65 0 0 0-1.37-5.07A8.04 8.04 0 0 1 19.93 11ZM12 4.07c.92 1.34 1.7 3.32 2.05 6.93H9.95C10.3 7.39 11.08 5.41 12 4.07ZM4.07 13h3.18a15.65 15.65 0 0 0 1.37 5.07A8.04 8.04 0 0 1 4.07 13Zm3.18-2H4.07a8.04 8.04 0 0 1 4.55-5.07A15.65 15.65 0 0 0 7.25 11ZM12 19.93c-.92-1.34-1.7-3.32-2.05-6.93h4.1c-.35 3.61-1.13 5.59-2.05 6.93Zm3.38-8.93H8.62A14.28 14.28 0 0 1 8.5 9h7c-.03.68-.08 1.35-.12 2Zm.12 2c.04.65.09 1.32.12 2h-7c.03-.68.08-1.35.12-2h6.76Zm-6.88 5.07A15.65 15.65 0 0 0 7.25 13h3.18a15.65 15.65 0 0 0 1.37 5.07 8.04 8.04 0 0 1-3.18 0Zm6.76-14.14A8.04 8.04 0 0 1 18.63 9h-3.18a15.65 15.65 0 0 0-1.37-5.07 8.04 8.04 0 0 1 4.55 2.14Z"/></svg>
+              <span>Global Top 100</span>
+            </button>
+            <button class="lb-tab-btn" data-tab="progression" type="button">
+              <svg viewBox="0 0 24 24" class="lb-tab-svg"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+              <span>Rank Progression</span>
+            </button>
+          </div>
+
+          <!-- Live Username Search -->
+          <div class="leaderboard-search-wrap">
+            <svg viewBox="0 0 24 24" class="search-icon-svg"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5Zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14Z"/></svg>
+            <input type="text" id="leaderboardSearchInput" class="leaderboard-search-input" placeholder="Search hunter by username..." maxlength="40" spellcheck="false" autocomplete="off" />
+            <button type="button" id="leaderboardSearchClear" class="leaderboard-search-clear" style="display:none;" title="Clear search">✕</button>
+          </div>
         </div>
-        <p class="roadmap-note">Every rank raises the shine of your interface — an S-Rank hunter's system glows brightest of all.</p>
+
+        <!-- Rank clearance filter pills -->
+        <div class="leaderboard-filters" id="leaderboardFilters">
+          <button class="lb-filter-btn is-active" data-rank-filter="ALL" type="button">All Ranks</button>
+          <button class="lb-filter-btn" data-rank-filter="Sovereign" type="button"><span class="lb-rank-dot rank-s"></span>Sovereign</button>
+          <button class="lb-filter-btn" data-rank-filter="Diamond" type="button"><span class="lb-rank-dot rank-a"></span>Diamond</button>
+          <button class="lb-filter-btn" data-rank-filter="Platinum" type="button"><span class="lb-rank-dot rank-b"></span>Platinum</button>
+          <button class="lb-filter-btn" data-rank-filter="Gold" type="button"><span class="lb-rank-dot rank-c"></span>Gold</button>
+          <button class="lb-filter-btn" data-rank-filter="Silver" type="button"><span class="lb-rank-dot rank-d"></span>Silver</button>
+          <button class="lb-filter-btn" data-rank-filter="Bronze" type="button"><span class="lb-rank-dot rank-e"></span>Bronze</button>
+        </div>
+
+        <!-- Collapsible Rank Progression Path (Accessible from tab) -->
+        <div class="roadmap-subpanel" id="roadmapSubpanel" style="display:none; margin-bottom: 24px;">
+          <div class="roadmap-track" id="roadmapTrack">
+            <div class="roadmap-fill" id="roadmapFill"></div>
+            <div class="roadmap-marker" id="roadmapMarker"><span id="roadmapMarkerLv">1</span></div>
+          </div>
+          <div class="roadmap-zones">
+            <div class="zone" data-rank="E"><span class="zone-rank">E</span><span class="zone-range">1–20</span></div>
+            <div class="zone" data-rank="D"><span class="zone-rank">D</span><span class="zone-range">21–40</span></div>
+            <div class="zone" data-rank="C"><span class="zone-rank">C</span><span class="zone-range">41–60</span></div>
+            <div class="zone" data-rank="B"><span class="zone-rank">B</span><span class="zone-range">61–80</span></div>
+            <div class="zone" data-rank="A"><span class="zone-rank">A</span><span class="zone-range">81–95</span></div>
+            <div class="zone" data-rank="S"><span class="zone-rank">S</span><span class="zone-range">96–100</span></div>
+          </div>
+          <p class="roadmap-note">Every rank raises the luminance and resonance of your interface. Rank S hunters unlock sovereign system tier.</p>
+        </div>
+
+        <!-- Leaderboard list container -->
+        <div class="leaderboard-table-wrap">
+          <div class="leaderboard-table-head">
+            <div class="col-pos">Rank</div>
+            <div class="col-hunter">Hunter</div>
+            <div class="col-level">Level</div>
+            <div class="col-exp">Total XP</div>
+            <div class="col-tier">Rank Title</div>
+            <div class="col-clearance">Clearance</div>
+          </div>
+          <div class="leaderboard-list" id="leaderboardList">
+            <!-- Dynamically populated from real Supabase users with Top 3 special visual treatment -->
+          </div>
+        </div>
+
+        <!-- Separate 'My Rank' Section (Displayed when current user is outside Top 100) -->
+        <div class="leaderboard-my-rank-section" id="leaderboardMyRankSection" style="display: none;">
+          <div class="my-rank-section-divider">
+            <span class="my-rank-divider-line"></span>
+            <div class="my-rank-header-pill">
+              <svg viewBox="0 0 24 24" class="my-rank-header-icon"><path d="M12 2 9.2 5H5v4.2L2 12l3 2.8V19h4.2L12 22l2.8-3H19v-4.2L22 12l-3-2.8V5h-4.2L12 2Z"/></svg>
+              <span class="my-rank-header-text">My Rank (Outside Top 100)</span>
+            </div>
+            <span class="my-rank-divider-line"></span>
+          </div>
+          <div class="my-rank-card-container" id="myRankCardContainer">
+            <!-- Formatted current user row outside Top 100 (e.g. #247 MyUsername Level 32 3,420 XP Gold) -->
+          </div>
+        </div>
+
+        <div class="leaderboard-footer">
+          <span class="lb-footer-note">⚡ Real-time Hunter Association rankings update dynamically upon quest clearance and Supabase database synchronization.</span>
+        </div>
       </div>
     </section>
 
@@ -653,52 +771,42 @@
   </div>
 </div>
 
-<!-- ===================== MODAL: RETRO HUNTER LOGON ===================== -->
+<!-- ===================== MODAL: HUNTER TERMINAL LOGON ===================== -->
 <div class="modal-overlay" id="modalLogin">
   <div class="modal modal-login-dialog" role="dialog" aria-modal="true" aria-labelledby="loginDialogTitle">
     <div class="modal-head login-dialog-head">
       <div class="login-head-title">
-        <span class="login-head-icon" aria-hidden="true">🔑</span>
-        <h3 id="loginDialogTitle">Log On to XELI Hunter Terminal</h3>
+        <div class="login-head-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <div>
+          <h3 id="loginDialogTitle">Hunter Terminal Access</h3>
+          <span class="login-head-sub">Cloud Sync &amp; Progress Persistence</span>
+        </div>
       </div>
       <div class="login-head-btns">
-        <button class="retro-btn" type="button" id="loginHelpBtn" title="Help Topics">?</button>
-        <button class="retro-btn retro-btn-close" type="button" data-close="modalLogin" title="Cancel">×</button>
+        <button class="icon-btn login-modal-close" type="button" data-close="modalLogin" aria-label="Close modal">✕</button>
       </div>
     </div>
     
     <div class="modal-body login-dialog-body">
-      <div class="login-banner">
-        <div class="login-graphic" aria-hidden="true">
-          <svg viewBox="0 0 54 54" class="login-svg">
-            <rect x="4" y="6" width="36" height="26" fill="#000" stroke="#808080" stroke-width="1.5"/>
-            <rect x="7" y="9" width="30" height="20" fill="#008080"/>
-            <path d="M14 13h16v3H24v10h-4V16h-6z" fill="#fff"/>
-            <rect x="18" y="32" width="8" height="4" fill="#808080"/>
-            <rect x="10" y="36" width="24" height="3" fill="#000"/>
-            <circle cx="38" cy="34" r="8" fill="#e6a100" stroke="#000" stroke-width="1.5"/>
-            <circle cx="38" cy="34" r="4" fill="#c0c0c0"/>
-            <path d="M34 38l-12 12h-4v-4l2-2v-2l2-2h3l3-3" fill="#e6a100" stroke="#000" stroke-width="1.5"/>
-          </svg>
-          <span class="login-graphic-label">SECURE<br/>1998</span>
-        </div>
-        
-        <div class="login-instructions-wrap">
-          <p class="login-instructions">
-            Log on to synchronize your Hunter Level, Quests, Heatmap, and Trials to the <b>XELI Awakening Cloud</b>.
-          </p>
-        </div>
-      </div>
-
+      <!-- Active session banner if logged in -->
       <div id="loginActiveUserBanner" class="login-active-user-banner" style="display:none;">
         <span class="active-user-dot"></span>
-        <span id="loginActiveUserText">Authenticated as hunter@domain.com</span>
+        <div class="active-user-info">
+          <span class="active-user-label">ACTIVE HUNTER SESSION</span>
+          <span id="loginActiveUserText" class="active-user-email">hunter@domain.com</span>
+        </div>
+        <button type="button" class="btn-logout-inline" id="loginSignOutBtn" style="display:none;" title="Sign out active session">Sign Out</button>
       </div>
 
-      <!-- Google OAuth Quick Button -->
-      <div class="login-oauth-wrap">
-        <button type="button" class="btn login-google-btn" id="loginGoogleBtn" title="Continue using Google OAuth 2.0">
-          <svg class="google-icon" viewBox="0 0 24 24" width="16" height="16">
+      <!-- Quick OAuth Provider -->
+      <div class="login-oauth-section">
+        <button type="button" class="login-google-btn" id="loginGoogleBtn" title="Continue using Google OAuth 2.0">
+          <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -709,39 +817,71 @@
       </div>
 
       <div class="login-divider">
-        <span>or sign in with email &amp; passkey</span>
+        <span>or sign in with email credentials</span>
+      </div>
+
+      <!-- Segmented Tab Switcher: Sign In vs Sign Up -->
+      <div class="login-auth-switch" role="tablist">
+        <button type="button" class="login-switch-tab is-active" id="authTabSignIn" role="tab" aria-selected="true">Sign In</button>
+        <button type="button" class="login-switch-tab" id="authTabSignUp" role="tab" aria-selected="false">Create Account</button>
       </div>
 
       <form id="loginForm" class="login-form">
-        <div class="login-field-row">
-          <label for="loginEmail" class="login-label"><u>E</u>mail:</label>
-          <input type="email" id="loginEmail" class="login-input" required autocomplete="email" placeholder="hunter@domain.com" />
-        </div>
-
-        <div class="login-field-row">
-          <label for="loginPassword" class="login-label"><u>P</u>assword:</label>
-          <div class="login-input-group">
-            <input type="password" id="loginPassword" class="login-input" maxlength="48" autocomplete="current-password" placeholder="••••••••" />
-            <button type="button" class="btn login-toggle-pwd-btn" id="togglePasswordVisibilityBtn" title="Reveal / conceal passkey">👁</button>
+        <!-- Callsign (shown in Sign Up mode) -->
+        <div class="login-field-row" id="loginHunterNameRow" style="display:none;">
+          <label for="loginHunterName" class="login-label">Hunter Callsign / Name</label>
+          <div class="login-input-wrap">
+            <svg class="login-field-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" id="loginHunterName" class="login-input" maxlength="28" placeholder="e.g. Sung Jin-Woo" value="Hunter" />
           </div>
         </div>
 
-        <div class="login-field-row" id="loginHunterNameRow">
-          <label for="loginHunterName" class="login-label"><u>H</u>unter Name:</label>
-          <input type="text" id="loginHunterName" class="login-input" maxlength="28" placeholder="Hunter (for new signups)" value="Hunter" />
+        <!-- Email -->
+        <div class="login-field-row">
+          <label for="loginEmail" class="login-label">Email Address</label>
+          <div class="login-input-wrap">
+            <svg class="login-field-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <input type="email" id="loginEmail" class="login-input" required autocomplete="email" placeholder="hunter@example.com" />
+          </div>
         </div>
 
+        <!-- Password / Passkey -->
+        <div class="login-field-row">
+          <div class="login-label-row">
+            <label for="loginPassword" class="login-label">Security Passkey</label>
+          </div>
+          <div class="login-input-wrap">
+            <svg class="login-field-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="loginPassword" class="login-input" maxlength="48" autocomplete="current-password" placeholder="At least 6 characters" />
+            <button type="button" class="login-toggle-pwd-btn" id="togglePasswordVisibilityBtn" title="Reveal / conceal passkey" aria-label="Toggle password visibility">👁</button>
+          </div>
+        </div>
+
+        <!-- Status Bar -->
         <div class="login-status-bar" id="loginStatusBar">
           <span class="login-status-dot" id="loginStatusDot"></span>
-          <span id="loginStatusMsg">Ready. Choose an authentication method.</span>
+          <span id="loginStatusMsg">Ready. Sign in or initialize hunter clearance.</span>
         </div>
 
-        <div class="login-btn-row">
-          <button type="submit" class="btn btn-primary login-btn-action" id="loginSignInBtn">Sign In</button>
-          <button type="button" class="btn login-btn-action" id="loginSignUpBtn">Sign Up</button>
-          <button type="button" class="btn login-btn-action" id="loginGuestBtn" title="Play offline using browser storage only">Continue as Guest</button>
-          <button type="button" class="btn login-btn-action" id="loginSignOutBtn" style="display:none;" title="Sign out active Supabase session">Log Out</button>
-          <button type="button" class="btn login-btn-action" data-close="modalLogin">Cancel</button>
+        <!-- Primary Action Submit Buttons -->
+        <div class="login-actions-main">
+          <button type="submit" class="btn btn-primary login-btn-primary" id="loginSignInBtn">
+            Sign In to Terminal
+          </button>
+          <button type="button" class="btn btn-primary login-btn-primary" id="loginSignUpBtn" style="display:none;">
+            Create Hunter Profile
+          </button>
+        </div>
+
+        <!-- Guest Offline Access & Cancel Row -->
+        <div class="login-footer-row">
+          <button type="button" class="login-btn-guest" id="loginGuestBtn" title="Play offline using browser storage only">
+            <span class="guest-btn-icon">🎮</span>
+            <span>Continue as Guest <small>(Local Only)</small></span>
+          </button>
+          <button type="button" class="login-btn-cancel" data-close="modalLogin">
+            Cancel
+          </button>
         </div>
       </form>
     </div>

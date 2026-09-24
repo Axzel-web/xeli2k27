@@ -125,27 +125,263 @@ export async function saveProgressToSupabase(state) {
     console.warn("Could not save to Supabase user metadata:", metaErr);
   }
 
-  // 2. Try saving to 'hunter_profiles' table if it has been created
+  // 2. Try saving to 'profiles' table in Supabase
   try {
     const { error: tableErr } = await supabase
-      .from("hunter_profiles")
+      .from("profiles")
       .upsert({
-        user_id: user.id,
-        email: user.email,
-        ...payload,
+        id: user.id,
+        name: state.name || user.user_metadata?.hunter_name || "Hunter",
+        level: state.level || 1,
+        exp: state.exp || 0,
+        total_exp: state.totalExp || 0,
+        streak: state.streak || 0,
+        updated_at: payload.updated_at,
       });
 
     if (tableErr) {
-      // If table doesn't exist (PGRST205), that's fine - user metadata holds the data
-      if (tableErr.code !== "PGRST205") {
-        console.warn("Table sync error (table may need RLS policy or creation):", tableErr);
-      }
+      console.warn("Table sync note:", tableErr);
     }
   } catch (err) {
     console.warn("Table upsert skipped:", err);
   }
 
   return { success: true, timestamp: payload.updated_at };
+}
+
+/**
+ * Map user level to current rank title
+ * Corresponds to standard hunter milestones and user prompt specifications:
+ * - Level 96-100: Sovereign (Rank S)
+ * - Level 85-95: Diamond (Rank A) -> e.g. Lv. 87 = Diamond
+ * - Level 70-84: Platinum (Rank B) -> e.g. Lv. 84 = Platinum
+ * - Level 30-69: Gold (Rank C/D) -> e.g. Lv. 32 = Gold
+ * - Level 15-29: Silver (Rank D)
+ * - Level 1-14: Bronze (Rank E)
+ */
+export function getRankTitle(level) {
+  const lv = Math.max(1, Number(level) || 1);
+  if (lv >= 96) return "Sovereign";
+  if (lv >= 85) return "Diamond";
+  if (lv >= 70) return "Platinum";
+  if (lv >= 30) return "Gold";
+  if (lv >= 15) return "Silver";
+  return "Bronze";
+}
+
+/**
+ * Fetch real registered users for the Global Leaderboard from Supabase.
+ * - Ranks users by total XP (total_exp), highest XP first.
+ * - Server-side / Supabase query execution.
+ * - Returns Top 100 users and current authenticated user's global standing.
+ * - If current user is outside Top 100, computes their actual global position.
+ * - Strictly zero simulated or dummy users.
+ */
+export async function fetchGlobalLeaderboard({
+  limit = 100,
+  offset = 0,
+  search = "",
+  currentUserId = null,
+} = {}) {
+  const cleanSearch = search ? search.trim() : "";
+  const boundedLimit = Math.min(Math.max(limit, 1), 100);
+  const boundedOffset = Math.max(offset, 0);
+
+  // Strategy 1: Attempt calling database RPC get_global_leaderboard if deployed
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc("get_global_leaderboard", {
+      p_limit: boundedLimit,
+      p_offset: boundedOffset,
+      p_search: cleanSearch || null,
+      p_user_id: currentUserId || null,
+    });
+
+    if (!rpcError && rpcData && Array.isArray(rpcData.users)) {
+      const users = rpcData.users.map((u) => ({
+        id: u.id,
+        global_rank: u.global_rank,
+        name: u.name || "Hunter",
+        avatar_url: u.avatar_url || null,
+        level: Math.max(1, Number(u.level) || 1),
+        total_exp: Math.max(0, Number(u.total_exp) || 0),
+        streak: Math.max(0, Number(u.streak) || 0),
+        rank_title: getRankTitle(u.level),
+        rank_letter: u.rank_letter || "E",
+        created_at: u.created_at,
+        is_current_user: Boolean(currentUserId && u.id === currentUserId),
+      }));
+
+      let myStanding = null;
+      if (rpcData.my_standing) {
+        const ms = rpcData.my_standing;
+        myStanding = {
+          id: ms.id,
+          global_rank: ms.global_rank,
+          name: ms.name || "Hunter",
+          avatar_url: ms.avatar_url || null,
+          level: Math.max(1, Number(ms.level) || 1),
+          total_exp: Math.max(0, Number(ms.total_exp) || 0),
+          streak: Math.max(0, Number(ms.streak) || 0),
+          rank_title: getRankTitle(ms.level),
+          rank_letter: ms.rank_letter || "E",
+          created_at: ms.created_at,
+          is_current_user: true,
+        };
+      }
+
+      return {
+        users,
+        myStanding,
+        totalCount: rpcData.total_count || users.length,
+        source: "rpc",
+      };
+    }
+  } catch (err) {
+    console.warn("RPC leaderboard query notice:", err);
+  }
+
+  // Strategy 2: Direct Supabase query against existing `profiles` table
+  let query = supabase
+    .from("profiles")
+    .select("id, name, avatar_url, level, exp, total_exp, streak, created_at, updated_at", {
+      count: "exact",
+    })
+    .order("total_exp", { ascending: false })
+    .order("level", { ascending: false })
+    .order("created_at", { ascending: true })
+    .range(boundedOffset, boundedOffset + boundedLimit - 1);
+
+  if (cleanSearch) {
+    query = query.ilike("name", `%${cleanSearch}%`);
+  }
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  const rawUsers = Array.isArray(data) ? data : [];
+  const users = rawUsers.map((u, idx) => {
+    const uLevel = Math.max(1, Number(u.level) || 1);
+    const uTotalExp = Math.max(0, Number(u.total_exp ?? u.exp ?? 0));
+    return {
+      id: u.id,
+      global_rank: boundedOffset + idx + 1,
+      name: u.name || "Hunter",
+      avatar_url: u.avatar_url || null,
+      level: uLevel,
+      total_exp: uTotalExp,
+      streak: Math.max(0, Number(u.streak) || 0),
+      rank_title: getRankTitle(uLevel),
+      rank_letter: uLevel >= 96 ? "S" : uLevel >= 81 ? "A" : uLevel >= 61 ? "B" : uLevel >= 41 ? "C" : uLevel >= 21 ? "D" : "E",
+      created_at: u.created_at,
+      is_current_user: Boolean(currentUserId && u.id === currentUserId),
+    };
+  });
+
+  let myStanding = null;
+
+  // If user is authenticated, find or calculate their rank
+  if (currentUserId) {
+    const inTop = users.find((u) => u.id === currentUserId);
+    if (inTop) {
+      myStanding = { ...inTop };
+    } else {
+      // User is outside the fetched Top 100:
+      // Query their profile and count how many users have higher total_exp
+      try {
+        const { data: myProfile, error: myProfileErr } = await supabase
+          .from("profiles")
+          .select("id, name, avatar_url, level, exp, total_exp, streak, created_at")
+          .eq("id", currentUserId)
+          .maybeSingle();
+
+        if (!myProfileErr && myProfile) {
+          const myTotalExp = Math.max(0, Number(myProfile.total_exp ?? myProfile.exp ?? 0));
+          const { count: aheadCount, error: countErr } = await supabase
+            .from("profiles")
+            .select("id", { count: "exact", head: true })
+            .gt("total_exp", myTotalExp);
+
+          const myRank = !countErr && typeof aheadCount === "number" ? aheadCount + 1 : 101;
+          const myLevel = Math.max(1, Number(myProfile.level) || 1);
+
+          myStanding = {
+            id: myProfile.id,
+            global_rank: myRank,
+            name: myProfile.name || "Hunter",
+            avatar_url: myProfile.avatar_url || null,
+            level: myLevel,
+            total_exp: myTotalExp,
+            streak: Math.max(0, Number(myProfile.streak) || 0),
+            rank_title: getRankTitle(myLevel),
+            rank_letter: myLevel >= 96 ? "S" : myLevel >= 81 ? "A" : myLevel >= 61 ? "B" : myLevel >= 41 ? "C" : myLevel >= 21 ? "D" : "E",
+            created_at: myProfile.created_at,
+            is_current_user: true,
+          };
+        }
+      } catch (calcErr) {
+        console.warn("Could not calculate current user global rank:", calcErr);
+      }
+    }
+  }
+
+  return {
+    users,
+    myStanding,
+    totalCount: count ?? users.length,
+    source: "table",
+  };
+}
+
+/**
+ * Subscribe to real-time changes on the profiles table so
+ * leaderboard rankings automatically update when any hunter's XP changes.
+ */
+export function subscribeToLeaderboardChanges(onChange) {
+  if (typeof onChange !== "function") return null;
+  try {
+    const channel = supabase
+      .channel("public:profiles:global_leaderboard")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        (payload) => {
+          onChange(payload);
+        }
+      )
+      .subscribe();
+    return channel;
+  } catch (err) {
+    console.warn("Realtime subscription notice:", err);
+    return null;
+  }
+}
+
+/**
+ * Fetch all real user profiles for the leaderboard from Supabase
+ * Zero dummy data - returns only genuinely registered user rows
+ */
+export async function fetchLeaderboardProfiles() {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, name, level, exp, total_exp, streak, avatar_url, updated_at, created_at")
+      .order("total_exp", { ascending: false })
+      .order("level", { ascending: false })
+      .limit(100);
+
+    if (!error && Array.isArray(data)) {
+      return data;
+    }
+    if (error) {
+      console.warn("Could not query profiles for leaderboard:", error);
+    }
+  } catch (err) {
+    console.warn("Error fetching profiles:", err);
+  }
+  return [];
 }
 
 /**
@@ -157,28 +393,29 @@ export async function loadProgressFromSupabase() {
     throw new Error("No active Supabase session. Please sign in first.");
   }
 
-  // 1. First check if 'hunter_profiles' table has data
+  // 1. First check if 'profiles' table has data
   try {
     const { data: tableData, error: tableErr } = await supabase
-      .from("hunter_profiles")
+      .from("profiles")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .maybeSingle();
 
     if (!tableErr && tableData) {
+      const p = user.user_metadata?.hunter_progress || {};
       return {
-        name: tableData.hunter_name || user.user_metadata?.hunter_name || "Hunter",
-        level: tableData.level || 1,
-        exp: tableData.exp || 0,
-        totalExp: tableData.total_exp || 0,
-        streak: tableData.streak || 0,
-        guild: tableData.guild || "Hunter Association",
-        quests: tableData.quests || [],
-        solvedChallenges: tableData.solved_challenges || [],
-        unlockedAchievements: tableData.unlocked_achievements || [],
-        activity: tableData.activity || [],
-        dailyExp: tableData.daily_exp || {},
-        syncedAt: tableData.updated_at,
+        name: tableData.name || p.hunter_name || user.user_metadata?.hunter_name || "Hunter",
+        level: tableData.level || p.level || 1,
+        exp: tableData.exp || p.exp || 0,
+        totalExp: tableData.total_exp || p.total_exp || 0,
+        streak: tableData.streak || p.streak || 0,
+        guild: p.guild || "Hunter Association",
+        quests: p.quests || [],
+        solvedChallenges: p.solved_challenges || [],
+        unlockedAchievements: p.unlocked_achievements || [],
+        activity: p.activity || [],
+        dailyExp: p.daily_exp || {},
+        syncedAt: tableData.updated_at || p.updated_at,
       };
     }
   } catch (err) {

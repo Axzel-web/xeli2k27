@@ -10,6 +10,10 @@ import {
   onSupabaseAuthStateChange,
   saveProgressToSupabase,
   loadProgressFromSupabase,
+  fetchLeaderboardProfiles,
+  fetchGlobalLeaderboard,
+  getRankTitle,
+  subscribeToLeaderboardChanges,
 } from "./supabase.js";
 import { renderCliLabChallenge } from "./cli-lab-ui.js";
 import { renderBinaryLabChallenge } from "./binary-lab-ui.js";
@@ -743,6 +747,20 @@ const ACHIEVEMENT_GROUPS = [
  
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (typeof recordRegisteredHunter === "function") {
+      recordRegisteredHunter({
+        id: currentSupabaseUser ? currentSupabaseUser.id : "local-active-hunter",
+        name: state.name || "Hunter",
+        level: state.level || 1,
+        totalExp: Math.max(state.totalExp || 0, state.exp || 0),
+        streak: state.streak || 0,
+        guild: state.guild || "Hunter Association",
+        solvedCount: state.solvedChallenges ? state.solvedChallenges.length : 0,
+        questsCleared: state.quests ? state.quests.filter((q) => q.done).length : 0,
+        isCurrent: true,
+        updatedAt: new Date().toISOString(),
+      });
+    }
     if (typeof triggerSupabaseAutoSync === "function") {
       triggerSupabaseAutoSync();
     }
@@ -1182,6 +1200,26 @@ const ACHIEVEMENT_GROUPS = [
     lcStreakMetric: $("#lcStreakMetric"),
     lcCalTotalSubs: $("#lcCalTotalSubs"), lcCalActiveDays: $("#lcCalActiveDays"),
     lcCalMaxStreak: $("#lcCalMaxStreak"), lcCalCurrentStreak: $("#lcCalCurrentStreak"),
+    // Hunter Association Leaderboards & Real User Rankings
+    leaderboardUserCount: $("#leaderboardUserCount"),
+    leaderboardRefreshBtn: $("#leaderboardRefreshBtn"),
+    leaderboardMyStanding: $("#leaderboardMyStanding"),
+    myStandingRankPos: $("#myStandingRankPos"),
+    myStandingName: $("#myStandingName"),
+    myStandingTier: $("#myStandingTier"),
+    myStandingLevel: $("#myStandingLevel"),
+    myStandingExp: $("#myStandingExp"),
+    myStandingRankLetter: $("#myStandingRankLetter"),
+    myStandingSyncStatus: $("#myStandingSyncStatus"),
+    myStandingYouBadge: $("#myStandingYouBadge"),
+    leaderboardFilters: $("#leaderboardFilters"),
+    leaderboardList: $("#leaderboardList"),
+    leaderboardSearchInput: $("#leaderboardSearchInput"),
+    leaderboardSearchClear: $("#leaderboardSearchClear"),
+    leaderboardTabs: $("#leaderboardTabs"),
+    roadmapSubpanel: $("#roadmapSubpanel"),
+    leaderboardMyRankSection: $("#leaderboardMyRankSection"),
+    myRankCardContainer: $("#myRankCardContainer"),
   };
 
   let questFilter = "active";
@@ -1271,6 +1309,7 @@ const ACHIEVEMENT_GROUPS = [
     renderQuests();
     renderChallenges();
     renderRoadmap(rankInfo);
+    renderLeaderboard();
     renderCalendar();
     renderAchievements();
     checkAchievements();
@@ -1630,6 +1669,366 @@ const ACHIEVEMENT_GROUPS = [
     el.roadmapMarkerLv.textContent = state.level;
     $$(".zone").forEach((z) => z.classList.toggle("is-current", z.dataset.rank === rankInfo.rank));
   }
+
+  // ---------------------------------------------------------
+  // GLOBAL HUNTER LEADERBOARDS (REAL SUPABASE DATABASE ONLY)
+  // ---------------------------------------------------------
+  let currentRankFilter = "ALL";
+  let currentSearchKeyword = "";
+  let cachedLeaderboardUsers = [];
+  let cachedMyStanding = null;
+  let isLeaderboardLoading = false;
+  let isLeaderboardRefreshing = false;
+  let leaderboardError = null;
+  let searchDebounceTimer = null;
+  let activeLeaderboardTab = "global";
+
+  function recordRegisteredHunter(hunterData) {
+    // Safe bridge: triggers real-time leaderboard sync
+    if (hunterData) {
+      refreshLeaderboard(false);
+    }
+  }
+
+  function renderLeaderboardSkeleton() {
+    if (!el.leaderboardList) return;
+    el.leaderboardList.innerHTML = Array.from({ length: 6 }).map(() => `
+      <div class="lb-skeleton-row">
+        <div class="lb-skeleton-box" style="width: 38px;"></div>
+        <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+          <div class="lb-skeleton-box" style="width: 38px; height: 38px; border-radius: 50%; flex-shrink:0;"></div>
+          <div style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:0;">
+            <div class="lb-skeleton-box" style="width: 120px; height: 13px;"></div>
+            <div class="lb-skeleton-box" style="width: 75px; height: 10px;"></div>
+          </div>
+        </div>
+        <div class="lb-skeleton-box" style="width: 55px;"></div>
+        <div class="lb-skeleton-box" style="width: 80px;"></div>
+        <div class="lb-skeleton-box" style="width: 72px; border-radius: 999px;"></div>
+        <div class="lb-skeleton-box" style="width: 58px; border-radius: 999px;"></div>
+      </div>
+    `).join("");
+  }
+
+  function formatHunterRow(u, isForMyRankSection = false) {
+    const isYou = Boolean(
+      u.is_current_user ||
+      (currentSupabaseUser && u.id === currentSupabaseUser.id) ||
+      (state.name && u.name && u.name.toLowerCase() === state.name.toLowerCase() && !currentSupabaseUser)
+    );
+    const rankPos = u.global_rank;
+    const rankLetter = u.rank_letter || (u.level ? rankInfoForLevel(u.level).rank : "E");
+    const rankTitle = u.rank_title || getRankTitle(u.level || 1);
+
+    let posBadgeHtml = `<span class="lb-pos-num">#${rankPos}</span>`;
+    let posClass = "pos-standard";
+
+    if (rankPos === 1) {
+      posClass = "pos-gold";
+      posBadgeHtml = `
+        <span class="lb-trophy gold" title="1st Place · Sovereign Champion">
+          <svg viewBox="0 0 24 24" class="svg-crown"><path d="M5 16 3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5Zm14 3c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h14v1Z"/></svg>
+        </span>
+        <span class="lb-pos-num">#1</span>
+      `;
+    } else if (rankPos === 2) {
+      posClass = "pos-silver";
+      posBadgeHtml = `
+        <span class="lb-trophy silver" title="2nd Place · Grand Sovereign">
+          <svg viewBox="0 0 24 24" class="svg-crown"><path d="M5 16 3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5Zm14 3c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h14v1Z"/></svg>
+        </span>
+        <span class="lb-pos-num">#2</span>
+      `;
+    } else if (rankPos === 3) {
+      posClass = "pos-bronze";
+      posBadgeHtml = `
+        <span class="lb-trophy bronze" title="3rd Place · High Sovereign">
+          <svg viewBox="0 0 24 24" class="svg-crown"><path d="M5 16 3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5Zm14 3c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h14v1Z"/></svg>
+        </span>
+        <span class="lb-pos-num">#3</span>
+      `;
+    }
+
+    const initial = (u.name || "H").charAt(0).toUpperCase();
+    const avatarHtml = u.avatar_url
+      ? `
+        <div class="lb-avatar-wrap rank-${rankLetter.toLowerCase()}">
+          <img src="${escapeHtml(u.avatar_url)}" class="lb-avatar-img" alt="${escapeHtml(u.name || "Hunter")}" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />
+          <div class="lb-avatar-circle rank-${rankLetter.toLowerCase()}" style="display:none;">
+            <span>${escapeHtml(initial)}</span>
+          </div>
+        </div>
+      `
+      : `
+        <div class="lb-avatar-wrap rank-${rankLetter.toLowerCase()}">
+          <div class="lb-avatar-circle rank-${rankLetter.toLowerCase()}">
+            <span>${escapeHtml(initial)}</span>
+          </div>
+        </div>
+      `;
+
+    return `
+      <div class="lb-row ${isYou ? "is-you" : ""} ${posClass} ${isForMyRankSection ? "is-my-rank-row" : ""}" data-user-id="${escapeHtml(u.id || "")}">
+        <div class="col-pos">
+          <div class="lb-pos-pill ${posClass}">${posBadgeHtml}</div>
+        </div>
+        <div class="col-hunter">
+          <div class="lb-hunter-wrap">
+            ${avatarHtml}
+            <div class="lb-hunter-details">
+              <div class="lb-hunter-name-row">
+                <span class="lb-hunter-name">${escapeHtml(u.name || "Hunter")}</span>
+                ${isYou ? '<span class="lb-you-badge">YOU</span>' : ""}
+              </div>
+              <div class="lb-hunter-guild">${escapeHtml(u.guild || "Hunter Association")}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-level">
+          <span class="lb-level-pill">Level ${u.level || 1}</span>
+        </div>
+        <div class="col-exp">
+          <div class="lb-exp-pill">
+            <span class="lb-exp-value">${Number(u.total_exp || 0).toLocaleString()}</span>
+            <span class="lb-exp-unit">XP</span>
+          </div>
+        </div>
+        <div class="col-tier">
+          <span class="lb-tier-pill tier-${rankTitle.toLowerCase()}">
+            ${escapeHtml(rankTitle)}
+          </span>
+        </div>
+        <div class="col-clearance">
+          <span class="lb-rank-badge rank-${rankLetter.toLowerCase()}">
+            Rank ${rankLetter}
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderLeaderboard() {
+    if (!el.leaderboardList) return;
+
+    if (isLeaderboardLoading && (!cachedLeaderboardUsers || cachedLeaderboardUsers.length === 0)) {
+      renderLeaderboardSkeleton();
+      return;
+    }
+
+    if (leaderboardError && (!cachedLeaderboardUsers || cachedLeaderboardUsers.length === 0)) {
+      el.leaderboardList.innerHTML = `
+        <div class="lb-error-state">
+          <div class="lb-error-icon">⚠️</div>
+          <div class="lb-error-title">Database Connection Issue</div>
+          <div class="lb-error-msg">${escapeHtml(leaderboardError)}</div>
+          <button class="lb-retry-btn" id="lbRetryBtn" type="button">Retry Supabase Sync</button>
+        </div>
+      `;
+      const retryBtn = $("#lbRetryBtn");
+      if (retryBtn) retryBtn.addEventListener("click", () => refreshLeaderboard(true));
+      return;
+    }
+
+    // Determine current user's standing for top banner & my-rank card
+    const myPos = cachedMyStanding?.global_rank;
+    const myName = currentSupabaseUser ? (cachedMyStanding?.name || state.name || "Hunter") : (state.name || "Hunter");
+    const myLevel = cachedMyStanding?.level || state.level || 1;
+    const myTotalExp = cachedMyStanding?.total_exp != null ? cachedMyStanding.total_exp : Math.max(state.totalExp || 0, state.exp || 0);
+    const myRankTitle = cachedMyStanding?.rank_title || getRankTitle(myLevel);
+    const myRankInfo = rankInfoForLevel(myLevel);
+
+    // Update Top Standing Banner
+    if (el.myStandingRankPos) {
+      el.myStandingRankPos.textContent = myPos ? `#${myPos}` : (currentSupabaseUser ? "#--" : "Guest");
+    }
+    if (el.myStandingName) el.myStandingName.textContent = myName;
+    if (el.myStandingTier) el.myStandingTier.textContent = myRankTitle;
+    if (el.myStandingLevel) el.myStandingLevel.textContent = `Level ${myLevel}`;
+    if (el.myStandingExp) el.myStandingExp.textContent = `${Number(myTotalExp).toLocaleString()} XP`;
+    if (el.myStandingRankLetter) el.myStandingRankLetter.textContent = `Rank ${myRankInfo.rank}`;
+    if (el.myStandingSyncStatus) {
+      el.myStandingSyncStatus.textContent = currentSupabaseUser ? "Cloud Synced" : "Local Mode";
+    }
+
+    // Filter by rank title / rank letter if chosen
+    let displayedUsers = cachedLeaderboardUsers || [];
+    if (currentRankFilter !== "ALL") {
+      displayedUsers = displayedUsers.filter((u) => {
+        return (u.rank_title && u.rank_title.toLowerCase() === currentRankFilter.toLowerCase()) ||
+               (u.rank_letter && u.rank_letter.toLowerCase() === currentRankFilter.toLowerCase());
+      });
+    }
+
+    // Filter by client search keyword if searched
+    if (currentSearchKeyword.trim()) {
+      const q = currentSearchKeyword.trim().toLowerCase();
+      displayedUsers = displayedUsers.filter((u) => (u.name || "").toLowerCase().includes(q));
+    }
+
+    // Update count pill
+    if (el.leaderboardUserCount) {
+      const totalCount = cachedLeaderboardUsers.length;
+      if (currentSearchKeyword.trim() || currentRankFilter !== "ALL") {
+        el.leaderboardUserCount.textContent = `${displayedUsers.length} of ${totalCount} Hunters`;
+      } else {
+        el.leaderboardUserCount.textContent = `${totalCount} ${totalCount === 1 ? "Hunter" : "Hunters"} Ranked`;
+      }
+    }
+
+    // Render empty state if no users match
+    if (displayedUsers.length === 0) {
+      if (currentSearchKeyword.trim()) {
+        el.leaderboardList.innerHTML = `
+          <div class="lb-empty-state">
+            <div class="lb-empty-icon">🔍</div>
+            <div class="lb-empty-title">No Hunters Found</div>
+            <div class="lb-empty-sub">
+              No registered hunters found matching "<b>${escapeHtml(currentSearchKeyword.trim())}</b>".
+            </div>
+            <button class="lb-retry-btn" id="lbClearSearchFilterBtn" type="button">Clear Search</button>
+          </div>
+        `;
+        const clearBtn = $("#lbClearSearchFilterBtn");
+        if (clearBtn) {
+          clearBtn.addEventListener("click", () => {
+            if (el.leaderboardSearchInput) el.leaderboardSearchInput.value = "";
+            if (el.leaderboardSearchClear) el.leaderboardSearchClear.style.display = "none";
+            currentSearchKeyword = "";
+            renderLeaderboard();
+          });
+        }
+      } else if (currentRankFilter !== "ALL") {
+        el.leaderboardList.innerHTML = `
+          <div class="lb-empty-state">
+            <div class="lb-empty-icon">🛡️</div>
+            <div class="lb-empty-title">No ${escapeHtml(currentRankFilter)} Hunters Yet</div>
+            <div class="lb-empty-sub">
+              No registered hunters currently hold ${escapeHtml(currentRankFilter)} tier rank. Complete high-tier quests and lab trials to elevate your standing!
+            </div>
+          </div>
+        `;
+      } else {
+        el.leaderboardList.innerHTML = `
+          <div class="lb-empty-state">
+            <div class="lb-empty-icon">🏆</div>
+            <div class="lb-empty-title">Global Leaderboard Ready</div>
+            <div class="lb-empty-sub">
+              Rankings are calculated directly from registered users in your Supabase database. Sign up or log in to take the #1 spot!
+            </div>
+            ${!currentSupabaseUser ? '<button class="lb-auth-btn" id="lbAuthCtaBtn" type="button">Authenticate Hunter</button>' : ''}
+          </div>
+        `;
+        const authBtn = $("#lbAuthCtaBtn");
+        if (authBtn) {
+          authBtn.addEventListener("click", () => openModal("modalAuth"));
+        }
+      }
+      return;
+    }
+
+    // Render list rows
+    el.leaderboardList.innerHTML = displayedUsers.map((u) => formatHunterRow(u, false)).join("");
+
+    // ---------------------------------------------------------
+    // "MY RANK" SECTION (If current user is outside Top 100)
+    // ---------------------------------------------------------
+    if (el.leaderboardMyRankSection && el.myRankCardContainer) {
+      const isUserInTop100 = cachedLeaderboardUsers.some((u) => {
+        return (currentSupabaseUser && u.id === currentSupabaseUser.id) ||
+               (u.is_current_user) ||
+               (state.name && u.name && u.name.toLowerCase() === state.name.toLowerCase() && !currentSupabaseUser);
+      });
+
+      const userRankNumber = Number(cachedMyStanding?.global_rank);
+      const isRankBeyond100 = userRankNumber > 100 || (!isUserInTop100 && userRankNumber > 0);
+
+      if (isRankBeyond100 && (cachedMyStanding || currentSupabaseUser)) {
+        el.leaderboardMyRankSection.style.display = "block";
+        const myRankData = cachedMyStanding || {
+          id: currentSupabaseUser?.id || "my-rank-user",
+          name: state.name || "Hunter",
+          level: state.level || 1,
+          total_exp: Math.max(state.totalExp || 0, state.exp || 0),
+          global_rank: myPos || ">100",
+          rank_title: myRankTitle,
+          rank_letter: myRankInfo.rank,
+          avatar_url: null,
+          is_current_user: true,
+          guild: state.guild || "Hunter Association",
+        };
+        el.myRankCardContainer.innerHTML = formatHunterRow({ ...myRankData, is_current_user: true }, true);
+      } else {
+        el.leaderboardMyRankSection.style.display = "none";
+        el.myRankCardContainer.innerHTML = "";
+      }
+    }
+  }
+
+  async function refreshLeaderboard(showToastNotice = false) {
+    if (isLeaderboardRefreshing) return;
+    isLeaderboardRefreshing = true;
+    isLeaderboardLoading = true;
+    leaderboardError = null;
+
+    if (el.leaderboardRefreshBtn) {
+      el.leaderboardRefreshBtn.classList.add("is-loading");
+    }
+
+    try {
+      const currentUserId = currentSupabaseUser?.id || null;
+      const result = await fetchGlobalLeaderboard({
+        currentUserId,
+        limit: 100,
+        searchQuery: currentSearchKeyword.trim() || null,
+      });
+
+      cachedLeaderboardUsers = result.users || [];
+      cachedMyStanding = result.myStanding || null;
+
+      // Fallback: If guest or unauthenticated, compute synthetic local standing
+      if (!cachedMyStanding) {
+        const localTotalExp = Math.max(state.totalExp || 0, state.exp || 0);
+        const match = cachedLeaderboardUsers.find((u) => u.name && u.name.toLowerCase() === (state.name || "").toLowerCase());
+        if (match) {
+          cachedMyStanding = { ...match, is_current_user: true };
+        } else {
+          const ahead = cachedLeaderboardUsers.filter((u) => (Number(u.total_exp) || 0) > localTotalExp).length;
+          cachedMyStanding = {
+            id: "guest-user",
+            name: state.name || "Hunter",
+            level: state.level || 1,
+            total_exp: localTotalExp,
+            global_rank: ahead + 1,
+            rank_title: getRankTitle(state.level || 1),
+            rank_letter: rankInfoForLevel(state.level || 1).rank,
+            is_current_user: true,
+          };
+        }
+      }
+
+      isLeaderboardLoading = false;
+      renderLeaderboard();
+
+      if (showToastNotice) {
+        playSuccess();
+        const count = cachedLeaderboardUsers.length;
+        showToast(`🏆 <b>Global Leaderboard Synced</b>: ${count} real ${count === 1 ? "hunter" : "hunters"} ranked.`);
+      }
+    } catch (err) {
+      console.warn("Could not refresh leaderboard:", err);
+      leaderboardError = err?.message || "Failed to load rankings from Supabase.";
+      isLeaderboardLoading = false;
+      renderLeaderboard();
+      if (showToastNotice) {
+        showToast("Notice: Could not connect to Supabase Cloud rankings. Check connection.");
+      }
+    } finally {
+      isLeaderboardRefreshing = false;
+      if (el.leaderboardRefreshBtn) {
+        el.leaderboardRefreshBtn.classList.remove("is-loading");
+      }
+    }
+  }
  
   // ---------------------------------------------------------
   // RENDER: progress calendar (GitHub-style heatmap)
@@ -1778,7 +2177,7 @@ const ACHIEVEMENT_GROUPS = [
     dashboard: "Hunter Status",
     quests: "Quest Log",
     lab: "Challenge Lab",
-    roadmap: "Rank Path",
+    roadmap: "Leaderboards & Ranks",
     achievements: "Achievements",
   };
  
@@ -1787,9 +2186,27 @@ const ACHIEVEMENT_GROUPS = [
     $$(".view").forEach((v) => v.classList.remove("is-active"));
     $(`#view-${view}`).classList.add("is-active");
     el.viewTitle.textContent = VIEW_TITLES[view] || "Xeli";
+    if (view === "roadmap") {
+      refreshLeaderboard(false);
+    }
   }
  
   $$("[data-view]").forEach((btn) => btn.addEventListener("click", () => switchView(btn.dataset.view)));
+
+  // Leaderboard filters & refresh button listeners
+  $$("[data-rank-filter]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      $$("[data-rank-filter]").forEach((b) => b.classList.toggle("is-active", b === btn));
+      currentRankFilter = btn.dataset.rankFilter || "ALL";
+      renderLeaderboard();
+    });
+  });
+
+  if (el.leaderboardRefreshBtn) {
+    el.leaderboardRefreshBtn.addEventListener("click", () => {
+      refreshLeaderboard(true);
+    });
+  }
  
   // ---------------------------------------------------------
   // MODALS
@@ -2833,12 +3250,13 @@ const ACHIEVEMENT_GROUPS = [
   }
 
   // ---------------------------------------------------------
-  // RETRO WINDOWS 95/98 HUNTER LOGON CONTROLLER
+  // HUNTER CLOUD AUTHENTICATION CONTROLLER & TAB SWITCHER
   // ---------------------------------------------------------
   const loginForm = $("#loginForm");
   const loginEmail = $("#loginEmail");
   const loginPassword = $("#loginPassword");
   const loginHunterName = $("#loginHunterName");
+  const loginHunterNameRow = $("#loginHunterNameRow");
   const loginStatusDot = $("#loginStatusDot");
   const loginStatusMsg = $("#loginStatusMsg");
   const loginSignInBtn = $("#loginSignInBtn");
@@ -2848,6 +3266,39 @@ const ACHIEVEMENT_GROUPS = [
   const loginSignOutBtn = $("#loginSignOutBtn");
   const quickLogOutBtn = $("#quickLogOutBtn");
   const togglePasswordVisibilityBtn = $("#togglePasswordVisibilityBtn");
+  const authTabSignIn = $("#authTabSignIn");
+  const authTabSignUp = $("#authTabSignUp");
+  const loginDialogTitle = $("#loginDialogTitle");
+
+  let authMode = "signin"; // 'signin' | 'signup'
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    if (mode === "signin") {
+      authTabSignIn?.classList.add("is-active");
+      authTabSignUp?.classList.remove("is-active");
+      authTabSignIn?.setAttribute("aria-selected", "true");
+      authTabSignUp?.setAttribute("aria-selected", "false");
+      if (loginHunterNameRow) loginHunterNameRow.style.display = "none";
+      if (loginSignInBtn) loginSignInBtn.style.display = "block";
+      if (loginSignUpBtn) loginSignUpBtn.style.display = "none";
+      if (loginDialogTitle) loginDialogTitle.textContent = "Hunter Terminal Access";
+      setInlineLoginStatus("Enter your hunter credentials to sign in.", false);
+    } else {
+      authTabSignUp?.classList.add("is-active");
+      authTabSignIn?.classList.remove("is-active");
+      authTabSignUp?.setAttribute("aria-selected", "true");
+      authTabSignIn?.setAttribute("aria-selected", "false");
+      if (loginHunterNameRow) loginHunterNameRow.style.display = "flex";
+      if (loginSignInBtn) loginSignInBtn.style.display = "none";
+      if (loginSignUpBtn) loginSignUpBtn.style.display = "block";
+      if (loginDialogTitle) loginDialogTitle.textContent = "Initialize Hunter Clearance";
+      setInlineLoginStatus("Create a new Hunter profile on the Awakening Cloud.", false);
+    }
+  }
+
+  if (authTabSignIn) authTabSignIn.addEventListener("click", () => setAuthMode("signin"));
+  if (authTabSignUp) authTabSignUp.addEventListener("click", () => setAuthMode("signup"));
 
   function setInlineLoginStatus(msg, isError = false) {
     if (!loginStatusMsg || !loginStatusDot) return;
@@ -2860,6 +3311,7 @@ const ACHIEVEMENT_GROUPS = [
   }
 
   function openHunterLogonModal() {
+    setAuthMode("signin");
     if (loginEmail) {
       if (currentSupabaseUser?.email) {
         loginEmail.value = currentSupabaseUser.email;
@@ -2879,7 +3331,7 @@ const ACHIEVEMENT_GROUPS = [
       if (isGuest) {
         setInlineLoginStatus("Guest Mode active (offline browser storage only).", false);
       } else {
-        setInlineLoginStatus("Ready. Choose an authentication method.", false);
+        setInlineLoginStatus("Ready. Sign in or initialize hunter clearance.", false);
       }
     }
 
@@ -2935,10 +3387,14 @@ const ACHIEVEMENT_GROUPS = [
     });
   }
 
-  // "Sign In" with Email & Password
+  // "Sign In" with Email & Password (or Sign Up when in signup mode)
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (authMode === "signup") {
+        if (loginSignUpBtn) loginSignUpBtn.click();
+        return;
+      }
       const email = (loginEmail?.value || "").trim();
       const password = (loginPassword?.value || "").trim();
 
@@ -3442,4 +3898,5 @@ const ACHIEVEMENT_GROUPS = [
   saveState();
   render();
   initSupabaseController();
+  refreshLeaderboard(false);
 })();
