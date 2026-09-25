@@ -769,6 +769,33 @@ const ACHIEVEMENT_GROUPS = [
   const TARGET_FIX_USER_ID = "a0c2b12e-6892-4016-8d29-d39c32f6f9c7";
   const TARGET_FIX_EMAILS = ["axzelbaril931@gmail.com", "xeligirl910@gmail.com"];
 
+  const TARGET_MATRIX_USER_ID = "f4b12bd2-f26a-4f98-aef2-1e883b9f1934";
+  const TARGET_MATRIX_EMAILS = ["axzelbaril460@gmail.com"];
+
+  // Activity Matrix from August 25 to September 24, 2026 (59 submissions, 20 active days, 18,050 Total EXP)
+  const AUG25_SEPT24_MATRIX = {
+    "2026-08-25": 300,
+    "2026-08-26": 610,
+    "2026-08-27": 920,
+    "2026-08-30": 310,
+    "2026-08-31": 610,
+    "2026-09-01": 920,
+    "2026-09-04": 920,
+    "2026-09-05": 920,
+    "2026-09-07": 920,
+    "2026-09-08": 920,
+    "2026-09-09": 1220,
+    "2026-09-10": 920,
+    "2026-09-11": 920,
+    "2026-09-14": 920,
+    "2026-09-15": 920,
+    "2026-09-17": 920,
+    "2026-09-18": 1220,
+    "2026-09-21": 920,
+    "2026-09-22": 920,
+    "2026-09-23": 1820,
+  };
+
   function isTargetHunterAccount(data) {
     if (!data) return false;
     if (typeof currentSupabaseUser !== "undefined" && currentSupabaseUser) {
@@ -778,11 +805,26 @@ const ACHIEVEMENT_GROUPS = [
     }
     const name = (data.name || "").trim().toLowerCase();
     const hasTrialsOrExp = (
-      (data.totalExp && data.totalExp >= 1900) ||
-      (data.total_exp && data.total_exp >= 1900) ||
-      (Array.isArray(data.solvedChallenges) && data.solvedChallenges.length >= 11)
+      (data.totalExp && data.totalExp >= 1900 && data.totalExp < 15000) ||
+      (data.total_exp && data.total_exp >= 1900 && data.total_exp < 15000) ||
+      (Array.isArray(data.solvedChallenges) && data.solvedChallenges.length >= 11 && data.solvedChallenges.length < 50)
     );
     return (name === "xel" && hasTrialsOrExp);
+  }
+
+  function isTargetMatrixAccount(data) {
+    if (!data) return false;
+    if (typeof currentSupabaseUser !== "undefined" && currentSupabaseUser) {
+      if (currentSupabaseUser.id === TARGET_MATRIX_USER_ID || TARGET_MATRIX_EMAILS.includes(currentSupabaseUser.email)) {
+        return true;
+      }
+    }
+    const name = (data.name || "").trim().toLowerCase();
+    const hasHighExp = (
+      (data.totalExp && data.totalExp >= 17000) ||
+      (data.total_exp && data.total_exp >= 17000)
+    );
+    return (name === "axzel" || name === "xel") && hasHighExp;
   }
 
   function sanitizeState(obj) {
@@ -808,13 +850,22 @@ const ACHIEVEMENT_GROUPS = [
     if (typeof merged.lastSupabaseSync !== "string" && merged.lastSupabaseSync !== null) merged.lastSupabaseSync = null;
 
     // Targeted fix for axzelbaril931@gmail.com (id: a0c2b12e-6892-4016-8d29-d39c32f6f9c7):
-    // Reconcile 1,905 Total EXP earned from 11 cleared trials with Level 9 & 125 EXP
     if (isTargetHunterAccount(merged)) {
       if (merged.level < 9 || merged.totalExp < 1905 || (merged.level === 1 && merged.exp === 125)) {
         merged.level = 9;
         merged.exp = 125;
         merged.totalExp = Math.max(merged.totalExp, 1905);
       }
+    }
+
+    // Targeted migration for axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934):
+    // 18,050 Total EXP, Level 24 (Rank D), 1,605/1,879 EXP, Aug 25 - Sept 24 matrix
+    if (isTargetMatrixAccount(merged)) {
+      merged.level = 24;
+      merged.exp = 1605;
+      merged.totalExp = 18050;
+      merged.streak = Math.max(merged.streak, 5);
+      merged.dailyExp = { ...AUG25_SEPT24_MATRIX, ...(merged.dailyExp || {}) };
     }
 
     return merged;
@@ -1050,6 +1101,9 @@ const ACHIEVEMENT_GROUPS = [
   // LEVEL / RANK MATH
   // ---------------------------------------------------------
   function requiredForLevel(level) {
+    if (level >= 100) return 0;
+    // Exactly 1,000,000 cumulative EXP to reach Level 100 (Level 99 cap is 29,555 EXP)
+    if (level === 99) return 152 + 3 * level * level;
     return 151 + 3 * level * level;
   }
 
@@ -1212,8 +1266,7 @@ const ACHIEVEMENT_GROUPS = [
     hunterNameInput: $("#hunterNameInput"), hunterTitle: $("#hunterTitle"),
     levelNumber: $("#levelNumber"), expFill: $("#expFill"), expTrack: $("#expTrack"),
     expCurrent: $("#expCurrent"), expRequired: $("#expRequired"), expHint: $("#expHint"),
-    expWordLabel: $("#expWordLabel"), expLevelBadge: $("#expLevelBadge"),
-    expNumbersRow: $("#expNumbersRow"), expViewToggleBtn: $("#expViewToggleBtn"),
+    expWordLabel: $("#expWordLabel"),
     statQuests: $("#statQuests"), statChallenges: $("#statChallenges"),
     dashQuestList: $("#dashQuestList"), activityList: $("#activityList"),
     questGrid: $("#questGrid"), questTabs: $("#questTabs"),
@@ -1348,25 +1401,14 @@ const ACHIEVEMENT_GROUPS = [
     el.expFill.style.width = pct + "%";
     el.expTrack.setAttribute("aria-valuenow", Math.round(pct));
 
-    // Dynamic EXP Display: Prominently show Total EXP (e.g. 1,905 / 2,174) with Level bracket details
-    const isLevelMode = expDisplayMode === "level";
     if (el.expCurrent) {
-      el.expCurrent.textContent = isLevelMode ? state.exp.toLocaleString() : totalExpVal.toLocaleString();
+      el.expCurrent.textContent = (state.level >= MAX_LEVEL ? required : state.exp).toLocaleString();
     }
     if (el.expRequired) {
-      el.expRequired.textContent = isLevelMode ? required.toLocaleString() : cumulativeNext.toLocaleString();
+      el.expRequired.textContent = required.toLocaleString();
     }
     if (el.expWordLabel) {
-      el.expWordLabel.textContent = isLevelMode ? "LEVEL EXP" : "TOTAL EXP";
-    }
-    if (el.expLevelBadge) {
-      if (isLevelMode) {
-        el.expLevelBadge.innerHTML = `Total: <b>${totalExpVal.toLocaleString()} EXP</b>`;
-        el.expLevelBadge.title = `Showing level bracket progress. Total EXP: ${totalExpVal.toLocaleString()}`;
-      } else {
-        el.expLevelBadge.innerHTML = `Lv. ${state.level}: <b>${state.exp.toLocaleString()} / ${required.toLocaleString()}</b>`;
-        el.expLevelBadge.title = `Current Level progress: ${state.exp} of ${required} EXP (Total: ${totalExpVal.toLocaleString()})`;
-      }
+      el.expWordLabel.textContent = "EXP";
     }
 
     const expRemaining = Math.max(0, required - state.exp);
@@ -2641,24 +2683,6 @@ const ACHIEVEMENT_GROUPS = [
     render();
   });
 
-  // ---------------------------------------------------------
-  // EXP DISPLAY MODE TOGGLE (Total EXP vs Level progress)
-  // ---------------------------------------------------------
-  if (el.expNumbersRow) {
-    el.expNumbersRow.addEventListener("click", () => toggleExpDisplayMode());
-    el.expNumbersRow.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        toggleExpDisplayMode();
-      }
-    });
-  }
-  if (el.expViewToggleBtn) {
-    el.expViewToggleBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      toggleExpDisplayMode();
-    });
-  }
  
   // ---------------------------------------------------------
   // LAB TABS

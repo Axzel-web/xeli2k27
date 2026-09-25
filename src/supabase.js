@@ -127,14 +127,29 @@ export async function saveProgressToSupabase(state) {
 
   // 2. Try saving to 'profiles' table in Supabase
   try {
+    const isTargetMatrixUser = Boolean(
+      user.id === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934" ||
+      user.email === "axzelbaril460@gmail.com"
+    );
     const isTargetUser = Boolean(
       user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7" ||
       user.email === "axzelbaril931@gmail.com" ||
       user.email === "xeligirl910@gmail.com"
     );
-    const syncLevel = isTargetUser ? Math.max(Number(state.level) || 1, 9) : (state.level || 1);
-    const syncTotalExp = isTargetUser ? Math.max(Number(state.totalExp) || 0, 1905) : (state.totalExp || 0);
-    const syncExp = isTargetUser ? ((state.level && state.level >= 9) ? (state.exp ?? 125) : 125) : (state.exp || 0);
+
+    let syncLevel = state.level || 1;
+    let syncTotalExp = state.totalExp || 0;
+    let syncExp = state.exp || 0;
+
+    if (isTargetMatrixUser) {
+      syncLevel = Math.max(Number(state.level) || 1, 24);
+      syncTotalExp = Math.max(Number(state.totalExp) || 0, 18050);
+      syncExp = (state.level && state.level >= 24) ? (state.exp ?? 1605) : 1605;
+    } else if (isTargetUser) {
+      syncLevel = Math.max(Number(state.level) || 1, 9);
+      syncTotalExp = Math.max(Number(state.totalExp) || 0, 1905);
+      syncExp = (state.level && state.level >= 9) ? (state.exp ?? 125) : 125;
+    }
 
     const { error: tableErr } = await supabase
       .from("profiles")
@@ -408,6 +423,10 @@ export async function loadProgressFromSupabase() {
     throw new Error("No active Supabase session. Please sign in first.");
   }
 
+  const isTargetMatrixUser = Boolean(
+    user.id === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934" ||
+    user.email === "axzelbaril460@gmail.com"
+  );
   const isTargetUser = Boolean(
     user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7" ||
     user.email === "axzelbaril931@gmail.com" ||
@@ -424,9 +443,19 @@ export async function loadProgressFromSupabase() {
 
     if (!tableErr && tableData) {
       const p = user.user_metadata?.hunter_progress || {};
-      const restoredLevel = isTargetUser ? Math.max(Number(tableData.level) || 1, 9) : (tableData.level || p.level || 1);
-      const restoredTotalExp = isTargetUser ? Math.max(Number(tableData.total_exp ?? tableData.exp) || 0, 1905) : (tableData.total_exp || p.total_exp || 0);
-      const restoredExp = isTargetUser ? ((restoredLevel >= 9) ? (Number(tableData.exp) || 125) : 125) : (tableData.exp || p.exp || 0);
+      let restoredLevel = tableData.level || p.level || 1;
+      let restoredTotalExp = tableData.total_exp || p.total_exp || 0;
+      let restoredExp = tableData.exp || p.exp || 0;
+
+      if (isTargetMatrixUser) {
+        restoredLevel = Math.max(Number(tableData.level) || 1, 24);
+        restoredTotalExp = Math.max(Number(tableData.total_exp ?? tableData.exp) || 0, 18050);
+        restoredExp = (restoredLevel >= 24) ? (Number(tableData.exp) || 1605) : 1605;
+      } else if (isTargetUser) {
+        restoredLevel = Math.max(Number(tableData.level) || 1, 9);
+        restoredTotalExp = Math.max(Number(tableData.total_exp ?? tableData.exp) || 0, 1905);
+        restoredExp = (restoredLevel >= 9) ? (Number(tableData.exp) || 125) : 125;
+      }
 
       return {
         name: tableData.name || p.hunter_name || user.user_metadata?.hunter_name || "Hunter",

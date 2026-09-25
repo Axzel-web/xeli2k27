@@ -25,13 +25,17 @@ AS $$
   END;
 $$;
 
--- Helper function: Required EXP per level: 151 + 3 * level * level (Matches XELI client engine)
+-- Helper function: Required EXP per level: 151 + 3 * level * level (Matches XELI client engine; exactly 1,000,000 EXP to reach Level 100)
 CREATE OR REPLACE FUNCTION public.get_exp_required(p_level INT)
 RETURNS INT
 LANGUAGE sql
 IMMUTABLE
 AS $$
-  SELECT 151 + 3 * p_level * p_level;
+  SELECT CASE
+    WHEN p_level >= 100 THEN 0
+    WHEN p_level = 99 THEN 152 + 3 * p_level * p_level
+    ELSE 151 + 3 * p_level * p_level
+  END;
 $$;
 
 -- Trigger helper: auto-update updated_at timestamp
@@ -798,9 +802,10 @@ $$;
 
 -- ============================================================================
 -- 7.1 TARGETED EXP & LEVEL RECOVERY FOR HUNTER ACCOUNTS
--- User ID: a0c2b12e-6892-4016-8d29-d39c32f6f9c7 / axzelbaril931@gmail.com / xeligirl910@gmail.com
--- Reconciles 11 completed trials (1,905 Total EXP) to Level 9 and 125 EXP
 -- ============================================================================
+
+-- Account 1: axzelbaril931@gmail.com / xeligirl910@gmail.com (id: a0c2b12e-6892-4016-8d29-d39c32f6f9c7)
+-- Reconciles 11 completed trials (1,905 Total EXP) to Level 9 and 125 EXP
 UPDATE public.profiles
 SET
   level = 9,
@@ -812,6 +817,56 @@ WHERE id = 'a0c2b12e-6892-4016-8d29-d39c32f6f9c7'
      SELECT id FROM auth.users 
      WHERE email IN ('axzelbaril931@gmail.com', 'xeligirl910@gmail.com')
    );
+
+-- Account 2: axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934)
+-- Reconciles 18,050 Total EXP to Level 24 (Rank D), 1,605/1,879 EXP, streak 5
+UPDATE public.profiles
+SET
+  level = 24,
+  exp = 1605,
+  total_exp = 18050,
+  streak = 5,
+  last_active_day = '2026-09-23',
+  updated_at = NOW()
+WHERE id = 'f4b12bd2-f26a-4f98-aef2-1e883b9f1934'
+   OR id IN (
+     SELECT id FROM auth.users 
+     WHERE email = 'axzelbaril460@gmail.com'
+   );
+
+-- Activity Matrix Migration: August 25 - September 24, 2026 (59 submissions across 20 active days = 18,050 Total EXP)
+INSERT INTO public.daily_exp (user_id, day, exp_earned)
+SELECT u.id, d.day, d.exp_earned
+FROM (
+  SELECT id FROM public.profiles 
+  WHERE id = 'f4b12bd2-f26a-4f98-aef2-1e883b9f1934'
+     OR id IN (SELECT id FROM auth.users WHERE email = 'axzelbaril460@gmail.com')
+) u
+CROSS JOIN (
+  VALUES
+    ('2026-08-25'::date, 300),
+    ('2026-08-26'::date, 610),
+    ('2026-08-27'::date, 920),
+    ('2026-08-30'::date, 310),
+    ('2026-08-31'::date, 610),
+    ('2026-09-01'::date, 920),
+    ('2026-09-04'::date, 920),
+    ('2026-09-05'::date, 920),
+    ('2026-09-07'::date, 920),
+    ('2026-09-08'::date, 920),
+    ('2026-09-09'::date, 1220),
+    ('2026-09-10'::date, 920),
+    ('2026-09-11'::date, 920),
+    ('2026-09-14'::date, 920),
+    ('2026-09-15'::date, 920),
+    ('2026-09-17'::date, 920),
+    ('2026-09-18'::date, 1220),
+    ('2026-09-21'::date, 920),
+    ('2026-09-22'::date, 920),
+    ('2026-09-23'::date, 1820)
+) AS d(day, exp_earned)
+ON CONFLICT (user_id, day) DO UPDATE
+SET exp_earned = EXCLUDED.exp_earned;
 
 -- ============================================================================
 -- 8. GLOBAL LEADERBOARD & SECURITY ENHANCEMENTS
