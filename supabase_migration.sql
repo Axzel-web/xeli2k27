@@ -797,6 +797,19 @@ END;
 $$;
 
 -- ============================================================================
+-- 7.1 TARGETED EXP & LEVEL RECOVERY FOR HUNTER: axzelbaril931@gmail.com
+-- User ID: a0c2b12e-6892-4016-8d29-d39c32f6f9c7
+-- Reconciles 11 completed trials (1,905 Total EXP) to Level 9 and 125 EXP
+-- ============================================================================
+UPDATE public.profiles
+SET
+  level = 9,
+  exp = 125,
+  total_exp = GREATEST(total_exp, 1905),
+  updated_at = NOW()
+WHERE id = 'a0c2b12e-6892-4016-8d29-d39c32f6f9c7';
+
+-- ============================================================================
 -- 8. GLOBAL LEADERBOARD & SECURITY ENHANCEMENTS
 -- ============================================================================
 

@@ -766,6 +766,25 @@ const ACHIEVEMENT_GROUPS = [
     }
   }
  
+  const TARGET_FIX_USER_ID = "a0c2b12e-6892-4016-8d29-d39c32f6f9c7";
+  const TARGET_FIX_EMAIL = "axzelbaril931@gmail.com";
+
+  function isTargetHunterAccount(data) {
+    if (!data) return false;
+    if (typeof currentSupabaseUser !== "undefined" && currentSupabaseUser) {
+      if (currentSupabaseUser.id === TARGET_FIX_USER_ID || currentSupabaseUser.email === TARGET_FIX_EMAIL) {
+        return true;
+      }
+    }
+    const name = (data.name || "").trim().toLowerCase();
+    const hasTrialsOrExp = (
+      (data.totalExp && data.totalExp >= 1900) ||
+      (data.total_exp && data.total_exp >= 1900) ||
+      (Array.isArray(data.solvedChallenges) && data.solvedChallenges.length >= 11)
+    );
+    return (name === "xel" && hasTrialsOrExp);
+  }
+
   function sanitizeState(obj) {
     const merged = { ...defaultState(), ...obj };
     if (typeof merged.level !== "number" || isNaN(merged.level)) merged.level = 1;
@@ -787,6 +806,17 @@ const ACHIEVEMENT_GROUPS = [
     if (typeof merged.password !== "string") merged.password = "hunter1998";
     if (typeof merged.supabaseAutoSync !== "boolean") merged.supabaseAutoSync = true;
     if (typeof merged.lastSupabaseSync !== "string" && merged.lastSupabaseSync !== null) merged.lastSupabaseSync = null;
+
+    // Targeted fix for axzelbaril931@gmail.com (id: a0c2b12e-6892-4016-8d29-d39c32f6f9c7):
+    // Reconcile 1,905 Total EXP earned from 11 cleared trials with Level 9 & 125 EXP
+    if (isTargetHunterAccount(merged)) {
+      if (merged.level < 9 || merged.totalExp < 1905 || (merged.level === 1 && merged.exp === 125)) {
+        merged.level = 9;
+        merged.exp = 125;
+        merged.totalExp = Math.max(merged.totalExp, 1905);
+      }
+    }
+
     return merged;
   }
  
@@ -2177,21 +2207,76 @@ const ACHIEVEMENT_GROUPS = [
     dashboard: "Hunter Status",
     quests: "Quest Log",
     lab: "Challenge Lab",
-    roadmap: "Leaderboards & Ranks",
+    leaderboard: "Global Leaderboard",
+    roadmap: "Global Leaderboard",
     achievements: "Achievements",
   };
  
   function switchView(view) {
-    $$(".nav-item").forEach((b) => b.classList.toggle("is-active", b.dataset.view === view));
+    const targetView = (view === "roadmap") ? "leaderboard" : view;
+    $$(".nav-item").forEach((b) => {
+      const bView = b.dataset.view;
+      b.classList.toggle("is-active", bView === view || (view === "roadmap" && bView === "leaderboard") || (view === "leaderboard" && bView === "roadmap"));
+    });
     $$(".view").forEach((v) => v.classList.remove("is-active"));
-    $(`#view-${view}`).classList.add("is-active");
-    el.viewTitle.textContent = VIEW_TITLES[view] || "Xeli";
-    if (view === "roadmap") {
+    const targetEl = $(`#view-${targetView}`);
+    if (targetEl) targetEl.classList.add("is-active");
+    el.viewTitle.textContent = VIEW_TITLES[view] || VIEW_TITLES[targetView] || "Xeli";
+
+    if (view === "leaderboard" || view === "roadmap") {
+      if (view === "roadmap") {
+        switchLeaderboardTab("progression");
+      }
       refreshLeaderboard(false);
     }
   }
  
   $$("[data-view]").forEach((btn) => btn.addEventListener("click", () => switchView(btn.dataset.view)));
+
+  // Leaderboard Tab Controller: Global Top 100 vs Rank Progression
+  function switchLeaderboardTab(tab) {
+    activeLeaderboardTab = tab;
+    $$("#leaderboardTabs [data-tab]").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.tab === tab);
+    });
+    if (tab === "progression") {
+      if (el.roadmapSubpanel) el.roadmapSubpanel.style.display = "block";
+    } else {
+      if (el.roadmapSubpanel) el.roadmapSubpanel.style.display = "none";
+    }
+  }
+
+  $$("#leaderboardTabs [data-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => switchLeaderboardTab(btn.dataset.tab));
+  });
+
+  // Leaderboard Search Input with Debounce
+  if (el.leaderboardSearchInput) {
+    el.leaderboardSearchInput.addEventListener("input", (e) => {
+      const val = e.target.value || "";
+      if (el.leaderboardSearchClear) {
+        el.leaderboardSearchClear.style.display = val.trim() ? "block" : "none";
+      }
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        currentSearchKeyword = val;
+        renderLeaderboard();
+      }, 200);
+    });
+  }
+
+  // Clear Search Input Button
+  if (el.leaderboardSearchClear) {
+    el.leaderboardSearchClear.addEventListener("click", () => {
+      if (el.leaderboardSearchInput) {
+        el.leaderboardSearchInput.value = "";
+        el.leaderboardSearchInput.focus();
+      }
+      el.leaderboardSearchClear.style.display = "none";
+      currentSearchKeyword = "";
+      renderLeaderboard();
+    });
+  }
 
   // Leaderboard filters & refresh button listeners
   $$("[data-rank-filter]").forEach((btn) => {
@@ -2206,6 +2291,20 @@ const ACHIEVEMENT_GROUPS = [
     el.leaderboardRefreshBtn.addEventListener("click", () => {
       refreshLeaderboard(true);
     });
+  }
+
+  // Realtime Supabase Subscription for Global Leaderboard
+  let leaderboardRealtimeChannel = null;
+  function initLeaderboardRealtime() {
+    if (leaderboardRealtimeChannel) return;
+    try {
+      leaderboardRealtimeChannel = subscribeToLeaderboardChanges(() => {
+        // Automatically sync latest rankings when any hunter completes quests or earns XP in Supabase
+        refreshLeaderboard(false);
+      });
+    } catch (err) {
+      console.warn("Could not subscribe to leaderboard realtime changes:", err);
+    }
   }
  
   // ---------------------------------------------------------
@@ -3233,6 +3332,19 @@ const ACHIEVEMENT_GROUPS = [
     }
 
     await restoreFromSupabaseCloud(true);
+
+    if (user.id === TARGET_FIX_USER_ID || user.email === TARGET_FIX_EMAIL) {
+      if (state.level < 9 || state.totalExp < 1905 || (state.level === 1 && state.exp === 125)) {
+        state.level = 9;
+        state.exp = 125;
+        state.totalExp = Math.max(state.totalExp || 0, 1905);
+        saveState();
+        render();
+        syncToSupabaseCloud(true);
+      }
+    }
+
+    refreshLeaderboard(false);
   }
 
   async function handleUserLoggedOut(showMessage = true) {
@@ -3242,6 +3354,7 @@ const ACHIEVEMENT_GROUPS = [
     saveState();
     render();
     updateSupabaseAuthUi();
+    refreshLeaderboard(false);
     if (showMessage) {
       playLogoffSound();
       showToast("🔒 Logged off terminal. Progress stored locally.");
@@ -3894,9 +4007,17 @@ const ACHIEVEMENT_GROUPS = [
   // ---------------------------------------------------------
   // INIT
   // ---------------------------------------------------------
+  if (isTargetHunterAccount(state)) {
+    if (state.level < 9 || state.totalExp < 1905 || (state.level === 1 && state.exp === 125)) {
+      state.level = 9;
+      state.exp = 125;
+      state.totalExp = Math.max(state.totalExp || 0, 1905);
+    }
+  }
   touchStreak();
   saveState();
   render();
   initSupabaseController();
   refreshLeaderboard(false);
+  initLeaderboardRealtime();
 })();
