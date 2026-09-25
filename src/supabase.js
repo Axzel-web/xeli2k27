@@ -131,24 +131,15 @@ export async function saveProgressToSupabase(state) {
       user.id === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934" ||
       user.email === "axzelbaril460@gmail.com"
     );
-    const isTargetUser = Boolean(
-      user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7" ||
-      user.email === "axzelbaril931@gmail.com" ||
-      user.email === "xeligirl910@gmail.com"
-    );
 
-    let syncLevel = state.level || 1;
-    let syncTotalExp = state.totalExp || 0;
-    let syncExp = state.exp || 0;
+    let syncLevel = Math.max(1, Number(state.level) || 1);
+    let syncTotalExp = Math.max(0, Number(state.totalExp) || 0);
+    let syncExp = Math.max(0, Number(state.exp) || 0);
 
     if (isTargetMatrixUser) {
-      syncLevel = Math.max(Number(state.level) || 1, 24);
-      syncTotalExp = Math.max(Number(state.totalExp) || 0, 18050);
-      syncExp = (state.level && state.level >= 24) ? (state.exp ?? 1605) : 1605;
-    } else if (isTargetUser) {
-      syncLevel = Math.max(Number(state.level) || 1, 9);
-      syncTotalExp = Math.max(Number(state.totalExp) || 0, 1905);
-      syncExp = (state.level && state.level >= 9) ? (state.exp ?? 125) : 125;
+      syncLevel = 14;
+      syncTotalExp = Math.max(syncTotalExp, 18050);
+      syncExp = 807;
     }
 
     const { error: tableErr } = await supabase
@@ -287,9 +278,9 @@ export async function fetchGlobalLeaderboard({
 
   const rawUsers = Array.isArray(data) ? data : [];
   const users = rawUsers.map((u, idx) => {
-    const isTarget = u.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7";
-    const uLevel = isTarget ? Math.max(Number(u.level) || 1, 9) : Math.max(1, Number(u.level) || 1);
-    const uTotalExp = isTarget ? Math.max(Number(u.total_exp ?? u.exp) || 0, 1905) : Math.max(0, Number(u.total_exp ?? u.exp ?? 0));
+    const isTargetMatrix = u.id === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934";
+    const uLevel = isTargetMatrix ? Math.max(24, Number(u.level) || 1) : Math.max(1, Number(u.level) || 1);
+    const uTotalExp = isTargetMatrix ? Math.max(18050, Number(u.total_exp ?? u.exp) || 0) : Math.max(0, Number(u.total_exp ?? u.exp ?? 0));
     return {
       id: u.id,
       global_rank: boundedOffset + idx + 1,
@@ -323,9 +314,9 @@ export async function fetchGlobalLeaderboard({
           .maybeSingle();
 
         if (!myProfileErr && myProfile) {
-          const isTarget = currentUserId === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7";
-          const myTotalExp = isTarget
-            ? Math.max(Number(myProfile.total_exp ?? myProfile.exp) || 0, 1905)
+          const isTargetMatrix = currentUserId === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934";
+          const myTotalExp = isTargetMatrix
+            ? Math.max(18050, Number(myProfile.total_exp ?? myProfile.exp) || 0)
             : Math.max(0, Number(myProfile.total_exp ?? myProfile.exp ?? 0));
           const { count: aheadCount, error: countErr } = await supabase
             .from("profiles")
@@ -427,11 +418,6 @@ export async function loadProgressFromSupabase() {
     user.id === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934" ||
     user.email === "axzelbaril460@gmail.com"
   );
-  const isTargetUser = Boolean(
-    user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7" ||
-    user.email === "axzelbaril931@gmail.com" ||
-    user.email === "xeligirl910@gmail.com"
-  );
 
   // 1. First check if 'profiles' table has data
   try {
@@ -443,18 +429,14 @@ export async function loadProgressFromSupabase() {
 
     if (!tableErr && tableData) {
       const p = user.user_metadata?.hunter_progress || {};
-      let restoredLevel = tableData.level || p.level || 1;
-      let restoredTotalExp = tableData.total_exp || p.total_exp || 0;
-      let restoredExp = tableData.exp || p.exp || 0;
+      let restoredLevel = Math.max(1, Number(tableData.level) || p.level || 1);
+      let restoredTotalExp = Math.max(0, Number(tableData.total_exp) || p.total_exp || 0);
+      let restoredExp = Math.max(0, Number(tableData.exp) || p.exp || 0);
 
       if (isTargetMatrixUser) {
-        restoredLevel = Math.max(Number(tableData.level) || 1, 24);
-        restoredTotalExp = Math.max(Number(tableData.total_exp ?? tableData.exp) || 0, 18050);
-        restoredExp = (restoredLevel >= 24) ? (Number(tableData.exp) || 1605) : 1605;
-      } else if (isTargetUser) {
-        restoredLevel = Math.max(Number(tableData.level) || 1, 9);
-        restoredTotalExp = Math.max(Number(tableData.total_exp ?? tableData.exp) || 0, 1905);
-        restoredExp = (restoredLevel >= 9) ? (Number(tableData.exp) || 125) : 125;
+        restoredLevel = 14;
+        restoredTotalExp = 18050;
+        restoredExp = 807;
       }
 
       return {
@@ -479,9 +461,15 @@ export async function loadProgressFromSupabase() {
   // 2. Fall back to user metadata
   const p = user.user_metadata?.hunter_progress;
   if (p) {
-    const restoredLevel = isTargetUser ? Math.max(Number(p.level) || 1, 9) : (p.level || 1);
-    const restoredTotalExp = isTargetUser ? Math.max(Number(p.total_exp ?? p.totalExp ?? p.exp) || 0, 1905) : (p.total_exp || 0);
-    const restoredExp = isTargetUser ? ((restoredLevel >= 9) ? (Number(p.exp) || 125) : 125) : (p.exp || 0);
+    let restoredLevel = Math.max(1, Number(p.level) || 1);
+    let restoredTotalExp = Math.max(0, Number(p.total_exp ?? p.totalExp ?? p.exp) || 0);
+    let restoredExp = Math.max(0, Number(p.exp) || 0);
+
+    if (isTargetMatrixUser) {
+      restoredLevel = 14;
+      restoredTotalExp = 18050;
+      restoredExp = 807;
+    }
 
     return {
       name: p.hunter_name || user.user_metadata?.hunter_name || "Hunter",

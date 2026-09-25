@@ -25,7 +25,21 @@ AS $$
   END;
 $$;
 
--- Helper function: Required EXP per level: 151 + 3 * level * level (Matches XELI client engine; exactly 1,000,000 EXP to reach Level 100)
+-- Helper function: Cumulative Total EXP threshold required for a given level (1–100)
+-- Formula: Total EXP = 1,000,000 * ((Level - 1) / 99)^2
+CREATE OR REPLACE FUNCTION public.get_total_exp_for_level(p_level INT)
+RETURNS INT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE
+    WHEN p_level <= 1 THEN 0
+    WHEN p_level >= 100 THEN 1000000
+    ELSE ROUND(1000000.0 * POWER((p_level - 1.0) / 99.0, 2))::INT
+  END;
+$$;
+
+-- Helper function: Required EXP to advance from p_level to p_level + 1
 CREATE OR REPLACE FUNCTION public.get_exp_required(p_level INT)
 RETURNS INT
 LANGUAGE sql
@@ -33,8 +47,7 @@ IMMUTABLE
 AS $$
   SELECT CASE
     WHEN p_level >= 100 THEN 0
-    WHEN p_level = 99 THEN 152 + 3 * p_level * p_level
-    ELSE 151 + 3 * p_level * p_level
+    ELSE public.get_total_exp_for_level(p_level + 1) - public.get_total_exp_for_level(p_level)
   END;
 $$;
 
@@ -348,27 +361,23 @@ BEGIN
   v_streak := v_profile.streak;
   v_last_day := v_profile.last_active_day;
 
-  -- 1. Level-up calculation loop
-  -- Required EXP = 100 + (level - 1) * 35
-  -- Max level = 100
-  LOOP
-    IF v_new_level >= 100 THEN
-      v_new_level := 100;
-      v_current_exp := 0; -- clamped at max level
-      EXIT;
-    END IF;
-
-    v_req_exp := public.get_exp_required(v_new_level);
-
-    IF v_current_exp >= v_req_exp THEN
-      v_current_exp := v_current_exp - v_req_exp;
+  -- 1. Level-up calculation based on Total EXP = 1,000,000 * ((Level - 1) / 99)^2
+  IF v_total_exp >= 1000000 THEN
+    v_new_level := 100;
+    v_current_exp := 0;
+  ELSE
+    v_new_level := LEAST(99, GREATEST(1, FLOOR(SQRT(v_total_exp::FLOAT / 1000000.0) * 99.0)::INT + 1));
+    WHILE v_new_level < 100 AND public.get_total_exp_for_level(v_new_level + 1) <= v_total_exp LOOP
       v_new_level := v_new_level + 1;
-      v_leveled_up := true;
-      v_levels_gained := v_levels_gained + 1;
-    ELSE
-      EXIT;
-    END IF;
-  END LOOP;
+    END LOOP;
+    WHILE v_new_level > 1 AND public.get_total_exp_for_level(v_new_level) > v_total_exp LOOP
+      v_new_level := v_new_level - 1;
+    END LOOP;
+    v_current_exp := v_total_exp - public.get_total_exp_for_level(v_new_level);
+  END IF;
+
+  v_leveled_up := (v_new_level > v_old_level);
+  v_levels_gained := GREATEST(0, v_new_level - v_old_level);
 
   -- 2. Streak update logic
   IF v_last_day IS NULL THEN
@@ -801,29 +810,30 @@ END;
 $$;
 
 -- ============================================================================
--- 7.1 TARGETED EXP & LEVEL RECOVERY FOR HUNTER ACCOUNTS
+-- 7.1 ACCOUNT PROGRESS RECOVERY & CLEANSE
 -- ============================================================================
 
--- Account 1: axzelbaril931@gmail.com / xeligirl910@gmail.com (id: a0c2b12e-6892-4016-8d29-d39c32f6f9c7)
--- Reconciles 11 completed trials (1,905 Total EXP) to Level 9 and 125 EXP
+-- Reset any legacy Level 9 / 1,905 EXP injections back to Level 1 (0 EXP)
 UPDATE public.profiles
 SET
-  level = 9,
-  exp = 125,
-  total_exp = GREATEST(total_exp, 1905),
+  level = 1,
+  exp = 0,
+  total_exp = 0,
   updated_at = NOW()
-WHERE id = 'a0c2b12e-6892-4016-8d29-d39c32f6f9c7'
+WHERE (level = 9 AND total_exp = 1905)
    OR id IN (
      SELECT id FROM auth.users 
      WHERE email IN ('axzelbaril931@gmail.com', 'xeligirl910@gmail.com')
    );
 
 -- Account 2: axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934)
--- Reconciles 18,050 Total EXP to Level 24 (Rank D), 1,605/1,879 EXP, streak 5
+-- Account 2: axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934)
+-- Under Total EXP = 1,000,000 * ((Level - 1) / 99)^2:
+-- 18,050 Total EXP = Level 14 with 807 / 2,755 EXP (Rank E · The Awakened)
 UPDATE public.profiles
 SET
-  level = 24,
-  exp = 1605,
+  level = 14,
+  exp = 807,
   total_exp = 18050,
   streak = 5,
   last_active_day = '2026-09-23',

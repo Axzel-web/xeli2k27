@@ -703,7 +703,52 @@ const ACHIEVEMENT_GROUPS = [
   ];
  
   const DIFF_LABELS = { 25: "Easy", 50: "Normal", 100: "Hard", 200: "Elite" };
- 
+
+  // ---------------------------------------------------------
+  // NEW LEVELING SYSTEM (Levels 1–100)
+  // Base Formula: Total EXP = 1,000,000 * ((Level - 1) / 99)^2
+  // - Level 1 = 0 Total EXP
+  // - Level 14 = 17,243 Total EXP (18,050 Total EXP is Level 14 with 807/2,755 EXP)
+  // - Level 100 = 1,000,000 Total EXP
+  // ---------------------------------------------------------
+  function totalExpForLevel(level) {
+    if (level <= 1) return 0;
+    if (level >= 100) return 1000000;
+    return Math.round(1000000 * Math.pow((level - 1) / 99, 2));
+  }
+
+  function requiredForLevel(level) {
+    if (level >= 100) return 0;
+    return totalExpForLevel(level + 1) - totalExpForLevel(level);
+  }
+
+  function cumulativeExpForLevel(targetLevel) {
+    return totalExpForLevel(targetLevel);
+  }
+
+  function getLevelAndExpFromTotal(totalExp) {
+    if (!totalExp || totalExp <= 0) return { level: 1, exp: 0, required: requiredForLevel(1) };
+    if (totalExp >= 1000000) return { level: 100, exp: 0, required: 0 };
+    let approx = Math.floor(Math.sqrt(totalExp / 1000000) * 99) + 1;
+    while (approx < 100 && totalExpForLevel(approx + 1) <= totalExp) {
+      approx++;
+    }
+    while (approx > 1 && totalExpForLevel(approx) > totalExp) {
+      approx--;
+    }
+    const currentBase = totalExpForLevel(approx);
+    const nextBase = totalExpForLevel(approx + 1);
+    return {
+      level: approx,
+      exp: totalExp - currentBase,
+      required: nextBase - currentBase
+    };
+  }
+
+  function rankInfoForLevel(level) {
+    return RANKS.find((r) => level >= r.min && level <= r.max) || RANKS[0];
+  }
+
   // ---------------------------------------------------------
   // STATE
   // ---------------------------------------------------------
@@ -737,6 +782,12 @@ const ACHIEVEMENT_GROUPS = [
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultState();
       const parsed = JSON.parse(raw);
+      // Cleanse any legacy Level 9 injection for guests / unauthenticated users
+      if (parsed && (parsed.level === 9 || parsed.totalExp === 1905 || (parsed.level === 9 && parsed.exp === 125))) {
+        parsed.level = 1;
+        parsed.exp = 0;
+        parsed.totalExp = 0;
+      }
       // Auto-off for BGM on initial load so background music does not auto-play
       return { ...defaultState(), ...parsed, bgmEnabled: false };
     } catch (e) {
@@ -765,10 +816,6 @@ const ACHIEVEMENT_GROUPS = [
       triggerSupabaseAutoSync();
     }
   }
- 
-  const TARGET_FIX_USER_ID = "a0c2b12e-6892-4016-8d29-d39c32f6f9c7";
-  const TARGET_FIX_EMAILS = ["axzelbaril931@gmail.com", "xeligirl910@gmail.com"];
-
   const TARGET_MATRIX_USER_ID = "f4b12bd2-f26a-4f98-aef2-1e883b9f1934";
   const TARGET_MATRIX_EMAILS = ["axzelbaril460@gmail.com"];
 
@@ -796,22 +843,6 @@ const ACHIEVEMENT_GROUPS = [
     "2026-09-23": 1820,
   };
 
-  function isTargetHunterAccount(data) {
-    if (!data) return false;
-    if (typeof currentSupabaseUser !== "undefined" && currentSupabaseUser) {
-      if (currentSupabaseUser.id === TARGET_FIX_USER_ID || TARGET_FIX_EMAILS.includes(currentSupabaseUser.email)) {
-        return true;
-      }
-    }
-    const name = (data.name || "").trim().toLowerCase();
-    const hasTrialsOrExp = (
-      (data.totalExp && data.totalExp >= 1900 && data.totalExp < 15000) ||
-      (data.total_exp && data.total_exp >= 1900 && data.total_exp < 15000) ||
-      (Array.isArray(data.solvedChallenges) && data.solvedChallenges.length >= 11 && data.solvedChallenges.length < 50)
-    );
-    return (name === "xel" && hasTrialsOrExp);
-  }
-
   function isTargetMatrixAccount(data) {
     if (!data) return false;
     if (typeof currentSupabaseUser !== "undefined" && currentSupabaseUser) {
@@ -819,12 +850,7 @@ const ACHIEVEMENT_GROUPS = [
         return true;
       }
     }
-    const name = (data.name || "").trim().toLowerCase();
-    const hasHighExp = (
-      (data.totalExp && data.totalExp >= 17000) ||
-      (data.total_exp && data.total_exp >= 17000)
-    );
-    return (name === "axzel" || name === "xel") && hasHighExp;
+    return false;
   }
 
   function sanitizeState(obj) {
@@ -849,23 +875,29 @@ const ACHIEVEMENT_GROUPS = [
     if (typeof merged.supabaseAutoSync !== "boolean") merged.supabaseAutoSync = true;
     if (typeof merged.lastSupabaseSync !== "string" && merged.lastSupabaseSync !== null) merged.lastSupabaseSync = null;
 
-    // Targeted fix for axzelbaril931@gmail.com (id: a0c2b12e-6892-4016-8d29-d39c32f6f9c7):
-    if (isTargetHunterAccount(merged)) {
-      if (merged.level < 9 || merged.totalExp < 1905 || (merged.level === 1 && merged.exp === 125)) {
-        merged.level = 9;
-        merged.exp = 125;
-        merged.totalExp = Math.max(merged.totalExp, 1905);
-      }
+    // Reset any legacy Level 9 injection for non-Google / guest accounts
+    if (!isTargetMatrixAccount(merged) && (merged.level === 9 || merged.totalExp === 1905 || (merged.level === 9 && merged.exp === 125))) {
+      merged.level = 1;
+      merged.exp = 0;
+      merged.totalExp = 0;
     }
 
-    // Targeted migration for axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934):
-    // 18,050 Total EXP, Level 24 (Rank D), 1,605/1,879 EXP, Aug 25 - Sept 24 matrix
+    // Targeted migration ONLY for verified Google user axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934):
+    // 18,050 Total EXP = Level 14 (807 / 2,755 EXP), Aug 25 - Sept 24 matrix
     if (isTargetMatrixAccount(merged)) {
-      merged.level = 24;
-      merged.exp = 1605;
       merged.totalExp = 18050;
       merged.streak = Math.max(merged.streak, 5);
       merged.dailyExp = { ...AUG25_SEPT24_MATRIX, ...(merged.dailyExp || {}) };
+    }
+
+    // Globally reconcile level & exp according to: Total EXP = 1,000,000 * ((Level - 1) / 99)^2
+    if (merged.totalExp > 0) {
+      const derived = getLevelAndExpFromTotal(merged.totalExp);
+      merged.level = derived.level;
+      merged.exp = derived.exp;
+    } else {
+      merged.level = 1;
+      merged.exp = 0;
     }
 
     return merged;
@@ -1097,58 +1129,6 @@ const ACHIEVEMENT_GROUPS = [
     true
   );
  
-  // ---------------------------------------------------------
-  // LEVEL / RANK MATH
-  // ---------------------------------------------------------
-  function requiredForLevel(level) {
-    if (level >= 100) return 0;
-    // Exactly 1,000,000 cumulative EXP to reach Level 100 (Level 99 cap is 29,555 EXP)
-    if (level === 99) return 152 + 3 * level * level;
-    return 151 + 3 * level * level;
-  }
-
-  function cumulativeExpForLevel(targetLevel) {
-    let sum = 0;
-    for (let l = 1; l < targetLevel; l++) {
-      sum += requiredForLevel(l);
-    }
-    return sum;
-  }
- 
-  function rankInfoForLevel(level) {
-    return RANKS.find((r) => level >= r.min && level <= r.max) || RANKS[0];
-  }
-
-  const RANK_AVATARS = [
-    {
-      min: 1,
-      max: 5,
-      rank: "E",
-      stageTitle: "E-Rank Hunter (Lv. 1–5)",
-      badge: "Lv. 1–5",
-      url: "/assets/rank_e_level_1_5.png",
-      description: "Weakest Hunter of All Mankind · Initial Awakening Stage",
-    },
-  ];
-
-  function getHunterAvatar(level) {
-    const matched = RANK_AVATARS.find((a) => level >= a.min && level <= a.max);
-    if (matched) return matched;
-    // For other levels in E-Rank (Lv 6-20), maintain the E-Rank visual progression
-    if (level <= 20) {
-      return {
-        min: 1,
-        max: 20,
-        rank: "E",
-        stageTitle: "E-Rank Hunter",
-        badge: `Lv. ${level}`,
-        url: "/assets/rank_e_level_1_5.png",
-        description: "E-Rank Awakened Hunter Stage",
-      };
-    }
-    return null;
-  }
- 
   function expHintText(rankInfo) {
     if (state.level >= MAX_LEVEL) return "Max level reached — Rank S achieved.";
     const nextRank = RANKS[RANKS.indexOf(rankInfo) + 1];
@@ -1156,37 +1136,30 @@ const ACHIEVEMENT_GROUPS = [
     if (!nextRank) return `${levelsToNext} level${levelsToNext === 1 ? "" : "s"} to Level 100.`;
     return `${levelsToNext} level${levelsToNext === 1 ? "" : "s"} to Rank ${nextRank.rank}.`;
   }
- 
+
   function addExp(amount, reason) {
+    if (amount <= 0) return;
+    const beforeLevel = state.level;
     const beforeRank = rankInfoForLevel(state.level).rank;
-    state.totalExp += amount;
+    state.totalExp = Math.max(0, (state.totalExp || 0) + amount);
     logDailyExp(amount);
- 
-    if (state.level >= MAX_LEVEL) {
-      state.exp = requiredForLevel(MAX_LEVEL);
-      saveState();
-      logActivity(`+${amount} EXP — ${reason}`);
-      render();
-      return;
-    }
- 
-    state.exp += amount;
-    let leveled = false;
-    while (state.level < MAX_LEVEL && state.exp >= requiredForLevel(state.level)) {
-      state.exp -= requiredForLevel(state.level);
-      state.level += 1;
-      leveled = true;
-    }
-    if (state.level >= MAX_LEVEL) {
+
+    if (state.totalExp >= 1000000) {
       state.level = MAX_LEVEL;
-      state.exp = Math.min(state.exp, requiredForLevel(MAX_LEVEL));
+      state.exp = 0;
+      state.totalExp = 1000000;
+    } else {
+      const derived = getLevelAndExpFromTotal(state.totalExp);
+      state.level = derived.level;
+      state.exp = derived.exp;
     }
- 
+
+    const leveled = state.level > beforeLevel;
     logActivity(`+${amount} EXP — ${reason}`);
     touchStreak();
     saveState();
     render();
- 
+
     if (leveled) {
       const afterRank = rankInfoForLevel(state.level).rank;
       playLevelUp();
@@ -3424,15 +3397,16 @@ const ACHIEVEMENT_GROUPS = [
 
     await restoreFromSupabaseCloud(true);
 
-    if (user.id === TARGET_FIX_USER_ID || user.email === TARGET_FIX_EMAIL) {
-      if (state.level < 9 || state.totalExp < 1905 || (state.level === 1 && state.exp === 125)) {
-        state.level = 9;
-        state.exp = 125;
-        state.totalExp = Math.max(state.totalExp || 0, 1905);
-        saveState();
-        render();
-        syncToSupabaseCloud(true);
-      }
+    if (user.id === TARGET_MATRIX_USER_ID || TARGET_MATRIX_EMAILS.includes(user.email)) {
+      state.totalExp = 18050;
+      const derived = getLevelAndExpFromTotal(18050);
+      state.level = derived.level;
+      state.exp = derived.exp;
+      state.streak = Math.max(state.streak, 5);
+      state.dailyExp = { ...AUG25_SEPT24_MATRIX, ...(state.dailyExp || {}) };
+      saveState();
+      render();
+      syncToSupabaseCloud(true);
     }
 
     refreshLeaderboard(false);
@@ -4098,12 +4072,11 @@ const ACHIEVEMENT_GROUPS = [
   // ---------------------------------------------------------
   // INIT
   // ---------------------------------------------------------
-  if (isTargetHunterAccount(state)) {
-    if (state.level < 9 || state.totalExp < 1905 || (state.level === 1 && state.exp === 125)) {
-      state.level = 9;
-      state.exp = 125;
-      state.totalExp = Math.max(state.totalExp || 0, 1905);
-    }
+  // Ensure guests / users with no Google account NEVER see Level 9
+  if (!currentSupabaseUser && (state.level === 9 || state.totalExp === 1905 || (state.level === 9 && state.exp === 125))) {
+    state.level = 1;
+    state.exp = 0;
+    state.totalExp = 0;
   }
   touchStreak();
   saveState();
