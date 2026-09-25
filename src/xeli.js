@@ -767,12 +767,12 @@ const ACHIEVEMENT_GROUPS = [
   }
  
   const TARGET_FIX_USER_ID = "a0c2b12e-6892-4016-8d29-d39c32f6f9c7";
-  const TARGET_FIX_EMAIL = "axzelbaril931@gmail.com";
+  const TARGET_FIX_EMAILS = ["axzelbaril931@gmail.com", "xeligirl910@gmail.com"];
 
   function isTargetHunterAccount(data) {
     if (!data) return false;
     if (typeof currentSupabaseUser !== "undefined" && currentSupabaseUser) {
-      if (currentSupabaseUser.id === TARGET_FIX_USER_ID || currentSupabaseUser.email === TARGET_FIX_EMAIL) {
+      if (currentSupabaseUser.id === TARGET_FIX_USER_ID || TARGET_FIX_EMAILS.includes(currentSupabaseUser.email)) {
         return true;
       }
     }
@@ -1052,6 +1052,14 @@ const ACHIEVEMENT_GROUPS = [
   function requiredForLevel(level) {
     return 151 + 3 * level * level;
   }
+
+  function cumulativeExpForLevel(targetLevel) {
+    let sum = 0;
+    for (let l = 1; l < targetLevel; l++) {
+      sum += requiredForLevel(l);
+    }
+    return sum;
+  }
  
   function rankInfoForLevel(level) {
     return RANKS.find((r) => level >= r.min && level <= r.max) || RANKS[0];
@@ -1204,6 +1212,8 @@ const ACHIEVEMENT_GROUPS = [
     hunterNameInput: $("#hunterNameInput"), hunterTitle: $("#hunterTitle"),
     levelNumber: $("#levelNumber"), expFill: $("#expFill"), expTrack: $("#expTrack"),
     expCurrent: $("#expCurrent"), expRequired: $("#expRequired"), expHint: $("#expHint"),
+    expWordLabel: $("#expWordLabel"), expLevelBadge: $("#expLevelBadge"),
+    expNumbersRow: $("#expNumbersRow"), expViewToggleBtn: $("#expViewToggleBtn"),
     statQuests: $("#statQuests"), statChallenges: $("#statChallenges"),
     dashQuestList: $("#dashQuestList"), activityList: $("#activityList"),
     questGrid: $("#questGrid"), questTabs: $("#questTabs"),
@@ -1254,13 +1264,24 @@ const ACHIEVEMENT_GROUPS = [
 
   let questFilter = "active";
   let labCategory = "coding";
- 
+  let expDisplayMode = localStorage.getItem("xeli_exp_display_mode") || "total";
+
+  function toggleExpDisplayMode() {
+    expDisplayMode = expDisplayMode === "total" ? "level" : "total";
+    localStorage.setItem("xeli_exp_display_mode", expDisplayMode);
+    render();
+    playClick();
+  }
+
   // ---------------------------------------------------------
   // RENDER: header / hero / sidebar
   // ---------------------------------------------------------
   function render() {
     const rankInfo = rankInfoForLevel(state.level);
     const required = requiredForLevel(state.level);
+    const cumulativeStart = cumulativeExpForLevel(state.level);
+    const cumulativeNext = cumulativeStart + required;
+    const totalExpVal = Math.max(state.totalExp || 0, cumulativeStart + state.exp);
     const pct = state.level >= MAX_LEVEL ? 100 : Math.min(100, (state.exp / required) * 100);
  
     document.body.setAttribute("data-rank", rankInfo.rank);
@@ -1325,10 +1346,37 @@ const ACHIEVEMENT_GROUPS = [
     el.hunterTitle.textContent = `${rankInfo.title} · ${state.guild || "Hunter Association"}`;
     el.levelNumber.textContent = state.level;
     el.expFill.style.width = pct + "%";
-    el.expCurrent.textContent = state.level >= MAX_LEVEL ? required : state.exp;
-    el.expRequired.textContent = required;
     el.expTrack.setAttribute("aria-valuenow", Math.round(pct));
-    el.expHint.textContent = expHintText(rankInfo);
+
+    // Dynamic EXP Display: Prominently show Total EXP (e.g. 1,905 / 2,174) with Level bracket details
+    const isLevelMode = expDisplayMode === "level";
+    if (el.expCurrent) {
+      el.expCurrent.textContent = isLevelMode ? state.exp.toLocaleString() : totalExpVal.toLocaleString();
+    }
+    if (el.expRequired) {
+      el.expRequired.textContent = isLevelMode ? required.toLocaleString() : cumulativeNext.toLocaleString();
+    }
+    if (el.expWordLabel) {
+      el.expWordLabel.textContent = isLevelMode ? "LEVEL EXP" : "TOTAL EXP";
+    }
+    if (el.expLevelBadge) {
+      if (isLevelMode) {
+        el.expLevelBadge.innerHTML = `Total: <b>${totalExpVal.toLocaleString()} EXP</b>`;
+        el.expLevelBadge.title = `Showing level bracket progress. Total EXP: ${totalExpVal.toLocaleString()}`;
+      } else {
+        el.expLevelBadge.innerHTML = `Lv. ${state.level}: <b>${state.exp.toLocaleString()} / ${required.toLocaleString()}</b>`;
+        el.expLevelBadge.title = `Current Level progress: ${state.exp} of ${required} EXP (Total: ${totalExpVal.toLocaleString()})`;
+      }
+    }
+
+    const expRemaining = Math.max(0, required - state.exp);
+    if (el.expHint) {
+      if (state.level >= MAX_LEVEL) {
+        el.expHint.textContent = "Max level reached — Rank S achieved.";
+      } else {
+        el.expHint.textContent = `${expRemaining.toLocaleString()} EXP to Level ${state.level + 1} · ${expHintText(rankInfo)}`;
+      }
+    }
  
     el.statQuests.textContent = state.quests.filter((q) => q.done).length;
     el.statChallenges.textContent = state.solvedChallenges.length;
@@ -2592,6 +2640,25 @@ const ACHIEVEMENT_GROUPS = [
     saveState();
     render();
   });
+
+  // ---------------------------------------------------------
+  // EXP DISPLAY MODE TOGGLE (Total EXP vs Level progress)
+  // ---------------------------------------------------------
+  if (el.expNumbersRow) {
+    el.expNumbersRow.addEventListener("click", () => toggleExpDisplayMode());
+    el.expNumbersRow.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleExpDisplayMode();
+      }
+    });
+  }
+  if (el.expViewToggleBtn) {
+    el.expViewToggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleExpDisplayMode();
+    });
+  }
  
   // ---------------------------------------------------------
   // LAB TABS

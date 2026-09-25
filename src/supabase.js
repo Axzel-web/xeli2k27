@@ -129,7 +129,8 @@ export async function saveProgressToSupabase(state) {
   try {
     const isTargetUser = Boolean(
       user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7" ||
-      user.email === "axzelbaril931@gmail.com"
+      user.email === "axzelbaril931@gmail.com" ||
+      user.email === "xeligirl910@gmail.com"
     );
     const syncLevel = isTargetUser ? Math.max(Number(state.level) || 1, 9) : (state.level || 1);
     const syncTotalExp = isTargetUser ? Math.max(Number(state.totalExp) || 0, 1905) : (state.totalExp || 0);
@@ -409,7 +410,8 @@ export async function loadProgressFromSupabase() {
 
   const isTargetUser = Boolean(
     user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7" ||
-    user.email === "axzelbaril931@gmail.com"
+    user.email === "axzelbaril931@gmail.com" ||
+    user.email === "xeligirl910@gmail.com"
   );
 
   // 1. First check if 'profiles' table has data
