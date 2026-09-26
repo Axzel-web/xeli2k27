@@ -4393,11 +4393,61 @@ const ACHIEVEMENT_GROUPS = [
   }
 
   // ---------------------------------------------------------
+  // SIDEBAR COLLAPSE / EXPAND CONTROLLER
+  // ---------------------------------------------------------
+  function initSidebarCollapse() {
+    const appEl = $(".app");
+    const brandBtn = $("#brandToggleBtn") || $("#brandLogo") || $(".brand");
+    const brandLogo = $("#brandLogo");
+    if (!appEl || !brandBtn) return;
+
+    // Load saved collapsed state
+    const savedState = localStorage.getItem("xeli_sidebar_collapsed");
+    if (savedState === "1") {
+      appEl.classList.add("sidebar-collapsed");
+      updateCollapseTooltips(true);
+    } else {
+      updateCollapseTooltips(false);
+    }
+
+    function toggleSidebar(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      const isNowCollapsed = appEl.classList.toggle("sidebar-collapsed");
+      localStorage.setItem("xeli_sidebar_collapsed", isNowCollapsed ? "1" : "0");
+      updateCollapseTooltips(isNowCollapsed);
+      playClick();
+    }
+
+    function updateCollapseTooltips(isCollapsed) {
+      const hint = isCollapsed ? "Click to expand sidebar" : "Click to collapse sidebar";
+      if (brandBtn) brandBtn.setAttribute("title", hint);
+      if (brandLogo) brandLogo.setAttribute("title", `XELI Leveling System · ${hint}`);
+      const collapseHint = $(".brand-collapse-hint");
+      if (collapseHint) collapseHint.setAttribute("title", hint);
+    }
+
+    brandBtn.addEventListener("click", toggleSidebar);
+    brandBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        toggleSidebar(e);
+      }
+    });
+
+    if (brandLogo && brandLogo !== brandBtn) {
+      brandLogo.addEventListener("click", toggleSidebar);
+    }
+  }
+
+  // ---------------------------------------------------------
   // INIT
   // ---------------------------------------------------------
   touchStreak();
   saveState();
   render();
+  initSidebarCollapse();
   initSupabaseController();
   refreshLeaderboard(false);
   initLeaderboardRealtime();

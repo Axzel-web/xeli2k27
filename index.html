@@ -27,34 +27,37 @@
 
   <!-- ===================== SIDEBAR ===================== -->
   <aside class="sidebar">
-    <div class="brand">
-      <span class="brand-mark" id="brandLogo" title="XELI Leveling System">
+    <div class="brand" id="brandToggleBtn" role="button" tabindex="0" title="Click to collapse sidebar" aria-label="Toggle navigation sidebar">
+      <span class="brand-mark" id="brandLogo" title="XELI Leveling System · Click to toggle sidebar">
         <img src="/assets/xeli_logo.png" alt="XELI Leveling Emblem" class="brand-logo-img" referrerPolicy="no-referrer" />
       </span>
       <div class="brand-text">
         <span class="brand-name">XELI</span>
         <span class="brand-sub">LEVELING SYSTEM</span>
       </div>
+      <div class="brand-collapse-hint" aria-hidden="true" title="Collapse sidebar">
+        <svg viewBox="0 0 24 24" class="collapse-hint-icon"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </div>
     </div>
 
     <nav class="nav" aria-label="Main navigation">
-      <button class="nav-item is-active" data-view="dashboard">
+      <button class="nav-item is-active" data-view="dashboard" title="Status">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z"/></svg>
         <span class="nav-label"><span class="nav-full">Status</span><span class="nav-short">Status</span></span>
       </button>
-      <button class="nav-item" data-view="quests">
+      <button class="nav-item" data-view="quests" title="Quests">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 3v2H4v16h16V9h2v14H2V3h7Zm10 6-9 9-4-4 1.4-1.4L10 15.2 17.6 7.6 19 9Z"/></svg>
         <span class="nav-label"><span class="nav-full">Quests</span><span class="nav-short">Quests</span></span>
       </button>
-      <button class="nav-item" data-view="lab">
+      <button class="nav-item" data-view="lab" title="Challenge Lab">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 2v6.35L4.2 17.6A2 2 0 0 0 6 20.6h12a2 2 0 0 0 1.8-3L15 8.35V2H9Zm2 2h2v4.87l.28.57L17.8 18.6H6.2l4.52-9.16.28-.57V4Z"/></svg>
         <span class="nav-label"><span class="nav-full">Challenge Lab</span><span class="nav-short">Labs</span></span>
       </button>
-      <button class="nav-item" data-view="leaderboard">
+      <button class="nav-item" data-view="leaderboard" title="Leaderboard">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2ZM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8Zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1Z"/></svg>
         <span class="nav-label"><span class="nav-full">Leaderboard</span><span class="nav-short">Ranks</span></span>
       </button>
-      <button class="nav-item" data-view="achievements">
+      <button class="nav-item" data-view="achievements" title="Achievements">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 2 9.2 5H5v4.2L2 12l3 2.8V19h4.2L12 22l2.8-3H19v-4.2L22 12l-3-2.8V5h-4.2L12 2Zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/></svg>
         <span class="nav-label"><span class="nav-full">Achievements</span><span class="nav-short">Badges</span></span>
       </button>
