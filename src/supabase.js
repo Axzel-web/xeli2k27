@@ -159,6 +159,34 @@ export async function saveProgressToSupabase(state) {
     if (tableErr) {
       console.warn("Table sync note:", tableErr);
     }
+
+    // Upsert problem_stats if available
+    if (state.problemStats || isTargetMatrixUser) {
+      const ps = state.problemStats || {
+        solvedTotal: 59,
+        totalProblems: 76,
+        solvedEasy: 2,
+        totalEasy: 10,
+        solvedMedium: 40,
+        totalMedium: 46,
+        solvedHard: 17,
+        totalHard: 20,
+      };
+      try {
+        await supabase.from("user_problem_stats").upsert({
+          user_id: user.id,
+          solved_total: ps.solvedTotal ?? 59,
+          total_problems: ps.totalProblems ?? 76,
+          solved_easy: ps.solvedEasy ?? 2,
+          total_easy: ps.totalEasy ?? 10,
+          solved_medium: ps.solvedMedium ?? 40,
+          total_medium: ps.totalMedium ?? 46,
+          solved_hard: ps.solvedHard ?? 17,
+          total_hard: ps.totalHard ?? 20,
+          updated_at: payload.updated_at,
+        });
+      } catch (_) {}
+    }
   } catch (err) {
     console.warn("Table upsert skipped:", err);
   }
@@ -467,6 +495,31 @@ export async function loadProgressFromSupabase() {
       const restoredLevel = derived.level;
       const restoredExp = derived.exp;
 
+      let problemStats = null;
+      if (isTargetMatrixUser) {
+        problemStats = {
+          solvedTotal: 59,
+          totalProblems: 76,
+          solvedEasy: 2,
+          totalEasy: 10,
+          solvedMedium: 40,
+          totalMedium: 46,
+          solvedHard: 17,
+          totalHard: 20,
+        };
+      } else if (tableData.solved_total || tableData.solved_problems) {
+        problemStats = {
+          solvedTotal: Number(tableData.solved_total ?? tableData.solved_problems) || 0,
+          totalProblems: Number(tableData.total_problems) || 76,
+          solvedEasy: Number(tableData.solved_easy) || 0,
+          totalEasy: Number(tableData.total_easy) || 10,
+          solvedMedium: Number(tableData.solved_medium) || 0,
+          totalMedium: Number(tableData.total_medium) || 46,
+          solvedHard: Number(tableData.solved_hard) || 0,
+          totalHard: Number(tableData.total_hard) || 20,
+        };
+      }
+
       return {
         name: tableData.name || p.hunter_name || user.user_metadata?.hunter_name || "Hunter",
         level: restoredLevel,
@@ -479,6 +532,7 @@ export async function loadProgressFromSupabase() {
         unlockedAchievements: p.unlocked_achievements || [],
         activity: p.activity || [],
         dailyExp: p.daily_exp || {},
+        problemStats: problemStats || p.problem_stats || null,
         syncedAt: tableData.updated_at || p.updated_at,
       };
     }
@@ -501,6 +555,20 @@ export async function loadProgressFromSupabase() {
     const restoredLevel = derived.level;
     const restoredExp = derived.exp;
 
+    let problemStats = null;
+    if (isTargetMatrixUser) {
+      problemStats = {
+        solvedTotal: 59,
+        totalProblems: 76,
+        solvedEasy: 2,
+        totalEasy: 10,
+        solvedMedium: 40,
+        totalMedium: 46,
+        solvedHard: 17,
+        totalHard: 20,
+      };
+    }
+
     return {
       name: p.hunter_name || user.user_metadata?.hunter_name || "Hunter",
       level: restoredLevel,
@@ -513,6 +581,7 @@ export async function loadProgressFromSupabase() {
       unlockedAchievements: p.unlocked_achievements || [],
       activity: p.activity || [],
       dailyExp: p.daily_exp || {},
+      problemStats: problemStats || p.problem_stats || null,
       syncedAt: p.updated_at || user.user_metadata?.last_synced_at,
     };
   }

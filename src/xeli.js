@@ -881,11 +881,21 @@ const ACHIEVEMENT_GROUPS = [
     if (typeof merged.lastSupabaseSync !== "string" && merged.lastSupabaseSync !== null) merged.lastSupabaseSync = null;
 
     // Targeted migration ONLY for verified Google user axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934):
-    // 18,050 Total EXP = Level 14 (807 / 2,755 EXP), Aug 25 - Sept 24 matrix
+    // 18,050 Total EXP = Level 14 (807 / 2,755 EXP), Aug 25 - Sept 24 matrix, 59/76 solved problems (2 easy, 40 med, 17 hard)
     if (isTargetMatrixAccount(merged)) {
       merged.totalExp = 18050;
       merged.streak = Math.max(merged.streak, 5);
       merged.dailyExp = { ...AUG25_SEPT24_MATRIX, ...(merged.dailyExp || {}) };
+      merged.problemStats = {
+        solvedTotal: 59,
+        totalProblems: 76,
+        solvedEasy: 2,
+        totalEasy: 10,
+        solvedMedium: 40,
+        totalMedium: 46,
+        solvedHard: 17,
+        totalHard: 20,
+      };
     }
 
     // Globally reconcile level & exp according to: Total EXP = 1,000,000 * ((Level - 1) / 99)^2
@@ -1425,7 +1435,8 @@ const ACHIEVEMENT_GROUPS = [
     }
  
     el.statQuests.textContent = state.quests.filter((q) => q.done).length;
-    el.statChallenges.textContent = state.solvedChallenges.length;
+    const trialsSolvedNum = state.problemStats?.solvedTotal ?? (isTargetMatrixAccount(state) ? 59 : state.solvedChallenges.length);
+    el.statChallenges.textContent = trialsSolvedNum;
     renderLeetCodeProgress();
  
     renderDashQuestList();
@@ -1501,6 +1512,23 @@ const ACHIEVEMENT_GROUPS = [
       }
     });
 
+    if (state.problemStats) {
+      easySolved = state.problemStats.solvedEasy ?? easySolved;
+      easyTotal = state.problemStats.totalEasy ?? easyTotal;
+      medSolved = state.problemStats.solvedMedium ?? medSolved;
+      medTotal = state.problemStats.totalMedium ?? medTotal;
+      hardSolved = state.problemStats.solvedHard ?? hardSolved;
+      hardTotal = state.problemStats.totalHard ?? hardTotal;
+    } else if (isTargetMatrixAccount(state)) {
+      // 59 / 76: 2 Easy, 40 Medium, 17 Hard
+      easySolved = 2;
+      easyTotal = 10;
+      medSolved = 40;
+      medTotal = 46;
+      hardSolved = 17;
+      hardTotal = 20;
+    }
+
     const totalSolved = easySolved + medSolved + hardSolved;
     const totalProblems = easyTotal + medTotal + hardTotal;
 
@@ -1542,14 +1570,14 @@ const ACHIEVEMENT_GROUPS = [
 
     // 2. Hunter Rating & Progression — 100% genuine user data, ZERO dummy data
     const rankInfo = rankInfoForLevel(state.level);
-    const solvedChallengesCount = state.solvedChallenges.length;
+    const solvedChallengesCount = totalSolved;
     const clearedQuestsCount = state.quests.filter((q) => q.done).length;
     const totalExpEarned = Math.max(state.totalExp || 0, state.exp || 0);
 
     if (el.lcHunterRating) el.lcHunterRating.textContent = totalExpEarned.toLocaleString();
     if (el.lcContestLeague) el.lcContestLeague.textContent = `Rank ${rankInfo.rank} · ${rankInfo.title}`;
 
-    if (el.lcTotalCleared) el.lcTotalCleared.textContent = `${solvedChallengesCount} / ${CHALLENGES.length}`;
+    if (el.lcTotalCleared) el.lcTotalCleared.textContent = `${totalSolved} / ${totalProblems}`;
     if (el.lcQuestsClearedMetric) el.lcQuestsClearedMetric.textContent = `${clearedQuestsCount}`;
     if (el.lcHunterLevelMetric) el.lcHunterLevelMetric.textContent = `Lv. ${state.level}`;
     if (el.lcStreakMetric) el.lcStreakMetric.textContent = `${state.streak || 0} ${state.streak === 1 ? "day" : "days"}`;
@@ -3435,6 +3463,16 @@ const ACHIEVEMENT_GROUPS = [
       state.exp = derived.exp;
       state.streak = Math.max(state.streak, 5);
       state.dailyExp = { ...AUG25_SEPT24_MATRIX, ...(state.dailyExp || {}) };
+      state.problemStats = {
+        solvedTotal: 59,
+        totalProblems: 76,
+        solvedEasy: 2,
+        totalEasy: 10,
+        solvedMedium: 40,
+        totalMedium: 46,
+        solvedHard: 17,
+        totalHard: 20,
+      };
       saveState();
       render();
       syncToSupabaseCloud(true);
