@@ -198,8 +198,11 @@
               </g>
             </svg>
           </div>
-          <div class="rank-badge" id="rankBadgeBig">
-            <span id="rankLetterBig">E</span>
+          <div class="rank-badge-wrap">
+            <div class="rank-badge" id="rankBadgeBig" role="button" tabindex="0" title="Hunter Rank · Click to trigger Awakening Resonance">
+              <span id="rankLetterBig">E</span>
+            </div>
+            <div class="rank-awakening-fx" id="rankAwakeningFx" aria-hidden="true"></div>
           </div>
           <span class="rank-caption">RANK</span>
         </div>
@@ -409,17 +412,44 @@
             </div>
           </div>
         </div>
-        <div class="calendar-scroll">
+
+        <!-- Progress Calendar Navigation & Month Quick Jump Toolbar -->
+        <div class="cal-nav-toolbar">
+          <div class="cal-nav-quick-scroll-wrap">
+            <div class="cal-nav-quick-months" id="calNavQuickMonths"></div>
+          </div>
+          <div class="cal-nav-actions">
+            <button class="cal-nav-btn" id="calNavPrevBtn" type="button" title="Scroll to earlier months" aria-label="Previous Month">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <button class="cal-nav-btn cal-nav-btn-today" id="calNavTodayBtn" type="button" title="Jump to Current Month">
+              <span class="cal-today-dot"></span>
+              <span>Today</span>
+            </button>
+            <button class="cal-nav-btn" id="calNavNextBtn" type="button" title="Scroll to later months" aria-label="Next Month">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="calendar-scroll" id="calendarScroll">
           <div class="calendar-wrap">
-            <div class="calendar-months" id="calendarMonths"></div>
             <div class="calendar-body">
-              <div class="calendar-daylabels">
+              <div class="calendar-daylabels" aria-hidden="true">
+                <span class="cal-daylabel-header-pad"></span>
                 <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
               </div>
-              <div class="calendar-grid" id="calendarGrid"></div>
+              <div class="calendar-months-flow" id="calendarMonthsFlow"></div>
+              <!-- Hidden fallback containers for script compatibility -->
+              <div class="calendar-grid" id="calendarGrid" style="display:none;"></div>
+              <div class="calendar-months" id="calendarMonths" style="display:none;"></div>
             </div>
           </div>
         </div>
+
+        <!-- Floating Interactive Day Tooltip -->
+        <div class="cal-floating-tooltip" id="calFloatingTooltip" style="display:none;"></div>
+
         <div class="calendar-legend">
           <span>Less</span>
           <span class="cal-cell" data-level="0"></span>
@@ -471,8 +501,8 @@
     <section class="view" id="view-leaderboard">
       <div class="view-toolbar" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
         <button class="btn btn-secondary back-to-dash-btn" data-view="dashboard">← Hunter Status</button>
-        <div class="leaderboard-view-meta">
-          <span class="lb-meta-tag"><span class="live-pulse-dot" style="display:inline-block; margin-right:4px;"></span>Supabase Cloud Realtime</span>
+        <div class="leaderboard-view-meta" style="display: none !important;">
+          <span class="lb-meta-tag" style="display: none !important;"><span class="live-pulse-dot" style="display:inline-block; margin-right:4px;"></span>Supabase Cloud Realtime</span>
         </div>
       </div>
 
@@ -498,7 +528,7 @@
         </div>
 
         <!-- Current User Ranking Callout Banner -->
-        <div class="leaderboard-my-standing" id="leaderboardMyStanding">
+        <div class="leaderboard-my-standing" id="leaderboardMyStanding" style="display: none !important;">
           <div class="my-standing-badge">
             <span class="my-standing-label">YOUR RANKING</span>
             <span class="my-standing-pos" id="myStandingRankPos">#--</span>
@@ -603,7 +633,7 @@
           </div>
         </div>
 
-        <div class="leaderboard-footer">
+        <div class="leaderboard-footer" style="display: none !important;">
           <span class="lb-footer-note">⚡ Real-time Hunter Association rankings update dynamically upon quest clearance and Supabase database synchronization.</span>
         </div>
       </div>

@@ -1285,6 +1285,10 @@ const ACHIEVEMENT_GROUPS = [
     roadmapTrack: $("#roadmapTrack"), roadmapFill: $("#roadmapFill"),
     roadmapMarker: $("#roadmapMarker"), roadmapMarkerLv: $("#roadmapMarkerLv"),
     calendarGrid: $("#calendarGrid"), calendarMonths: $("#calendarMonths"), calendarCaption: $("#calendarCaption"),
+    calendarScroll: $("#calendarScroll"), calendarMonthsFlow: $("#calendarMonthsFlow"),
+    calNavQuickMonths: $("#calNavQuickMonths"), calNavPrevBtn: $("#calNavPrevBtn"),
+    calNavNextBtn: $("#calNavNextBtn"), calNavTodayBtn: $("#calNavTodayBtn"),
+    calFloatingTooltip: $("#calFloatingTooltip"),
     achievementGrid: $("#achievementGrid"), achUnlockedCount: $("#achUnlockedCount"),
     achProgressFill: $("#achProgressFill"), achProgressLabel: $("#achProgressLabel"),
     toastStack: $("#toastStack"),
@@ -1459,7 +1463,7 @@ const ACHIEVEMENT_GROUPS = [
           <p>No active quests. Head to the Quests tab to log one.</p>
           <button class="btn btn-primary mini-create-quest-btn" id="dashCreateQuestBtn" type="button">
             <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;flex-shrink:0;"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6Z"/></svg>
-            <span>+ New Quest</span>
+            <span>New Quest</span>
           </button>
         </div>`;
       const btn = $("#dashCreateQuestBtn");
@@ -2183,11 +2187,10 @@ const ACHIEVEMENT_GROUPS = [
   }
  
   // ---------------------------------------------------------
-  // RENDER: progress calendar (GitHub-style heatmap)
+  // RENDER: progress calendar (Month Matrix with Spaced Months)
   // ---------------------------------------------------------
   const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const CELL_STEP = 14; // 11px cell + 3px gap
- 
+
   function expToLevel(exp) {
     if (!exp) return 0;
     if (exp < 50) return 1;
@@ -2195,76 +2198,235 @@ const ACHIEVEMENT_GROUPS = [
     if (exp < 200) return 3;
     return 4;
   }
- 
-  function buildCalendarWeeks() {
+
+  let calNavInitialized = false;
+
+  function renderCalendar() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const totalDays = 371; // 53 full weeks
-    const rangeStart = new Date(today);
-    rangeStart.setDate(rangeStart.getDate() - (totalDays - 1));
-    rangeStart.setDate(rangeStart.getDate() - rangeStart.getDay()); // snap back to Sunday
- 
-    const weeks = [];
-    let cursor = new Date(rangeStart);
-    while (cursor <= today) {
-      const week = [];
-      for (let i = 0; i < 7; i++) {
-        week.push(new Date(cursor));
-        cursor.setDate(cursor.getDate() + 1);
+
+    // Build the past 12-13 months (from 12 months ago through current month)
+    const monthBlocks = [];
+    const numMonths = 12; // 12 past months + current month = 13 months
+    for (let offset = numMonths; offset >= 0; offset--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - offset, 1);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const isCurrentMonth = (year === today.getFullYear() && month === today.getMonth());
+      const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 = Sunday
+
+      const columns = [];
+      let curCol = [];
+      for (let s = 0; s < firstDayOfWeek; s++) {
+        curCol.push(null);
       }
-      weeks.push(week);
+      for (let dayNum = 1; dayNum <= totalDaysInMonth; dayNum++) {
+        curCol.push(new Date(year, month, dayNum));
+        if (curCol.length === 7) {
+          columns.push(curCol);
+          curCol = [];
+        }
+      }
+      if (curCol.length > 0) {
+        while (curCol.length < 7) {
+          curCol.push(null);
+        }
+        columns.push(curCol);
+      }
+
+      monthBlocks.push({
+        year,
+        month,
+        name: MONTH_ABBR[month],
+        isCurrentMonth,
+        columns,
+      });
     }
-    return { weeks, today };
+
+    let totalYearExp = 0;
+    const monthExpMap = {};
+
+    // Generate Month Cards with 14px space between every month
+    const monthCardsHtml = monthBlocks.map((b) => {
+      let monthExp = 0;
+
+      const colsHtml = b.columns.map((col) => {
+        const colCells = col.map((day) => {
+          if (!day) {
+            return "<span class=\"cal-cell is-empty\" aria-hidden=\"true\"></span>";
+          }
+          if (day > today) {
+            return "<span class=\"cal-cell is-future\" aria-hidden=\"true\"></span>";
+          }
+          const key = dateKey(day);
+          const exp = state.dailyExp[key] || 0;
+          if (exp > 0) {
+            monthExp += exp;
+            totalYearExp += exp;
+          }
+          const level = expToLevel(exp);
+          const dayName = day.toLocaleDateString(undefined, { weekday: "short" });
+          const dateStr = day.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+          const tooltipLabel = dayName + ", " + dateStr + ": " + exp + " EXP earned";
+          return "<span class=\"cal-cell\" data-level=\"" + level + "\" data-date=\"" + escapeHtml(dayName + ", " + dateStr) + "\" data-exp=\"" + exp + "\" data-date-key=\"" + key + "\" title=\"" + escapeHtml(tooltipLabel) + "\"></span>";
+        }).join("");
+        return colCells;
+      }).join("");
+
+      const monthKey = b.year + "-" + b.month;
+      monthExpMap[monthKey] = monthExp;
+
+      const expBadge = monthExp > 0
+        ? "<span class=\"cal-month-exp-tag\">+" + monthExp.toLocaleString() + " XP</span>"
+        : (b.isCurrentMonth ? "<span class=\"cal-month-current-pill\">Current</span>" : "");
+
+      return (
+        "<div class=\"cal-month-card " + (b.isCurrentMonth ? "is-current-month" : "") + "\" id=\"calMonth-" + b.year + "-" + b.month + "\" data-month-key=\"" + monthKey + "\">" +
+          "<div class=\"cal-month-head\">" +
+            "<div class=\"cal-month-title-wrap\">" +
+              "<span class=\"cal-month-title\">" + b.name + "</span>" +
+              "<span class=\"cal-month-year\">" + b.year + "</span>" +
+            "</div>" +
+            expBadge +
+          "</div>" +
+          "<div class=\"cal-month-matrix\">" +
+            colsHtml +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
+
+    if (el.calendarMonthsFlow) {
+      el.calendarMonthsFlow.innerHTML = monthCardsHtml;
+    }
+
+    // Quick jump pills in nav toolbar
+    if (el.calNavQuickMonths) {
+      el.calNavQuickMonths.innerHTML = monthBlocks.map((b) => {
+        const monthKey = b.year + "-" + b.month;
+        const hasExp = (monthExpMap[monthKey] || 0) > 0;
+        return (
+          "<button class=\"cal-nav-month-pill " + (b.isCurrentMonth ? "is-active" : "") + "\" data-month-target=\"calMonth-" + b.year + "-" + b.month + "\" type=\"button\" title=\"Jump to " + b.name + " " + b.year + "\">" +
+            "<span>" + b.name + "</span>" +
+            (hasExp ? "<span class=\"cal-nav-dot\"></span>" : "") +
+          "</button>"
+        );
+      }).join("");
+    }
+
+    if (el.calendarCaption) {
+      el.calendarCaption.textContent = totalYearExp.toLocaleString() + " EXP earned in the last year";
+    }
+
+    // Setup navigation listeners and tooltip once
+    setupCalendarInteractions();
+
+    // Auto-scroll to today on initial load / render so user sees current activity
+    setTimeout(() => {
+      if (el.calendarScroll) {
+        el.calendarScroll.scrollLeft = el.calendarScroll.scrollWidth;
+      }
+    }, 60);
   }
- 
-  function renderCalendar() {
-    const { weeks, today } = buildCalendarWeeks();
- 
-    // ----- grid cells -----
-    const cellsHtml = [];
-    for (const week of weeks) {
-      for (const day of week) {
-        if (day > today) {
-          cellsHtml.push(`<span class="cal-cell is-future"></span>`);
-          continue;
+
+  function setupCalendarInteractions() {
+    if (calNavInitialized) return;
+    calNavInitialized = true;
+
+    // Quick month jump buttons
+    if (el.calNavQuickMonths) {
+      el.calNavQuickMonths.addEventListener("click", (e) => {
+        const btn = e.target.closest(".cal-nav-month-pill");
+        if (!btn) return;
+        const targetId = btn.dataset.monthTarget;
+        const targetCard = document.getElementById(targetId);
+        if (targetCard && el.calendarScroll) {
+          const scrollTarget = targetCard.offsetLeft - el.calendarScroll.offsetLeft - 30;
+          el.calendarScroll.scrollTo({ left: Math.max(0, scrollTarget), behavior: "smooth" });
+          $$(".cal-nav-month-pill").forEach((p) => p.classList.remove("is-active"));
+          btn.classList.add("is-active");
         }
-        const key = dateKey(day);
-        const exp = state.dailyExp[key] || 0;
-        const level = expToLevel(exp);
-        const label = `${day.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}: ${exp} EXP`;
-        cellsHtml.push(`<span class="cal-cell" data-level="${level}" title="${escapeHtml(label)}"></span>`);
-      }
+      });
     }
-    el.calendarGrid.innerHTML = cellsHtml.join("");
- 
-    // ----- month labels (skip a label if it would collide with the previous one) -----
-    const labels = [];
-    let lastMonth = null;
-    let lastLabelIndex = -Infinity;
-    const MIN_LABEL_GAP = 3; // columns
-    weeks.forEach((week, i) => {
-      const firstOfWeek = week[0];
-      const m = firstOfWeek.getMonth();
-      if (m !== lastMonth) {
-        lastMonth = m;
-        if (i - lastLabelIndex >= MIN_LABEL_GAP) {
-          labels.push(`<span class="calendar-month-label" style="left:${i * CELL_STEP}px">${MONTH_ABBR[m]}</span>`);
-          lastLabelIndex = i;
+
+    // Prev / Next / Today buttons
+    if (el.calNavPrevBtn) {
+      el.calNavPrevBtn.addEventListener("click", () => {
+        if (el.calendarScroll) {
+          el.calendarScroll.scrollBy({ left: -240, behavior: "smooth" });
         }
-      }
-    });
-    el.calendarMonths.innerHTML = labels.join("");
-    el.calendarMonths.style.width = weeks.length * CELL_STEP + "px";
- 
-    // ----- total for range -----
-    let total = 0;
-    for (const week of weeks) {
-      for (const day of week) {
-        if (day > today) continue;
-        total += state.dailyExp[dateKey(day)] || 0;
-      }
+      });
     }
-    el.calendarCaption.textContent = `${total.toLocaleString()} EXP earned in the last year`;
+    if (el.calNavNextBtn) {
+      el.calNavNextBtn.addEventListener("click", () => {
+        if (el.calendarScroll) {
+          el.calendarScroll.scrollBy({ left: 240, behavior: "smooth" });
+        }
+      });
+    }
+    if (el.calNavTodayBtn) {
+      el.calNavTodayBtn.addEventListener("click", () => {
+        if (el.calendarScroll) {
+          el.calendarScroll.scrollTo({ left: el.calendarScroll.scrollWidth, behavior: "smooth" });
+          const currentPill = $(".cal-nav-month-pill:last-child");
+          if (currentPill) {
+            $$(".cal-nav-month-pill").forEach((p) => p.classList.remove("is-active"));
+            currentPill.classList.add("is-active");
+          }
+        }
+      });
+    }
+
+    // Custom floating tooltip for quick inspection
+    const tooltip = el.calFloatingTooltip || $("#calFloatingTooltip");
+    if (tooltip && el.calendarMonthsFlow) {
+      let activeCell = null;
+
+      const positionTooltip = (e) => {
+        if (!tooltip || !activeCell) return;
+        const pad = 12;
+        let x = e.clientX;
+        let y = e.clientY - pad;
+        const rect = tooltip.getBoundingClientRect();
+        if (x - rect.width / 2 < 12) x = rect.width / 2 + 12;
+        if (x + rect.width / 2 > window.innerWidth - 12) x = window.innerWidth - rect.width / 2 - 12;
+        tooltip.style.left = x + "px";
+        tooltip.style.top = y + "px";
+      };
+
+      el.calendarMonthsFlow.addEventListener("mouseover", (e) => {
+        const cell = e.target.closest(".cal-cell:not(.is-empty):not(.is-future)");
+        if (!cell) {
+          tooltip.style.display = "none";
+          activeCell = null;
+          return;
+        }
+        activeCell = cell;
+        const date = cell.dataset.date || "";
+        const exp = parseInt(cell.dataset.exp || "0", 10);
+        const expClass = exp > 0 ? "cal-tt-exp-positive" : "cal-tt-exp-zero";
+        const statusText = exp > 0 ? "Hunter Activity Recorded" : "No Submissions";
+        tooltip.innerHTML = (
+          "<div class=\"cal-tt-date\">" + date + "</div>" +
+          "<div class=\"cal-tt-body\">" +
+            "<span class=\"cal-tt-pill " + expClass + "\">" + (exp > 0 ? "+" + exp + " EXP" : "0 EXP") + "</span>" +
+            "<span class=\"cal-tt-status\">" + statusText + "</span>" +
+          "</div>"
+        );
+        tooltip.style.display = "block";
+        positionTooltip(e);
+      });
+
+      el.calendarMonthsFlow.addEventListener("mousemove", (e) => {
+        if (activeCell) positionTooltip(e);
+      });
+
+      el.calendarMonthsFlow.addEventListener("mouseleave", () => {
+        tooltip.style.display = "none";
+        activeCell = null;
+      });
+    }
   }
  
   // ---------------------------------------------------------
@@ -2438,7 +2600,7 @@ const ACHIEVEMENT_GROUPS = [
   function closeModal(id) {
     $(`#${id}`).classList.remove("is-open");
     if (id === "modalChallenge") {
-      toggleChallengeFullscreen(false);
+      toggleChallengeFullscreen(false, true);
       const m = $("#modalChallenge .modal");
       if (m) {
         m.classList.remove("modal-cli-lab");
@@ -2454,7 +2616,7 @@ const ACHIEVEMENT_GROUPS = [
       if (e.target === overlay) {
         overlay.classList.remove("is-open");
         if (overlay.id === "modalChallenge") {
-          toggleChallengeFullscreen(false);
+          toggleChallengeFullscreen(false, true);
         }
         const m = overlay.querySelector(".modal");
         if (m) {
@@ -2468,7 +2630,7 @@ const ACHIEVEMENT_GROUPS = [
   // ---------------------------------------------------------
   // CHALLENGE LAB FULL SCREEN CONTROLLER
   // ---------------------------------------------------------
-  function toggleChallengeFullscreen(forceState) {
+  function toggleChallengeFullscreen(forceState, silent = false) {
     const overlay = $("#modalChallenge");
     const modal = $("#modalChallenge .modal");
     const fsBtn = $("#modalChallengeFullscreenBtn");
@@ -2522,7 +2684,7 @@ const ACHIEVEMENT_GROUPS = [
       } catch (err) {}
     }
 
-    if (state.soundEnabled && typeof playSuccess === "function") {
+    if (!silent && state.soundEnabled && typeof playSuccess === "function") {
       playSuccess();
     }
 
@@ -2880,12 +3042,8 @@ const ACHIEVEMENT_GROUPS = [
   }
  
     openModal("modalChallenge");
-    const isLab = type === "cli-lab" || type === "binary-lab" || type === "python-lab" || type === "lab";
-    if (isLab) {
-      toggleChallengeFullscreen(true);
-    } else {
-      toggleChallengeFullscreen(false);
-    }
+    // Default to regular modal view (NOT fullscreen). Fullscreen button is always available in the header & tab bar.
+    toggleChallengeFullscreen(false, true);
   }
  
   function renderLabChallenge(c, solved) {
@@ -3089,8 +3247,84 @@ const ACHIEVEMENT_GROUPS = [
   }
  
   // ---------------------------------------------------------
-  // LEVEL UP / TOASTS
+  // LEVEL UP / TOASTS & AWAKENING FX
   // ---------------------------------------------------------
+  function triggerRankBadgeAwakening() {
+    const badge = el.rankBadgeBig || $("#rankBadgeBig");
+    const fxContainer = $("#rankAwakeningFx");
+    if (!badge) return;
+
+    badge.classList.remove("is-awakening");
+    if (fxContainer) fxContainer.innerHTML = "";
+    void badge.offsetWidth; // Force reflow to restart CSS keyframe animation
+
+    badge.classList.add("is-awakening");
+
+    if (fxContainer) {
+      // Spawn 2 expanding shockwave rings
+      const ring1 = document.createElement("div");
+      ring1.className = "awakening-shockwave";
+      fxContainer.appendChild(ring1);
+
+      setTimeout(() => {
+        if (!fxContainer) return;
+        const ring2 = document.createElement("div");
+        ring2.className = "awakening-shockwave awakening-shockwave-secondary";
+        fxContainer.appendChild(ring2);
+      }, 160);
+
+      // Spawn radiant Awakening energy particles
+      const particleCount = 32;
+      const colors = ["#00d2ff", "#ffffff", "#38bdf8", "#facc15", "#60a5fa", "#a7f3d0"];
+
+      for (let i = 0; i < particleCount; i++) {
+        const p = document.createElement("div");
+        p.className = "awakening-particle";
+
+        const angle = (i * (360 / particleCount) + (Math.random() * 20 - 10)) * (Math.PI / 180);
+        const distance = 46 + Math.random() * 64;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance;
+        const size = 3 + Math.random() * 5;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const duration = 1.0 + Math.random() * 0.7;
+        const delay = Math.random() * 0.12;
+
+        p.style.setProperty("--tx", `${tx}px`);
+        p.style.setProperty("--ty", `${ty}px`);
+        p.style.width = `${size}px`;
+        p.style.height = `${size}px`;
+        p.style.background = color;
+        p.style.boxShadow = `0 0 ${Math.round(size * 2.2)}px ${color}`;
+        p.style.animationDuration = `${duration}s`;
+        p.style.animationDelay = `${delay}s`;
+
+        fxContainer.appendChild(p);
+      }
+
+      // Spawn ascending mana vapor motes
+      for (let j = 0; j < 12; j++) {
+        const v = document.createElement("div");
+        v.className = "awakening-vapor";
+        const vx = (Math.random() - 0.5) * 60;
+        const vy = -40 - Math.random() * 50;
+        const vColor = j % 2 === 0 ? "#00d2ff" : "#ffffff";
+        v.style.setProperty("--vx", `${vx}px`);
+        v.style.setProperty("--vy", `${vy}px`);
+        v.style.background = vColor;
+        v.style.boxShadow = `0 0 8px ${vColor}`;
+        v.style.animationDelay = `${0.2 + Math.random() * 0.35}s`;
+        v.style.animationDuration = `${1.3 + Math.random() * 0.5}s`;
+        fxContainer.appendChild(v);
+      }
+    }
+
+    setTimeout(() => {
+      badge.classList.remove("is-awakening");
+      if (fxContainer) fxContainer.innerHTML = "";
+    }, 2500);
+  }
+
   function showLevelUp(level, newRank) {
     el.levelupNumber.textContent = level;
     el.levelupRankline.textContent = newRank ? `Rank ascended to ${newRank}` : "";
@@ -3105,6 +3339,9 @@ const ACHIEVEMENT_GROUPS = [
     }
     el.levelupOverlay.classList.add("is-open");
     setTimeout(() => el.levelupOverlay.classList.remove("is-open"), 2400);
+
+    // Trigger Rank Badge Awakening Glow & Particle Burst
+    triggerRankBadgeAwakening();
   }
   el.levelupOverlay.addEventListener("click", () => el.levelupOverlay.classList.remove("is-open"));
 
@@ -3113,6 +3350,15 @@ const ACHIEVEMENT_GROUPS = [
       const avatarData = getHunterAvatar(state.level);
       showToast(`🪪 <b>${avatarData ? escapeHtml(avatarData.stageTitle) : "Hunter Avatar"}</b>: ${avatarData && avatarData.description ? escapeHtml(avatarData.description) : "System clearance verified."}`);
       beep(560, 0.08, "square", 0.05, 0);
+    });
+  }
+
+  if (el.rankBadgeBig) {
+    el.rankBadgeBig.addEventListener("click", () => {
+      triggerRankBadgeAwakening();
+      playLevelUp();
+      const currentRank = rankInfoForLevel(state.level);
+      showToast(`⚡ <b>Awakening Resonance</b>: Rank ${currentRank.rank} (${currentRank.title}) Mana Surge activated!`);
     });
   }
  
