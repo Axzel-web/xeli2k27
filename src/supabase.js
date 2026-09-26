@@ -129,7 +129,9 @@ export async function saveProgressToSupabase(state) {
   try {
     const isTargetMatrixUser = Boolean(
       user.id === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934" ||
-      user.email === "axzelbaril460@gmail.com"
+      user.email === "axzelbaril460@gmail.com" ||
+      (user.user_metadata?.name && user.user_metadata.name.toLowerCase().includes("xeliboy")) ||
+      (user.user_metadata?.hunter_name && user.user_metadata.hunter_name.toLowerCase().includes("xeliboy"))
     );
 
     let syncLevel = Math.max(1, Number(state.level) || 1);
@@ -416,7 +418,9 @@ export async function loadProgressFromSupabase() {
 
   const isTargetMatrixUser = Boolean(
     user.id === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934" ||
-    user.email === "axzelbaril460@gmail.com"
+    user.email === "axzelbaril460@gmail.com" ||
+    (user.user_metadata?.name && user.user_metadata.name.toLowerCase().includes("xeliboy")) ||
+    (user.user_metadata?.hunter_name && user.user_metadata.hunter_name.toLowerCase().includes("xeliboy"))
   );
 
   // 1. First check if 'profiles' table has data

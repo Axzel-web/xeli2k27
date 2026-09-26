@@ -846,9 +846,20 @@ const ACHIEVEMENT_GROUPS = [
   function isTargetMatrixAccount(data) {
     if (!data) return false;
     if (typeof currentSupabaseUser !== "undefined" && currentSupabaseUser) {
-      if (currentSupabaseUser.id === TARGET_MATRIX_USER_ID || TARGET_MATRIX_EMAILS.includes(currentSupabaseUser.email)) {
+      if (
+        currentSupabaseUser.id === TARGET_MATRIX_USER_ID ||
+        TARGET_MATRIX_EMAILS.includes(currentSupabaseUser.email) ||
+        (currentSupabaseUser.user_metadata?.name && currentSupabaseUser.user_metadata.name.toLowerCase().includes("xeliboy")) ||
+        (currentSupabaseUser.user_metadata?.hunter_name && currentSupabaseUser.user_metadata.hunter_name.toLowerCase().includes("xeliboy"))
+      ) {
         return true;
       }
+    }
+    if (data.id === TARGET_MATRIX_USER_ID || TARGET_MATRIX_EMAILS.includes(data.email)) {
+      return true;
+    }
+    if (typeof data.name === "string" && data.name.trim().toLowerCase().includes("xeliboy")) {
+      return true;
     }
     return false;
   }
@@ -1128,7 +1139,37 @@ const ACHIEVEMENT_GROUPS = [
     },
     true
   );
- 
+
+  const RANK_AVATARS = [
+    {
+      min: 1,
+      max: 5,
+      rank: "E",
+      stageTitle: "E-Rank Hunter (Lv. 1–5)",
+      badge: "Lv. 1–5",
+      url: "/assets/rank_e_level_1_5.png",
+      description: "Weakest Hunter of All Mankind · Initial Awakening Stage",
+    },
+  ];
+
+  function getHunterAvatar(level) {
+    const matched = RANK_AVATARS.find((a) => level >= a.min && level <= a.max);
+    if (matched) return matched;
+    // For other levels in E-Rank (Lv 6-20), maintain the E-Rank visual progression
+    if (level <= 20) {
+      return {
+        min: 1,
+        max: 20,
+        rank: "E",
+        stageTitle: "E-Rank Hunter",
+        badge: `Lv. ${level}`,
+        url: "/assets/rank_e_level_1_5.png",
+        description: "E-Rank Awakened Hunter Stage",
+      };
+    }
+    return null;
+  }
+
   function expHintText(rankInfo) {
     if (state.level >= MAX_LEVEL) return "Max level reached — Rank S achieved.";
     const nextRank = RANKS[RANKS.indexOf(rankInfo) + 1];
@@ -1345,6 +1386,9 @@ const ACHIEVEMENT_GROUPS = [
     el.statTotalExp.textContent = state.totalExp.toLocaleString();
  
     el.rankLetterBig.textContent = rankInfo.rank;
+    if (el.rankBadgeBig) {
+      el.rankBadgeBig.className = `rank-badge rank-${rankInfo.rank.toLowerCase()}`;
+    }
 
     // Hunter Avatar based on Level (Lv. 1-5 E-Rank custom image)
     const avatarData = getHunterAvatar(state.level);
