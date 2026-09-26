@@ -782,12 +782,6 @@ const ACHIEVEMENT_GROUPS = [
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultState();
       const parsed = JSON.parse(raw);
-      // Cleanse any legacy Level 9 injection for guests / unauthenticated users
-      if (parsed && (parsed.level === 9 || parsed.totalExp === 1905 || (parsed.level === 9 && parsed.exp === 125))) {
-        parsed.level = 1;
-        parsed.exp = 0;
-        parsed.totalExp = 0;
-      }
       // Auto-off for BGM on initial load so background music does not auto-play
       return { ...defaultState(), ...parsed, bgmEnabled: false };
     } catch (e) {
@@ -885,13 +879,6 @@ const ACHIEVEMENT_GROUPS = [
     if (typeof merged.password !== "string") merged.password = "hunter1998";
     if (typeof merged.supabaseAutoSync !== "boolean") merged.supabaseAutoSync = true;
     if (typeof merged.lastSupabaseSync !== "string" && merged.lastSupabaseSync !== null) merged.lastSupabaseSync = null;
-
-    // Reset any legacy Level 9 injection for non-Google / guest accounts
-    if (!isTargetMatrixAccount(merged) && (merged.level === 9 || merged.totalExp === 1905 || (merged.level === 9 && merged.exp === 125))) {
-      merged.level = 1;
-      merged.exp = 0;
-      merged.totalExp = 0;
-    }
 
     // Targeted migration ONLY for verified Google user axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934):
     // 18,050 Total EXP = Level 14 (807 / 2,755 EXP), Aug 25 - Sept 24 matrix
@@ -3451,6 +3438,14 @@ const ACHIEVEMENT_GROUPS = [
       saveState();
       render();
       syncToSupabaseCloud(true);
+    } else if (user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7") {
+      state.totalExp = Math.max(state.totalExp || 0, 1905);
+      const derived = getLevelAndExpFromTotal(state.totalExp);
+      state.level = derived.level;
+      state.exp = derived.exp;
+      saveState();
+      render();
+      syncToSupabaseCloud(true);
     }
 
     refreshLeaderboard(false);
@@ -4116,12 +4111,6 @@ const ACHIEVEMENT_GROUPS = [
   // ---------------------------------------------------------
   // INIT
   // ---------------------------------------------------------
-  // Ensure guests / users with no Google account NEVER see Level 9
-  if (!currentSupabaseUser && (state.level === 9 || state.totalExp === 1905 || (state.level === 9 && state.exp === 125))) {
-    state.level = 1;
-    state.exp = 0;
-    state.totalExp = 0;
-  }
   touchStreak();
   saveState();
   render();

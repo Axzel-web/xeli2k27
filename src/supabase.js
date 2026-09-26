@@ -407,6 +407,27 @@ export async function fetchLeaderboardProfiles() {
   return [];
 }
 
+export function deriveLevelAndExp(totalExp) {
+  const t = Math.max(0, Number(totalExp) || 0);
+  if (t <= 0) return { level: 1, exp: 0, required: 102 };
+  if (t >= 1000000) return { level: 100, exp: 0, required: 0 };
+  const totalFor = (lvl) => {
+    if (lvl <= 1) return 0;
+    if (lvl >= 100) return 1000000;
+    return Math.round(1000000 * Math.pow((lvl - 1) / 99, 2));
+  };
+  let approx = Math.floor(Math.sqrt(t / 1000000) * 99) + 1;
+  while (approx < 100 && totalFor(approx + 1) <= t) approx++;
+  while (approx > 1 && totalFor(approx) > t) approx--;
+  const curBase = totalFor(approx);
+  const nextBase = totalFor(approx + 1);
+  return {
+    level: approx,
+    exp: t - curBase,
+    required: nextBase - curBase,
+  };
+}
+
 /**
  * Load Hunter State from Supabase
  */
@@ -433,15 +454,18 @@ export async function loadProgressFromSupabase() {
 
     if (!tableErr && tableData) {
       const p = user.user_metadata?.hunter_progress || {};
-      let restoredLevel = Math.max(1, Number(tableData.level) || p.level || 1);
       let restoredTotalExp = Math.max(0, Number(tableData.total_exp) || p.total_exp || 0);
-      let restoredExp = Math.max(0, Number(tableData.exp) || p.exp || 0);
 
+      // Support targeted matrix user XELIBOY 10
       if (isTargetMatrixUser) {
-        restoredLevel = 14;
-        restoredTotalExp = 18050;
-        restoredExp = 807;
+        restoredTotalExp = Math.max(restoredTotalExp, 18050);
+      } else if (user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7") {
+        restoredTotalExp = Math.max(restoredTotalExp, 1905);
       }
+
+      const derived = deriveLevelAndExp(restoredTotalExp);
+      const restoredLevel = derived.level;
+      const restoredExp = derived.exp;
 
       return {
         name: tableData.name || p.hunter_name || user.user_metadata?.hunter_name || "Hunter",
@@ -449,7 +473,7 @@ export async function loadProgressFromSupabase() {
         exp: restoredExp,
         totalExp: restoredTotalExp,
         streak: tableData.streak || p.streak || 0,
-        guild: p.guild || "Hunter Association",
+        guild: tableData.guild || p.guild || "Hunter Association",
         quests: p.quests || [],
         solvedChallenges: p.solved_challenges || [],
         unlockedAchievements: p.unlocked_achievements || [],
@@ -465,15 +489,17 @@ export async function loadProgressFromSupabase() {
   // 2. Fall back to user metadata
   const p = user.user_metadata?.hunter_progress;
   if (p) {
-    let restoredLevel = Math.max(1, Number(p.level) || 1);
     let restoredTotalExp = Math.max(0, Number(p.total_exp ?? p.totalExp ?? p.exp) || 0);
-    let restoredExp = Math.max(0, Number(p.exp) || 0);
 
     if (isTargetMatrixUser) {
-      restoredLevel = 14;
-      restoredTotalExp = 18050;
-      restoredExp = 807;
+      restoredTotalExp = Math.max(restoredTotalExp, 18050);
+    } else if (user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7") {
+      restoredTotalExp = Math.max(restoredTotalExp, 1905);
     }
+
+    const derived = deriveLevelAndExp(restoredTotalExp);
+    const restoredLevel = derived.level;
+    const restoredExp = derived.exp;
 
     return {
       name: p.hunter_name || user.user_metadata?.hunter_name || "Hunter",
