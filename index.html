@@ -178,7 +178,7 @@
         <div class="status-glow" aria-hidden="true"></div>
 
         <div class="status-left">
-          <div class="hunter-avatar" id="hunterAvatar" role="img" aria-label="Hunter Avatar" title="Hunter Avatar · Level 1–5 E-Rank">
+          <div class="hunter-avatar" id="hunterAvatar" role="button" tabindex="0" aria-label="Hunter Avatar · Click to Edit Profile" title="Hunter Avatar · Click to Edit Profile &amp; Picture">
             <img id="hunterAvatarImg" class="hunter-avatar-img" src="/assets/rank_e_level_1_5.png" alt="Hunter Avatar (Level 1-5 E-Rank)" referrerPolicy="no-referrer" />
             <svg viewBox="0 0 200 200" class="hunter-avatar-svg" id="hunterAvatarSvg" xmlns="http://www.w3.org/2000/svg" style="display:none;">
               <defs>
@@ -214,6 +214,10 @@
           <div class="status-row">
             <input class="hunter-name-input" id="hunterNameInput" value="Hunter" maxlength="18" aria-label="Hunter name">
             <span class="status-title" id="hunterTitle">The Awakened</span>
+            <button type="button" class="btn btn-ghost edit-profile-trigger-btn" id="openEditProfileBtn" title="Edit Hunter Profile &amp; Avatar Picture">
+              <svg viewBox="0 0 24 24" class="btn-icon" style="width:13px; height:13px;"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              <span>Edit Profile</span>
+            </button>
           </div>
 
           <div class="level-line">
@@ -615,6 +619,7 @@
             <div class="col-exp">Total XP</div>
             <div class="col-tier">Rank Title</div>
             <div class="col-clearance">Clearance</div>
+            <div class="col-actions" style="text-align:right;">Profile / Action</div>
           </div>
           <div class="leaderboard-list" id="leaderboardList">
             <!-- Dynamically populated from real Supabase users with Top 3 special visual treatment -->
@@ -921,6 +926,202 @@
   </div>
 </div>
 
+<!-- ===================== MODAL: EDIT HUNTER PROFILE ===================== -->
+<div class="modal-overlay" id="modalEditProfile">
+  <div class="modal modal-edit-profile" role="dialog" aria-modal="true" aria-labelledby="editProfileTitle">
+    <div class="modal-head edit-profile-head">
+      <div class="login-head-title">
+        <span class="login-head-icon" aria-hidden="true">🛡️</span>
+        <h3 id="editProfileTitle">Hunter Profile // Edit Clearance</h3>
+      </div>
+      <button class="retro-btn retro-btn-close" type="button" data-close="modalEditProfile" aria-label="Close">×</button>
+    </div>
+
+    <form id="editProfileForm" class="modal-body edit-profile-body">
+      <!-- Profile Picture Upload & Preview Section -->
+      <div class="profile-avatar-section">
+        <div class="profile-avatar-preview-wrap">
+          <div class="profile-avatar-frame" id="profileAvatarFrame" role="button" tabindex="0" title="Click to choose a new picture">
+            <img id="profileAvatarPreviewImg" class="profile-avatar-preview-img" src="/assets/rank_e_level_1_5.png" alt="Profile Picture Preview" />
+            <div class="profile-avatar-placeholder" id="profileAvatarPlaceholder" style="display:none;">
+              <span id="profileAvatarInitial">H</span>
+            </div>
+            <div class="avatar-upload-overlay" id="avatarUploadOverlay" title="Upload new photo">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              <span>Change</span>
+            </div>
+          </div>
+          <input type="file" id="profileAvatarFileInput" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" style="display:none;" />
+        </div>
+
+        <div class="profile-avatar-controls">
+          <div class="profile-avatar-title">Profile Picture</div>
+          <p class="profile-avatar-hint">
+            Upload your personal hunter picture (PNG, JPG, WebP). Max 5MB.<br>
+            It will automatically appear next to your name on the Global Leaderboard.
+          </p>
+          <div class="profile-avatar-btn-row">
+            <button type="button" class="btn btn-secondary btn-sm" id="profileUploadBtn">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload Picture
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" id="profileRemoveAvatarBtn" title="Revert to default rank avatar">
+              Remove
+            </button>
+          </div>
+          <div class="avatar-upload-status" id="avatarUploadStatus"></div>
+        </div>
+      </div>
+
+      <div class="profile-divider"></div>
+
+      <!-- Hunter Information Fields -->
+      <div class="profile-fields-grid">
+        <div class="field">
+          <label for="editProfileName">Hunter Username / Callsign</label>
+          <input type="text" id="editProfileName" class="profile-input" maxlength="24" required placeholder="Hunter" autocomplete="off" />
+          <span class="field-hint">Your public identity on the Global Leaderboard and Hunter Console.</span>
+        </div>
+
+        <div class="field">
+          <label for="editProfileGuild">Affiliation / Guild</label>
+          <input type="text" id="editProfileGuild" class="profile-input" maxlength="32" placeholder="Hunter Association" autocomplete="off" />
+          <span class="field-hint">Displayed below your name on the Global Leaderboard.</span>
+        </div>
+      </div>
+
+      <!-- Current Profile Meta Display -->
+      <div class="profile-stats-card">
+        <div class="profile-stat-item">
+          <span class="profile-stat-lbl">Clearance Tier</span>
+          <span class="profile-stat-val" id="editProfileRankTier">Rank E · The Awakened</span>
+        </div>
+        <div class="profile-stat-item">
+          <span class="profile-stat-lbl">Hunter Level</span>
+          <span class="profile-stat-val" id="editProfileLevelVal">Level 1</span>
+        </div>
+        <div class="profile-stat-item">
+          <span class="profile-stat-lbl">Total Experience</span>
+          <span class="profile-stat-val" id="editProfileExpVal">0 XP</span>
+        </div>
+        <div class="profile-stat-item">
+          <span class="profile-stat-lbl">Cloud Account</span>
+          <span class="profile-stat-val" id="editProfileCloudStatus">Connected</span>
+        </div>
+      </div>
+
+      <div id="editProfileMsg" class="edit-profile-msg"></div>
+
+      <div class="modal-actions" style="margin-top:16px;">
+        <button type="button" class="btn btn-ghost" data-close="modalEditProfile">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveProfileBtn">
+          <span id="saveProfileBtnText">Save Profile</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MODAL: LEADERBOARD HUNTER PROFILE & CRUD DOSSIER ===================== -->
+<div class="modal-overlay" id="modalLeaderboardProfile">
+  <div class="modal modal-hunter-profile" role="dialog" aria-modal="true" aria-labelledby="hpModalTitle">
+    <div class="modal-head">
+      <div class="login-head-title">
+        <span class="login-head-icon" aria-hidden="true">🛡️</span>
+        <h3 id="hpModalTitle">Hunter Profile Dossier // Leaderboard Clearance</h3>
+      </div>
+      <button class="retro-btn retro-btn-close" type="button" data-close="modalLeaderboardProfile" aria-label="Close">×</button>
+    </div>
+
+    <div class="modal-body hunter-profile-body">
+      <!-- 1. Hunter Hero Banner -->
+      <div class="hp-hero">
+        <div class="hp-avatar-container">
+          <div class="hp-avatar-frame rank-e" id="hpAvatarFrame" title="Hunter Avatar">
+            <img src="" id="hpAvatarImg" class="hp-avatar-img" alt="Hunter" style="display:none;" />
+            <div class="hp-avatar-fallback" id="hpAvatarFallback">H</div>
+          </div>
+          <span class="hp-rank-badge" id="hpRankLetter">Rank E</span>
+        </div>
+        <div class="hp-identity">
+          <div class="hp-name-row">
+            <h2 class="hp-name" id="hpName">Hunter Name</h2>
+            <span class="hp-you-pill" id="hpYouBadge" style="display:none;">YOU</span>
+            <span class="hp-pos-pill" id="hpPosPill">#1 Global</span>
+            <button type="button" class="hp-change-avatar-btn" id="hpChangeAvatarBtn" style="display:none;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              <span>Add / Change Picture</span>
+            </button>
+          </div>
+          <div class="hp-meta-row">
+            <span class="hp-guild" id="hpGuild">Hunter Association</span>
+            <span class="hp-dot">•</span>
+            <span class="hp-tier" id="hpTier">Bronze Tier</span>
+            <span class="hp-dot">•</span>
+            <span class="hp-status-tag" id="hpStatusTag">Active Hunter</span>
+          </div>
+          <p class="hp-bio" id="hpBio">Awakened hunter affiliated with the Association.</p>
+        </div>
+      </div>
+
+      <!-- 2. Hunter Core Stats Grid -->
+      <div class="hp-stats-grid">
+        <div class="hp-stat-card">
+          <span class="hp-stat-label">Hunter Level</span>
+          <div class="hp-stat-val" id="hpLevel">Lv. 14</div>
+          <span class="hp-stat-sub" id="hpLevelSub">Clearance Level</span>
+        </div>
+        <div class="hp-stat-card">
+          <span class="hp-stat-label">Total EXP Earned</span>
+          <div class="hp-stat-val text-cyan" id="hpTotalExp">19,230 XP</div>
+          <span class="hp-stat-sub" id="hpRankTitleSub">Rank: Bronze</span>
+        </div>
+        <div class="hp-stat-card">
+          <span class="hp-stat-label">Level Progress</span>
+          <div class="hp-stat-val" id="hpCurrentExp">1,987 / 2,755</div>
+          <span class="hp-stat-sub" id="hpExpToNext">768 EXP to Level 15</span>
+        </div>
+        <div class="hp-stat-card">
+          <span class="hp-stat-label">Active Streak</span>
+          <div class="hp-stat-val text-amber" id="hpStreak">6 Days</div>
+          <span class="hp-stat-sub" id="hpStreakSub">Consistency Multiplier</span>
+        </div>
+      </div>
+
+      <!-- Level EXP Bar -->
+      <div class="hp-bar-container">
+        <div class="hp-bar-labels">
+          <span id="hpBarLeftLabel">Level 14 Progress</span>
+          <span id="hpBarRightLabel">72.1%</span>
+        </div>
+        <div class="hp-bar-track">
+          <div class="hp-bar-fill" id="hpBarFill" style="width: 72.1%;"></div>
+        </div>
+      </div>
+
+      <!-- 3. Association Clearance Dossier (Secure Read-Only) -->
+      <div class="hp-overview-details">
+        <div class="hp-detail-row">
+          <span class="hp-detail-k">Hunter Identifier (UUID):</span>
+          <span class="hp-detail-v" id="hpDetailId">--</span>
+        </div>
+        <div class="hp-detail-row">
+          <span class="hp-detail-k">Clearance Authority:</span>
+          <span class="hp-detail-v" id="hpDetailClearance">Standard Hunter Clearance</span>
+        </div>
+        <div class="hp-detail-row">
+          <span class="hp-detail-k">Database Record:</span>
+          <span class="hp-detail-v text-green" id="hpDetailDbStatus">Verified in public.profiles</span>
+        </div>
+        <div class="hp-detail-row">
+          <span class="hp-detail-k">Last Synced:</span>
+          <span class="hp-detail-v" id="hpDetailUpdated">Real-time</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== MODAL: SUPABASE CLOUD CONNECTION & SYNC ===================== -->
 <div class="modal-overlay" id="modalSupabase">
   <div class="modal modal-supabase" role="dialog" aria-modal="true" aria-labelledby="supabaseModalTitle">
@@ -1000,6 +1201,9 @@
             <span class="supabase-info-value" id="supabaseLastSyncedVal">Never</span>
           </div>
           <div class="supabase-btn-group" style="justify-content:flex-start;">
+            <button type="button" class="btn btn-secondary" id="supabaseEditProfileBtn" title="Edit Hunter Profile &amp; Picture">
+              🛡️ Edit Profile
+            </button>
             <button type="button" class="btn btn-primary" id="supabaseManualPushBtn" title="Upload current local progress to Supabase Cloud">
               ⬆ Upload to Cloud
             </button>
@@ -1031,6 +1235,7 @@
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL DEFAULT 'Hunter',
+  avatar_url TEXT,
   level INT NOT NULL DEFAULT 1 CHECK (level BETWEEN 1 AND 100),
   exp INT NOT NULL DEFAULT 0 CHECK (exp &gt;= 0),
   total_exp INT NOT NULL DEFAULT 0 CHECK (total_exp &gt;= 0),

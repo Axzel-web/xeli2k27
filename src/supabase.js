@@ -139,9 +139,10 @@ export async function saveProgressToSupabase(state) {
     let syncExp = Math.max(0, Number(state.exp) || 0);
 
     if (isTargetMatrixUser) {
-      syncLevel = 14;
-      syncTotalExp = Math.max(syncTotalExp, 18050);
-      syncExp = 807;
+      syncTotalExp = Math.max(syncTotalExp, 19230);
+      const derived = deriveLevelAndExp(syncTotalExp);
+      syncLevel = derived.level;
+      syncExp = derived.exp;
     }
 
     const { error: tableErr } = await supabase
@@ -149,6 +150,7 @@ export async function saveProgressToSupabase(state) {
       .upsert({
         id: user.id,
         name: state.name || user.user_metadata?.hunter_name || "Hunter",
+        avatar_url: state.avatarUrl || user.user_metadata?.avatar_url || null,
         level: syncLevel,
         exp: syncExp,
         total_exp: syncTotalExp,
@@ -162,30 +164,35 @@ export async function saveProgressToSupabase(state) {
 
     // Upsert problem_stats if available
     if (state.problemStats || isTargetMatrixUser) {
-      const ps = state.problemStats || {
-        solvedTotal: 59,
+      const extraSolved = Array.isArray(state.solvedChallenges) ? state.solvedChallenges.length : 0;
+      const currentSolved = Math.max(59 + extraSolved, Number(state.problemStats?.solvedTotal) || (59 + extraSolved));
+      const currentMed = Math.max(40 + extraSolved, Number(state.problemStats?.solvedMedium) || (40 + extraSolved));
+      const ps = {
+        solvedTotal: currentSolved,
         totalProblems: 76,
-        solvedEasy: 2,
+        solvedEasy: Number(state.problemStats?.solvedEasy) || 2,
         totalEasy: 10,
-        solvedMedium: 40,
+        solvedMedium: currentMed,
         totalMedium: 46,
-        solvedHard: 17,
+        solvedHard: Number(state.problemStats?.solvedHard) || 17,
         totalHard: 20,
       };
       try {
         await supabase.from("user_problem_stats").upsert({
           user_id: user.id,
-          solved_total: ps.solvedTotal ?? 59,
-          total_problems: ps.totalProblems ?? 76,
-          solved_easy: ps.solvedEasy ?? 2,
-          total_easy: ps.totalEasy ?? 10,
-          solved_medium: ps.solvedMedium ?? 40,
-          total_medium: ps.totalMedium ?? 46,
-          solved_hard: ps.solvedHard ?? 17,
-          total_hard: ps.totalHard ?? 20,
+          solved_total: ps.solvedTotal,
+          total_problems: ps.totalProblems,
+          solved_easy: ps.solvedEasy,
+          total_easy: ps.totalEasy,
+          solved_medium: ps.solvedMedium,
+          total_medium: ps.totalMedium,
+          solved_hard: ps.solvedHard,
+          total_hard: ps.totalHard,
           updated_at: payload.updated_at,
         });
-      } catch (_) {}
+      } catch (errPs) {
+        console.warn("user_problem_stats upsert note:", errPs);
+      }
     }
   } catch (err) {
     console.warn("Table upsert skipped:", err);
@@ -309,8 +316,12 @@ export async function fetchGlobalLeaderboard({
   const rawUsers = Array.isArray(data) ? data : [];
   const users = rawUsers.map((u, idx) => {
     const isTargetMatrix = u.id === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934";
-    const uLevel = isTargetMatrix ? Math.max(24, Number(u.level) || 1) : Math.max(1, Number(u.level) || 1);
-    const uTotalExp = isTargetMatrix ? Math.max(18050, Number(u.total_exp ?? u.exp) || 0) : Math.max(0, Number(u.total_exp ?? u.exp ?? 0));
+    let uTotalExp = Math.max(0, Number(u.total_exp ?? u.exp ?? 0));
+    if (isTargetMatrix) {
+      uTotalExp = Math.max(uTotalExp, 19230);
+    }
+    const derived = deriveLevelAndExp(uTotalExp);
+    const uLevel = Number(u.level) && Number(u.level) >= derived.level ? Number(u.level) : derived.level;
     return {
       id: u.id,
       global_rank: boundedOffset + idx + 1,
@@ -346,7 +357,7 @@ export async function fetchGlobalLeaderboard({
         if (!myProfileErr && myProfile) {
           const isTargetMatrix = currentUserId === "f4b12bd2-f26a-4f98-aef2-1e883b9f1934";
           const myTotalExp = isTargetMatrix
-            ? Math.max(18050, Number(myProfile.total_exp ?? myProfile.exp) || 0)
+            ? Math.max(19230, Number(myProfile.total_exp ?? myProfile.exp) || 0)
             : Math.max(0, Number(myProfile.total_exp ?? myProfile.exp ?? 0));
           const { count: aheadCount, error: countErr } = await supabase
             .from("profiles")
@@ -354,9 +365,8 @@ export async function fetchGlobalLeaderboard({
             .gt("total_exp", myTotalExp);
 
           const myRank = !countErr && typeof aheadCount === "number" ? aheadCount + 1 : 101;
-          const myLevel = isTarget
-            ? Math.max(Number(myProfile.level) || 1, 9)
-            : Math.max(1, Number(myProfile.level) || 1);
+          const derived = deriveLevelAndExp(myTotalExp);
+          const myLevel = Number(myProfile.level) && Number(myProfile.level) >= derived.level ? Number(myProfile.level) : derived.level;
 
           myStanding = {
             id: myProfile.id,
@@ -486,7 +496,7 @@ export async function loadProgressFromSupabase() {
 
       // Support targeted matrix user XELIBOY 10
       if (isTargetMatrixUser) {
-        restoredTotalExp = Math.max(restoredTotalExp, 18050);
+        restoredTotalExp = Math.max(restoredTotalExp, 19230);
       } else if (user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7") {
         restoredTotalExp = Math.max(restoredTotalExp, 1905);
       }
@@ -497,12 +507,15 @@ export async function loadProgressFromSupabase() {
 
       let problemStats = null;
       if (isTargetMatrixUser) {
+        const extraSolved = Array.isArray(p.solved_challenges) ? p.solved_challenges.length : 0;
+        const currentSolved = Math.max(61, 59 + extraSolved, Number(tableData.solved_total) || 59);
+        const currentMed = Math.max(42, 40 + extraSolved, Number(tableData.solved_medium) || 40);
         problemStats = {
-          solvedTotal: 59,
+          solvedTotal: currentSolved,
           totalProblems: 76,
           solvedEasy: 2,
           totalEasy: 10,
-          solvedMedium: 40,
+          solvedMedium: currentMed,
           totalMedium: 46,
           solvedHard: 17,
           totalHard: 20,
@@ -533,6 +546,7 @@ export async function loadProgressFromSupabase() {
         activity: p.activity || [],
         dailyExp: p.daily_exp || {},
         problemStats: problemStats || p.problem_stats || null,
+        avatarUrl: tableData.avatar_url || p.avatar_url || user.user_metadata?.avatar_url || null,
         syncedAt: tableData.updated_at || p.updated_at,
       };
     }
@@ -546,7 +560,7 @@ export async function loadProgressFromSupabase() {
     let restoredTotalExp = Math.max(0, Number(p.total_exp ?? p.totalExp ?? p.exp) || 0);
 
     if (isTargetMatrixUser) {
-      restoredTotalExp = Math.max(restoredTotalExp, 18050);
+      restoredTotalExp = Math.max(restoredTotalExp, 19230);
     } else if (user.id === "a0c2b12e-6892-4016-8d29-d39c32f6f9c7") {
       restoredTotalExp = Math.max(restoredTotalExp, 1905);
     }
@@ -557,12 +571,15 @@ export async function loadProgressFromSupabase() {
 
     let problemStats = null;
     if (isTargetMatrixUser) {
+      const extraSolved = Array.isArray(p.solved_challenges) ? p.solved_challenges.length : 0;
+      const currentSolved = Math.max(61, 59 + extraSolved);
+      const currentMed = Math.max(42, 40 + extraSolved);
       problemStats = {
-        solvedTotal: 59,
+        solvedTotal: currentSolved,
         totalProblems: 76,
         solvedEasy: 2,
         totalEasy: 10,
-        solvedMedium: 40,
+        solvedMedium: currentMed,
         totalMedium: 46,
         solvedHard: 17,
         totalHard: 20,
@@ -582,6 +599,7 @@ export async function loadProgressFromSupabase() {
       activity: p.activity || [],
       dailyExp: p.daily_exp || {},
       problemStats: problemStats || p.problem_stats || null,
+      avatarUrl: p.avatar_url || user.user_metadata?.avatar_url || null,
       syncedAt: p.updated_at || user.user_metadata?.last_synced_at,
     };
   }
@@ -752,6 +770,224 @@ export async function deleteMyAccount() {
     // Ignore sign-out error if session already revoked
   }
   return data;
+}
+
+/**
+ * Upload an avatar image file to Supabase Storage ('avatars' bucket)
+ * If the storage bucket is not configured, gracefully falls back to an optimized WebP/JPEG data URL
+ */
+export async function uploadProfileAvatar(file, userId) {
+  if (!file) throw new Error("No image file provided.");
+  if (!userId) throw new Error("Authenticated user ID required.");
+
+  const fileExt = file.name ? file.name.split(".").pop().toLowerCase() : "png";
+  const safeExt = ["png", "jpg", "jpeg", "webp", "gif"].includes(fileExt) ? fileExt : "png";
+  const filePath = `${userId}/avatar_${Date.now()}.${safeExt}`;
+
+  // 1. Attempt uploading directly to Supabase Storage 'avatars' bucket
+  try {
+    const { data: uploadData, error: uploadErr } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (!uploadErr && uploadData) {
+      const { data: publicUrlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      if (publicUrlData && publicUrlData.publicUrl) {
+        return {
+          url: publicUrlData.publicUrl,
+          storageType: "supabase_storage",
+          path: filePath,
+        };
+      }
+    } else if (uploadErr) {
+      console.warn("Supabase Storage notice (using optimized fallback):", uploadErr.message);
+    }
+  } catch (storageException) {
+    console.warn("Storage upload exception:", storageException);
+  }
+
+  // 2. High-performance client-side fallback: compact, canvas-optimized Data URL
+  const optimizedDataUrl = await createOptimizedAvatarDataUrl(file);
+  return {
+    url: optimizedDataUrl,
+    storageType: "data_url",
+    path: null,
+  };
+}
+
+/**
+ * Resizes an image file to max 220x220 for snappy loading and minimal storage size
+ */
+function createOptimizedAvatarDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const maxDim = 220;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const dataUrl = canvas.toDataURL("image/webp", 0.88) || canvas.toDataURL("image/jpeg", 0.88);
+          resolve(dataUrl);
+        } catch (_) {
+          resolve(e.target.result);
+        }
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Update Hunter Profile (callsign, avatar_url, guild)
+ */
+export async function updateHunterProfile({ name, avatarUrl, guild }) {
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) {
+    throw new Error("You must be signed in to Supabase to update your profile.");
+  }
+
+  const cleanName = (name || "").trim() || "Hunter";
+  const cleanGuild = (guild || "").trim() || "Hunter Association";
+
+  // 1. Update Supabase Auth User metadata (guaranteed persistence)
+  const { error: metaErr } = await supabase.auth.updateUser({
+    data: {
+      hunter_name: cleanName,
+      name: cleanName,
+      avatar_url: avatarUrl,
+      guild: cleanGuild,
+    },
+  });
+  if (metaErr) {
+    console.warn("User metadata update notice:", metaErr);
+  }
+
+  // 2. Update Supabase profiles table
+  const { error: profileErr } = await supabase
+    .from("profiles")
+    .upsert({
+      id: user.id,
+      name: cleanName,
+      avatar_url: avatarUrl,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (profileErr) {
+    console.warn("Profile table update notice:", profileErr);
+  }
+
+  return {
+    success: true,
+    user: {
+      id: user.id,
+      name: cleanName,
+      avatar_url: avatarUrl,
+      guild: cleanGuild,
+    },
+  };
+}
+
+/**
+ * Leaderboard Profile CRUD: Read profile by ID from public.profiles
+ */
+export async function fetchHunterProfileById(userId) {
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, name, avatar_url, bio, level, exp, total_exp, streak, created_at, updated_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Could not fetch hunter profile:", error);
+    return null;
+  }
+  return data;
+}
+
+/**
+ * Leaderboard Profile CRUD: Update profile directly in public.profiles based on SQL Editor schema
+ */
+export async function crudUpdateHunterProfile(userId, { name, avatarUrl, bio, totalExp, streak } = {}) {
+  if (!userId) throw new Error("Hunter ID is required for CRUD update.");
+
+  const updates = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (typeof name === "string" && name.trim()) {
+    updates.name = name.trim().slice(0, 30);
+  }
+  if (typeof avatarUrl !== "undefined") {
+    updates.avatar_url = avatarUrl;
+  }
+  if (typeof bio !== "undefined") {
+    updates.bio = bio ? bio.trim().slice(0, 140) : null;
+  }
+  if (typeof totalExp === "number" && !isNaN(totalExp)) {
+    const cleanTotal = Math.max(0, Math.min(1000000, totalExp));
+    updates.total_exp = cleanTotal;
+    const derived = deriveLevelAndExp(cleanTotal);
+    updates.level = derived.level;
+    updates.exp = derived.exp;
+  }
+  if (typeof streak === "number" && !isNaN(streak)) {
+    updates.streak = Math.max(0, streak);
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(updates)
+    .eq("id", userId)
+    .select()
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Leaderboard Profile CRUD: Delete / reset profile from public.profiles
+ */
+export async function crudDeleteHunterProfile(userId) {
+  if (!userId) throw new Error("Hunter ID is required for deletion.");
+  const { data, error } = await supabase
+    .from("profiles")
+    .delete()
+    .eq("id", userId);
+
+  if (error) throw error;
+  return { success: true };
 }
 
 

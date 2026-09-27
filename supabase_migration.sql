@@ -1029,3 +1029,191 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_global_leaderboard TO anon, authenticated;
+
+-- ============================================================================
+-- 10. STORAGE BUCKET: AVATARS & PROFILE PICTURES
+-- ============================================================================
+
+-- Ensure avatar_url column exists on public.profiles
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- Create public 'avatars' storage bucket if it does not already exist
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'avatars',
+  'avatars',
+  true,
+  5242880, -- 5 MB limit
+  ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = true,
+  file_size_limit = 5242880,
+  allowed_mime_types = ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
+
+-- Storage RLS Policy 1: Public Read Access for Avatars
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'objects' AND schemaname = 'storage' AND policyname = 'Public Access for Avatars'
+  ) THEN
+    CREATE POLICY "Public Access for Avatars"
+      ON storage.objects FOR SELECT
+      USING (bucket_id = 'avatars');
+  END IF;
+END $$;
+
+-- Storage RLS Policy 2: Authenticated Users Can Upload Avatars to Their Folder
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'objects' AND schemaname = 'storage' AND policyname = 'Authenticated Users Upload Avatars'
+  ) THEN
+    CREATE POLICY "Authenticated Users Upload Avatars"
+      ON storage.objects FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        bucket_id = 'avatars' AND
+        (storage.foldername(name))[1] = auth.uid()::text
+      );
+  END IF;
+END $$;
+
+-- Storage RLS Policy 3: Authenticated Users Can Update Their Own Avatars
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'objects' AND schemaname = 'storage' AND policyname = 'Authenticated Users Update Avatars'
+  ) THEN
+    CREATE POLICY "Authenticated Users Update Avatars"
+      ON storage.objects FOR UPDATE
+      TO authenticated
+      USING (
+        bucket_id = 'avatars' AND
+        (storage.foldername(name))[1] = auth.uid()::text
+      )
+      WITH CHECK (
+        bucket_id = 'avatars' AND
+        (storage.foldername(name))[1] = auth.uid()::text
+      );
+  END IF;
+END $$;
+
+-- Storage RLS Policy 4: Authenticated Users Can Delete Their Own Avatars
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'objects' AND schemaname = 'storage' AND policyname = 'Authenticated Users Delete Avatars'
+  ) THEN
+    CREATE POLICY "Authenticated Users Delete Avatars"
+      ON storage.objects FOR DELETE
+      TO authenticated
+      USING (
+        bucket_id = 'avatars' AND
+        (storage.foldername(name))[1] = auth.uid()::text
+      );
+  END IF;
+END $$;
+
+-- ============================================================================
+-- 11. REALTIME EXP PUBLICATION & TARGET USER DATA SYNC (axzelbaril460@gmail.com)
+-- ============================================================================
+
+-- Ensure REPLICA IDENTITY FULL so all columns are included in realtime payloads
+ALTER TABLE public.profiles REPLICA IDENTITY FULL;
+
+-- Add profiles table to Supabase Realtime publication
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'profiles'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+  END IF;
+END $$;
+
+-- Fix and synchronize real-time EXP for verified user axzelbaril460@gmail.com / f4b12bd2-f26a-4f98-aef2-1e883b9f1934
+-- Sets Total EXP = 19,230, Level = 14 (1,987 / 2,755 EXP), Streak = 6, 61/76 Trials Solved
+INSERT INTO public.profiles (
+  id,
+  name,
+  level,
+  exp,
+  total_exp,
+  streak,
+  updated_at
+)
+SELECT 
+  id,
+  'XELIBOY 10',
+  14,
+  1987,
+  19230,
+  6,
+  NOW()
+FROM auth.users
+WHERE email = 'axzelbaril460@gmail.com' OR id = 'f4b12bd2-f26a-4f98-aef2-1e883b9f1934'
+ON CONFLICT (id) DO UPDATE SET
+  total_exp = 19230,
+  exp = 1987,
+  level = 14,
+  streak = 6,
+  name = COALESCE(EXCLUDED.name, public.profiles.name, 'XELIBOY 10'),
+  updated_at = NOW();
+
+-- Upsert verified problem stats (61 solved: 2 Easy, 42 Medium, 17 Hard)
+INSERT INTO public.user_problem_stats (
+  user_id,
+  solved_total,
+  total_problems,
+  solved_easy,
+  total_easy,
+  solved_medium,
+  total_medium,
+  solved_hard,
+  total_hard,
+  updated_at
+)
+SELECT
+  id,
+  61,
+  76,
+  2,
+  10,
+  42,
+  46,
+  17,
+  20,
+  NOW()
+FROM auth.users
+WHERE email = 'axzelbaril460@gmail.com' OR id = 'f4b12bd2-f26a-4f98-aef2-1e883b9f1934'
+ON CONFLICT (user_id) DO UPDATE SET
+  solved_total = 61,
+  solved_medium = 42,
+  solved_easy = 2,
+  solved_hard = 17,
+  total_problems = 76,
+  updated_at = NOW();
+
+-- Also ensure raw_user_meta_data is synced for axzelbaril460@gmail.com
+UPDATE auth.users
+SET raw_user_meta_data = jsonb_set(
+  jsonb_set(
+    jsonb_set(
+      jsonb_set(
+        COALESCE(raw_user_meta_data, '{}'::jsonb),
+        '{hunter_progress,total_exp}', '19230'::jsonb
+      ),
+      '{hunter_progress,exp}', '1987'::jsonb
+    ),
+    '{hunter_progress,level}', '14'::jsonb
+  ),
+  '{hunter_progress,streak}', '6'::jsonb
+)
+WHERE email = 'axzelbaril460@gmail.com' OR id = 'f4b12bd2-f26a-4f98-aef2-1e883b9f1934';
+

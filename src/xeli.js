@@ -14,6 +14,11 @@ import {
   fetchGlobalLeaderboard,
   getRankTitle,
   subscribeToLeaderboardChanges,
+  uploadProfileAvatar,
+  updateHunterProfile,
+  fetchHunterProfileById,
+  crudUpdateHunterProfile,
+  crudDeleteHunterProfile,
 } from "./supabase.js";
 import { renderCliLabChallenge } from "./cli-lab-ui.js";
 import { renderBinaryLabChallenge } from "./binary-lab-ui.js";
@@ -769,6 +774,7 @@ const ACHIEVEMENT_GROUPS = [
       bgmEnabled: false,
       bgmVolume: 65,
       guild: "Hunter Association",
+      avatarUrl: null,
       isLoggedIn: true,
       rememberMe: true,
       password: "hunter1998",
@@ -796,6 +802,7 @@ const ACHIEVEMENT_GROUPS = [
       recordRegisteredHunter({
         id: currentSupabaseUser ? currentSupabaseUser.id : "local-active-hunter",
         name: state.name || "Hunter",
+        avatarUrl: state.avatarUrl || null,
         level: state.level || 1,
         totalExp: Math.max(state.totalExp || 0, state.exp || 0),
         streak: state.streak || 0,
@@ -874,26 +881,33 @@ const ACHIEVEMENT_GROUPS = [
     if (typeof merged.dailyExp !== "object" || merged.dailyExp === null) merged.dailyExp = {};
     if (typeof merged.name !== "string" || !merged.name.trim()) merged.name = "Hunter";
     if (typeof merged.guild !== "string" || !merged.guild.trim()) merged.guild = "Hunter Association";
+    if (typeof merged.avatarUrl !== "string" && merged.avatarUrl !== null) merged.avatarUrl = null;
     if (typeof merged.isLoggedIn !== "boolean") merged.isLoggedIn = true;
     if (typeof merged.rememberMe !== "boolean") merged.rememberMe = true;
     if (typeof merged.password !== "string") merged.password = "hunter1998";
     if (typeof merged.supabaseAutoSync !== "boolean") merged.supabaseAutoSync = true;
     if (typeof merged.lastSupabaseSync !== "string" && merged.lastSupabaseSync !== null) merged.lastSupabaseSync = null;
 
-    // Targeted migration ONLY for verified Google user axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934):
-    // 18,050 Total EXP = Level 14 (807 / 2,755 EXP), Aug 25 - Sept 24 matrix, 59/76 solved problems (2 easy, 40 med, 17 hard)
+    // Targeted migration for verified Google user axzelbaril460@gmail.com (id: f4b12bd2-f26a-4f98-aef2-1e883b9f1934):
+    // Baseline 19,230 Total EXP, 6 active streak days, 59+ solved challenges
     if (isTargetMatrixAccount(merged)) {
-      merged.totalExp = 18050;
-      merged.streak = Math.max(merged.streak, 5);
+      merged.totalExp = Math.max(merged.totalExp || 0, 19230);
+      merged.streak = Math.max(merged.streak || 0, 6);
       merged.dailyExp = { ...AUG25_SEPT24_MATRIX, ...(merged.dailyExp || {}) };
+
+      const prev = merged.problemStats || {};
+      const extraSolved = Array.isArray(merged.solvedChallenges) ? merged.solvedChallenges.length : 0;
+      const currentSolved = Math.max(59 + extraSolved, Number(prev.solvedTotal) || 59);
+      const currentMed = Math.max(40 + extraSolved, Number(prev.solvedMedium) || 40);
+
       merged.problemStats = {
-        solvedTotal: 59,
+        solvedTotal: currentSolved,
         totalProblems: 76,
-        solvedEasy: 2,
+        solvedEasy: Math.max(2, Number(prev.solvedEasy) || 2),
         totalEasy: 10,
-        solvedMedium: 40,
+        solvedMedium: currentMed,
         totalMedium: 46,
-        solvedHard: 17,
+        solvedHard: Math.max(17, Number(prev.solvedHard) || 17),
         totalHard: 20,
       };
     }
@@ -1198,6 +1212,14 @@ const ACHIEVEMENT_GROUPS = [
     saveState();
     render();
 
+    if (typeof syncToSupabaseCloud === "function") {
+      syncToSupabaseCloud(true).then(() => {
+        if (typeof refreshLeaderboard === "function") {
+          refreshLeaderboard(false);
+        }
+      });
+    }
+
     if (leveled) {
       const afterRank = rankInfoForLevel(state.level).rank;
       playLevelUp();
@@ -1391,16 +1413,28 @@ const ACHIEVEMENT_GROUPS = [
       el.rankBadgeBig.className = `rank-badge rank-${rankInfo.rank.toLowerCase()}`;
     }
 
-    // Hunter Avatar based on Level (Lv. 1-5 E-Rank custom image)
+    // Hunter Avatar based on Level or custom uploaded Profile Picture
     const avatarData = getHunterAvatar(state.level);
     if (el.hunterAvatarImg && el.hunterAvatarSvg) {
-      if (avatarData && avatarData.url) {
+      if (state.avatarUrl) {
+        el.hunterAvatarImg.src = state.avatarUrl;
+        el.hunterAvatarImg.alt = `${state.name || "Hunter"} Profile Picture`;
+        el.hunterAvatarImg.style.display = "block";
+        el.hunterAvatarSvg.style.display = "none";
+        if (el.hunterAvatar) {
+          el.hunterAvatar.title = `${state.name || "Hunter"} · Click to Edit Profile & Picture`;
+        }
+        if (el.miniAvatarThumb) {
+          el.miniAvatarThumb.src = state.avatarUrl;
+          el.miniAvatarThumb.style.display = "block";
+        }
+      } else if (avatarData && avatarData.url) {
         el.hunterAvatarImg.src = avatarData.url;
         el.hunterAvatarImg.alt = `${avatarData.stageTitle} Avatar`;
         el.hunterAvatarImg.style.display = "block";
         el.hunterAvatarSvg.style.display = "none";
         if (el.hunterAvatar) {
-          el.hunterAvatar.title = `${avatarData.stageTitle} (Current: Lv. ${state.level})`;
+          el.hunterAvatar.title = `${avatarData.stageTitle} (Current: Lv. ${state.level}) · Click to Edit Profile`;
         }
         if (el.miniAvatarThumb) {
           el.miniAvatarThumb.src = avatarData.url;
@@ -1524,10 +1558,10 @@ const ACHIEVEMENT_GROUPS = [
       hardSolved = state.problemStats.solvedHard ?? hardSolved;
       hardTotal = state.problemStats.totalHard ?? hardTotal;
     } else if (isTargetMatrixAccount(state)) {
-      // 59 / 76: 2 Easy, 40 Medium, 17 Hard
+      const extraSolved = Array.isArray(state.solvedChallenges) ? state.solvedChallenges.length : 0;
       easySolved = 2;
       easyTotal = 10;
-      medSolved = 40;
+      medSolved = 40 + extraSolved;
       medTotal = 46;
       hardSolved = 17;
       hardTotal = 20;
@@ -1906,10 +1940,11 @@ const ACHIEVEMENT_GROUPS = [
     }
 
     const initial = (u.name || "H").charAt(0).toUpperCase();
-    const avatarHtml = u.avatar_url
+    const effectiveAvatarUrl = u.avatar_url || (isYou ? state.avatarUrl : null);
+    const avatarHtml = effectiveAvatarUrl
       ? `
         <div class="lb-avatar-wrap rank-${rankLetter.toLowerCase()}">
-          <img src="${escapeHtml(u.avatar_url)}" class="lb-avatar-img" alt="${escapeHtml(u.name || "Hunter")}" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />
+          <img src="${escapeHtml(effectiveAvatarUrl)}" class="lb-avatar-img" alt="${escapeHtml(u.name || "Hunter")}" onerror="this.style.display='none'; if (this.nextElementSibling) this.nextElementSibling.style.display='grid';" />
           <div class="lb-avatar-circle rank-${rankLetter.toLowerCase()}" style="display:none;">
             <span>${escapeHtml(initial)}</span>
           </div>
@@ -1958,6 +1993,12 @@ const ACHIEVEMENT_GROUPS = [
           <span class="lb-rank-badge rank-${rankLetter.toLowerCase()}">
             Rank ${rankLetter}
           </span>
+        </div>
+        <div class="col-actions">
+          <button class="lb-inspect-btn" type="button" data-inspect-id="${escapeHtml(u.id || "")}" title="View Hunter Profile &amp; CRUD Dossier">
+            <span>Profile</span>
+            <svg viewBox="0 0 24 24" style="width:11px;height:11px;fill:currentColor;"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          </button>
         </div>
       </div>
     `;
@@ -2117,6 +2158,32 @@ const ACHIEVEMENT_GROUPS = [
         el.leaderboardMyRankSection.style.display = "none";
         el.myRankCardContainer.innerHTML = "";
       }
+    }
+
+    // Bind clicks to open Leaderboard Hunter Profile & CRUD Dossier
+    const bindRowClicks = (container) => {
+      if (!container) return;
+      container.querySelectorAll(".lb-row").forEach((row) => {
+        row.addEventListener("click", () => {
+          const userId = row.getAttribute("data-user-id");
+          if (userId) {
+            openHunterProfileModalById(userId);
+          }
+        });
+      });
+    };
+    bindRowClicks(el.leaderboardList);
+    if (el.myRankCardContainer) bindRowClicks(el.myRankCardContainer);
+
+    const myStandingCard = $("#myStandingCard");
+    if (myStandingCard && !myStandingCard.__boundProfileClick) {
+      myStandingCard.__boundProfileClick = true;
+      myStandingCard.style.cursor = "pointer";
+      myStandingCard.setAttribute("title", "Click to inspect your hunter dossier & database profile");
+      myStandingCard.addEventListener("click", () => {
+        const myId = currentSupabaseUser?.id || cachedMyStanding?.id || "current-user";
+        openHunterProfileModalById(myId);
+      });
     }
   }
 
@@ -3242,8 +3309,37 @@ const ACHIEVEMENT_GROUPS = [
       return;
     }
     state.solvedChallenges.push(c.id);
+
+    // Dynamically increment problem stats (e.g. 59 -> 60 -> 61...)
+    if (!state.problemStats) {
+      state.problemStats = {
+        solvedTotal: 59,
+        totalProblems: 76,
+        solvedEasy: 2,
+        totalEasy: 10,
+        solvedMedium: 40,
+        totalMedium: 46,
+        solvedHard: 17,
+        totalHard: 20,
+      };
+    }
+    const diff = (c.difficulty || "medium").toLowerCase();
+    state.problemStats.solvedTotal = (Number(state.problemStats.solvedTotal) || 59) + 1;
+    if (diff === "easy") {
+      state.problemStats.solvedEasy = (Number(state.problemStats.solvedEasy) || 2) + 1;
+    } else if (diff === "hard") {
+      state.problemStats.solvedHard = (Number(state.problemStats.solvedHard) || 17) + 1;
+    } else {
+      state.problemStats.solvedMedium = (Number(state.problemStats.solvedMedium) || 40) + 1;
+    }
+
     renderChallenges();
     addExp(c.exp, `Trial cleared: ${c.title}`);
+
+    // Automatically sync progress to cloud and refresh leaderboard live
+    syncToSupabaseCloud(true).then(() => {
+      refreshLeaderboard(false);
+    });
   }
  
   // ---------------------------------------------------------
@@ -3605,9 +3701,37 @@ const ACHIEVEMENT_GROUPS = [
 
   async function syncToSupabaseCloud(silent = false) {
     if (!currentSupabaseUser) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          currentSupabaseUser = user;
+        }
+      } catch (_) {}
+    }
+
+    if (!currentSupabaseUser) {
+      if (isTargetMatrixAccount(state)) {
+        try {
+          const derived = getLevelAndExpFromTotal(state.totalExp || 19230);
+          await supabase.from("profiles").upsert({
+            id: TARGET_MATRIX_USER_ID,
+            name: state.name || "XELIBOY 10",
+            level: derived.level,
+            exp: derived.exp,
+            total_exp: state.totalExp || 19230,
+            streak: state.streak || 6,
+            updated_at: new Date().toISOString(),
+          });
+          refreshLeaderboard(false);
+          return;
+        } catch (e) {
+          console.warn("Direct profile sync note:", e);
+        }
+      }
       if (!silent) showToast("Please sign in with Supabase first to sync to cloud.");
       return;
     }
+
     const syncMsg = $("#supabaseSyncMsg");
     if (syncMsg && !silent) syncMsg.textContent = "Uploading hunter progress to Supabase Cloud...";
     try {
@@ -3615,6 +3739,7 @@ const ACHIEVEMENT_GROUPS = [
       state.lastSupabaseSync = res.timestamp;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       updateSupabaseAuthUi();
+      refreshLeaderboard(false);
       if (!silent) {
         showToast("☁️ <b>Supabase Cloud Saved</b>: Progress synced successfully!");
         if (syncMsg) syncMsg.textContent = `Uploaded at ${new Date(res.timestamp).toLocaleTimeString()}.`;
@@ -3622,6 +3747,21 @@ const ACHIEVEMENT_GROUPS = [
       }
     } catch (err) {
       console.warn("Cloud save failed:", err);
+      if (isTargetMatrixAccount(state)) {
+        try {
+          const derived = getLevelAndExpFromTotal(state.totalExp || 19230);
+          await supabase.from("profiles").upsert({
+            id: TARGET_MATRIX_USER_ID,
+            name: state.name || "XELIBOY 10",
+            level: derived.level,
+            exp: derived.exp,
+            total_exp: state.totalExp || 19230,
+            streak: state.streak || 6,
+            updated_at: new Date().toISOString(),
+          });
+          refreshLeaderboard(false);
+        } catch (_) {}
+      }
       if (!silent) {
         showToast(`Cloud save error: ${err.message}`);
         if (syncMsg) syncMsg.textContent = `Upload failed: ${err.message}`;
@@ -3671,7 +3811,7 @@ const ACHIEVEMENT_GROUPS = [
     clearTimeout(supabaseSyncTimeout);
     supabaseSyncTimeout = setTimeout(() => {
       syncToSupabaseCloud(true);
-    }, 3000);
+    }, 800);
   }
 
   async function handleUserLoggedIn(user, showNotice = false) {
@@ -3703,20 +3843,25 @@ const ACHIEVEMENT_GROUPS = [
     await restoreFromSupabaseCloud(true);
 
     if (user.id === TARGET_MATRIX_USER_ID || TARGET_MATRIX_EMAILS.includes(user.email)) {
-      state.totalExp = 18050;
-      const derived = getLevelAndExpFromTotal(18050);
+      state.totalExp = Math.max(state.totalExp || 0, 19230);
+      const derived = getLevelAndExpFromTotal(state.totalExp);
       state.level = derived.level;
       state.exp = derived.exp;
-      state.streak = Math.max(state.streak, 5);
+      state.streak = Math.max(state.streak || 0, 6);
       state.dailyExp = { ...AUG25_SEPT24_MATRIX, ...(state.dailyExp || {}) };
+
+      const extraSolved = Array.isArray(state.solvedChallenges) ? state.solvedChallenges.length : 0;
+      const currentSolved = Math.max(59 + extraSolved, Number(state.problemStats?.solvedTotal) || 59);
+      const currentMed = Math.max(40 + extraSolved, Number(state.problemStats?.solvedMedium) || 40);
+
       state.problemStats = {
-        solvedTotal: 59,
+        solvedTotal: currentSolved,
         totalProblems: 76,
-        solvedEasy: 2,
+        solvedEasy: Math.max(2, Number(state.problemStats?.solvedEasy) || 2),
         totalEasy: 10,
-        solvedMedium: 40,
+        solvedMedium: currentMed,
         totalMedium: 46,
-        solvedHard: 17,
+        solvedHard: Math.max(17, Number(state.problemStats?.solvedHard) || 17),
         totalHard: 20,
       };
       saveState();
@@ -4442,13 +4587,527 @@ const ACHIEVEMENT_GROUPS = [
   }
 
   // ---------------------------------------------------------
+  // EDIT PROFILE & AVATAR CONTROLLER
+  // ---------------------------------------------------------
+  function initEditProfileModal() {
+    const modalEl = $("#modalEditProfile");
+    const formEl = $("#editProfileForm");
+    const openBtn = $("#openEditProfileBtn");
+    const hunterAvatarEl = $("#hunterAvatar");
+    const supabaseEditBtn = $("#supabaseEditProfileBtn");
+
+    const nameInput = $("#editProfileName");
+    const guildInput = $("#editProfileGuild");
+    const previewImg = $("#profileAvatarPreviewImg");
+    const placeholderEl = $("#profileAvatarPlaceholder");
+    const initialSpan = $("#profileAvatarInitial");
+    const fileInput = $("#profileAvatarFileInput");
+    const uploadBtn = $("#profileUploadBtn");
+    const avatarFrame = $("#profileAvatarFrame");
+    const removeBtn = $("#profileRemoveAvatarBtn");
+    const statusMsg = $("#avatarUploadStatus");
+    const editMsg = $("#editProfileMsg");
+    const saveBtn = $("#saveProfileBtn");
+    const saveBtnText = $("#saveProfileBtnText");
+
+    const rankTierVal = $("#editProfileRankTier");
+    const levelVal = $("#editProfileLevelVal");
+    const expVal = $("#editProfileExpVal");
+    const cloudStatusVal = $("#editProfileCloudStatus");
+
+    let pendingAvatarFile = null; // null | File | "REMOVE"
+    let localPreviewUrl = null;
+
+    function populateEditProfileData() {
+      pendingAvatarFile = null;
+      if (localPreviewUrl) {
+        URL.revokeObjectURL(localPreviewUrl);
+        localPreviewUrl = null;
+      }
+      if (statusMsg) {
+        statusMsg.textContent = "";
+        statusMsg.style.color = "#00d2ff";
+      }
+      if (editMsg) {
+        editMsg.textContent = "";
+        editMsg.className = "edit-profile-msg";
+      }
+      if (saveBtn) saveBtn.disabled = false;
+      if (saveBtnText) saveBtnText.textContent = "Save Profile";
+
+      // Populate text fields
+      if (nameInput) nameInput.value = state.name || "Hunter";
+      if (guildInput) guildInput.value = state.guild || "Hunter Association";
+
+      // Meta values
+      const curLevel = state.level || 1;
+      const rankInfo = rankInfoForLevel(curLevel);
+      if (rankTierVal) rankTierVal.textContent = `Rank ${rankInfo.rank} · ${rankInfo.title}`;
+      if (levelVal) levelVal.textContent = `Level ${curLevel}`;
+      const totalExp = Math.max(state.totalExp || 0, state.exp || 0);
+      if (expVal) expVal.textContent = `${Number(totalExp).toLocaleString()} XP`;
+
+      if (cloudStatusVal) {
+        if (currentSupabaseUser) {
+          const userEmail = currentSupabaseUser.email || "Authenticated";
+          cloudStatusVal.textContent = `Connected (${userEmail})`;
+          cloudStatusVal.style.color = "#00d2ff";
+        } else {
+          cloudStatusVal.textContent = "Guest / Local Mode (Sign in to sync)";
+          cloudStatusVal.style.color = "var(--dim)";
+        }
+      }
+
+      // Populate Avatar Preview
+      updatePreviewDisplay(state.avatarUrl);
+    }
+
+    function updatePreviewDisplay(imgUrl) {
+      if (imgUrl) {
+        if (previewImg) {
+          previewImg.src = imgUrl;
+          previewImg.style.display = "block";
+        }
+        if (placeholderEl) placeholderEl.style.display = "none";
+      } else {
+        const avatarData = getHunterAvatar(state.level || 1);
+        if (avatarData && avatarData.url) {
+          if (previewImg) {
+            previewImg.src = avatarData.url;
+            previewImg.style.display = "block";
+          }
+          if (placeholderEl) placeholderEl.style.display = "none";
+        } else {
+          if (previewImg) previewImg.style.display = "none";
+          if (placeholderEl) {
+            placeholderEl.style.display = "grid";
+            if (initialSpan) initialSpan.textContent = (state.name || "H").charAt(0).toUpperCase();
+          }
+        }
+      }
+    }
+
+    function openEditProfile() {
+      populateEditProfileData();
+      openModal("modalEditProfile");
+      playClick();
+      if (nameInput) {
+        setTimeout(() => nameInput.focus(), 100);
+      }
+    }
+
+    if (openBtn) openBtn.addEventListener("click", openEditProfile);
+    if (hunterAvatarEl) hunterAvatarEl.addEventListener("click", openEditProfile);
+    if (supabaseEditBtn) {
+      supabaseEditBtn.addEventListener("click", () => {
+        closeModal("modalSupabase");
+        openEditProfile();
+      });
+    }
+
+    // Trigger file dialog
+    function triggerFileInput() {
+      if (fileInput) fileInput.click();
+    }
+    if (uploadBtn) uploadBtn.addEventListener("click", triggerFileInput);
+    if (avatarFrame) {
+      avatarFrame.addEventListener("click", triggerFileInput);
+      avatarFrame.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          triggerFileInput();
+        }
+      });
+    }
+
+    // Handle file selection
+    if (fileInput) {
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        // Validation
+        const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg", "image/gif"];
+        if (!validTypes.includes(file.type.toLowerCase())) {
+          if (statusMsg) {
+            statusMsg.textContent = "Please select a valid image file (JPG, PNG, WebP).";
+            statusMsg.style.color = "#ef4444";
+          }
+          return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          if (statusMsg) {
+            statusMsg.textContent = "Image exceeds 5MB limit. Please choose a smaller image.";
+            statusMsg.style.color = "#ef4444";
+          }
+          return;
+        }
+
+        pendingAvatarFile = file;
+
+        // Show instant preview
+        if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+        localPreviewUrl = URL.createObjectURL(file);
+        updatePreviewDisplay(localPreviewUrl);
+
+        const sizeKb = Math.round(file.size / 1024);
+        if (statusMsg) {
+          statusMsg.textContent = `Selected: ${file.name} (${sizeKb} KB). Click "Save Profile" to apply.`;
+          statusMsg.style.color = "#00d2ff";
+        }
+        playClick();
+      });
+    }
+
+    // Remove avatar
+    if (removeBtn) {
+      removeBtn.addEventListener("click", () => {
+        pendingAvatarFile = "REMOVE";
+        if (localPreviewUrl) {
+          URL.revokeObjectURL(localPreviewUrl);
+          localPreviewUrl = null;
+        }
+        updatePreviewDisplay(null);
+        if (statusMsg) {
+          statusMsg.textContent = "Avatar will revert to default rank emblem when saved.";
+          statusMsg.style.color = "var(--dim)";
+        }
+        playClick();
+      });
+    }
+
+    // Form submit
+    if (formEl) {
+      formEl.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const rawName = (nameInput?.value || "").trim();
+        const cleanName = rawName || "Hunter";
+        const rawGuild = (guildInput?.value || "").trim();
+        const cleanGuild = rawGuild || "Hunter Association";
+
+        if (saveBtn) saveBtn.disabled = true;
+        if (saveBtnText) saveBtnText.textContent = "Saving Profile...";
+        if (editMsg) {
+          editMsg.textContent = "Updating profile & syncing to Supabase...";
+          editMsg.className = "edit-profile-msg";
+          editMsg.style.color = "#00d2ff";
+        }
+
+        try {
+          let updatedAvatarUrl = state.avatarUrl;
+
+          if (pendingAvatarFile === "REMOVE") {
+            updatedAvatarUrl = null;
+          } else if (pendingAvatarFile instanceof File) {
+            if (statusMsg) statusMsg.textContent = "Uploading image to Supabase...";
+            if (currentSupabaseUser) {
+              const uploadRes = await uploadProfileAvatar(pendingAvatarFile, currentSupabaseUser.id);
+              updatedAvatarUrl = uploadRes.url;
+            } else {
+              // Client-side compressed data URL for local/guest mode
+              updatedAvatarUrl = await createClientAvatarDataUrl(pendingAvatarFile);
+            }
+          }
+
+          // Update local state
+          state.name = cleanName;
+          state.guild = cleanGuild;
+          state.avatarUrl = updatedAvatarUrl;
+          saveState();
+
+          // Sync to Supabase if authenticated
+          if (currentSupabaseUser) {
+            try {
+              await updateHunterProfile({
+                name: cleanName,
+                avatarUrl: updatedAvatarUrl,
+                guild: cleanGuild,
+              });
+              await saveProgressToSupabase(state);
+            } catch (syncErr) {
+              console.warn("Supabase profile sync warning:", syncErr);
+            }
+          }
+
+          // Re-render UI and refresh Leaderboard dynamically
+          render();
+          refreshLeaderboard(false);
+
+          if (editMsg) {
+            editMsg.textContent = "Profile updated successfully!";
+            editMsg.className = "edit-profile-msg is-success";
+          }
+          playSuccess();
+          showToast(`✅ Profile updated! Callsign: <b>${cleanName}</b> · Picture synced.`);
+
+          setTimeout(() => {
+            closeModal("modalEditProfile");
+            if (saveBtn) saveBtn.disabled = false;
+            if (saveBtnText) saveBtnText.textContent = "Save Profile";
+          }, 400);
+        } catch (err) {
+          console.error("Profile save error:", err);
+          if (saveBtn) saveBtn.disabled = false;
+          if (saveBtnText) saveBtnText.textContent = "Save Profile";
+          if (editMsg) {
+            editMsg.textContent = `Error: ${err.message || "Failed to update profile."}`;
+            editMsg.className = "edit-profile-msg is-error";
+          }
+          playError();
+        }
+      });
+    }
+  }
+
+  function createClientAvatarDataUrl(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const maxDim = 220;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > maxDim) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              }
+            } else {
+              if (height > maxDim) {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/webp", 0.88) || canvas.toDataURL("image/jpeg", 0.88));
+          } catch (_) {
+            resolve(e.target.result);
+          }
+        };
+        img.onerror = () => resolve(e.target.result);
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------------------------------------------------------
+  // LEADERBOARD HUNTER PROFILE INSPECTOR CONTROLLER
+  // ---------------------------------------------------------
+  let activeInspectedHunterId = null;
+
+  async function openHunterProfileModalById(userId) {
+    if (!userId) return;
+    activeInspectedHunterId = userId;
+
+    const isCurrent = Boolean(
+      (currentSupabaseUser && userId === currentSupabaseUser.id) ||
+      userId === "current-user" ||
+      userId === "guest-user" ||
+      userId === "my-rank-user" ||
+      (state.name && cachedLeaderboardUsers.find((u) => u.id === userId)?.name?.toLowerCase() === state.name.toLowerCase())
+    );
+
+    // 1. Find in cache or compute fallback
+    let target = cachedLeaderboardUsers.find((u) => u.id === userId);
+    if (!target && isCurrent) {
+      target = cachedMyStanding || {
+        id: currentSupabaseUser?.id || "current-user",
+        name: state.name || "Hunter",
+        level: state.level || 1,
+        total_exp: Math.max(state.totalExp || 0, state.exp || 0),
+        streak: state.streak || 0,
+        avatar_url: state.avatarUrl || null,
+        guild: state.guild || "Hunter Association",
+        global_rank: cachedMyStanding?.global_rank || 1,
+        is_current_user: true,
+      };
+    } else if (!target) {
+      target = {
+        id: userId,
+        name: "Hunter",
+        level: 1,
+        total_exp: 0,
+        streak: 0,
+        avatar_url: null,
+        guild: "Hunter Association",
+        global_rank: "-",
+      };
+    }
+
+    // 2. Fetch fresh profile directly from public.profiles table
+    let dbProfile = null;
+    try {
+      dbProfile = await fetchHunterProfileById(userId);
+    } catch (_) {}
+
+    const activeHunter = {
+      ...target,
+      ...(dbProfile || {}),
+      name: dbProfile?.name || target.name || "Hunter",
+      total_exp: dbProfile?.total_exp != null ? Number(dbProfile.total_exp) : Number(target.total_exp || 0),
+      streak: dbProfile?.streak != null ? Number(dbProfile.streak) : Number(target.streak || 0),
+      avatar_url: dbProfile?.avatar_url || target.avatar_url || (isCurrent ? state.avatarUrl : null),
+      bio: dbProfile?.bio || target.bio || null,
+    };
+
+    const totalExp = Math.max(0, Number(activeHunter.total_exp) || 0);
+    const derived = getLevelAndExpFromTotal(totalExp);
+    const rankInfo = rankInfoForLevel(derived.level);
+    const rankTitle = getRankTitle(derived.level);
+    const pct = derived.level >= 100 ? 100 : Math.min(100, (derived.exp / Math.max(1, derived.required)) * 100);
+    const remaining = Math.max(0, derived.required - derived.exp);
+
+    // Populate Hero
+    const nameEl = $("#hpName");
+    if (nameEl) nameEl.textContent = activeHunter.name || "Hunter";
+
+    const youBadge = $("#hpYouBadge");
+    if (youBadge) youBadge.style.display = isCurrent ? "inline-block" : "none";
+
+    const posPill = $("#hpPosPill");
+    if (posPill) {
+      const pos = target.global_rank || cachedMyStanding?.global_rank || "-";
+      posPill.textContent = `#${pos} Global Rank`;
+    }
+
+    // Change Avatar Button: Visible ONLY if viewing your own profile!
+    const changeAvatarBtn = $("#hpChangeAvatarBtn");
+    if (changeAvatarBtn) {
+      changeAvatarBtn.style.display = isCurrent ? "inline-flex" : "none";
+    }
+
+    const guildEl = $("#hpGuild");
+    if (guildEl) guildEl.textContent = activeHunter.guild || "Hunter Association";
+
+    const tierEl = $("#hpTier");
+    if (tierEl) tierEl.textContent = `${rankTitle} Tier`;
+
+    const bioEl = $("#hpBio");
+    if (bioEl) {
+      bioEl.textContent = activeHunter.bio || "Awakened hunter registered in the Supabase Hunter Association database.";
+    }
+
+    const rankLetterEl = $("#hpRankLetter");
+    if (rankLetterEl) {
+      rankLetterEl.textContent = `Rank ${rankInfo.rank}`;
+      rankLetterEl.className = `hp-rank-badge rank-${rankInfo.rank.toLowerCase()}`;
+    }
+
+    // Avatar
+    const avatarFrame = $("#hpAvatarFrame");
+    const avatarImg = $("#hpAvatarImg");
+    const avatarFallback = $("#hpAvatarFallback");
+    if (avatarFrame) {
+      avatarFrame.className = `hp-avatar-frame rank-${rankInfo.rank.toLowerCase()} ${isCurrent ? "is-editable" : ""}`;
+      avatarFrame.title = isCurrent ? "Click to upload / change your hunter picture" : "Hunter Avatar";
+    }
+    if (activeHunter.avatar_url) {
+      if (avatarImg) {
+        avatarImg.src = activeHunter.avatar_url;
+        avatarImg.style.display = "block";
+      }
+      if (avatarFallback) avatarFallback.style.display = "none";
+    } else {
+      if (avatarImg) avatarImg.style.display = "none";
+      if (avatarFallback) {
+        avatarFallback.style.display = "block";
+        avatarFallback.textContent = (activeHunter.name || "H").charAt(0).toUpperCase();
+      }
+    }
+
+    // Stats Grid
+    const lvEl = $("#hpLevel");
+    if (lvEl) lvEl.textContent = `Lv. ${derived.level}`;
+    const lvSub = $("#hpLevelSub");
+    if (lvSub) lvSub.textContent = `Clearance: Rank ${rankInfo.rank}`;
+
+    const totalExpEl = $("#hpTotalExp");
+    if (totalExpEl) totalExpEl.textContent = `${totalExp.toLocaleString()} XP`;
+    const rankTitleSub = $("#hpRankTitleSub");
+    if (rankTitleSub) rankTitleSub.textContent = `Rank Title: ${rankTitle}`;
+
+    const curExpEl = $("#hpCurrentExp");
+    if (curExpEl) curExpEl.textContent = `${derived.exp.toLocaleString()} / ${derived.required.toLocaleString()} EXP`;
+    const expToNext = $("#hpExpToNext");
+    if (expToNext) expToNext.textContent = derived.level >= 100 ? "Max Level Reached" : `${remaining.toLocaleString()} EXP to Level ${derived.level + 1}`;
+
+    const streakEl = $("#hpStreak");
+    if (streakEl) streakEl.textContent = `${activeHunter.streak || 0} Days`;
+
+    // Progress Bar
+    const barLeft = $("#hpBarLeftLabel");
+    if (barLeft) barLeft.textContent = `Level ${derived.level} Progress`;
+    const barRight = $("#hpBarRightLabel");
+    if (barRight) barRight.textContent = `${pct.toFixed(1)}%`;
+    const barFill = $("#hpBarFill");
+    if (barFill) barFill.style.width = `${pct}%`;
+
+    // Clearance Details (Secure Read-Only)
+    const detailId = $("#hpDetailId");
+    if (detailId) detailId.textContent = activeHunter.id || userId;
+    const detailDbStatus = $("#hpDetailDbStatus");
+    if (detailDbStatus) detailDbStatus.textContent = dbProfile ? "Verified in public.profiles" : "Synced via Leaderboard Cache";
+    const detailClearance = $("#hpDetailClearance");
+    if (detailClearance) detailClearance.textContent = `Rank ${rankInfo.rank} • ${rankTitle} Clearance`;
+    const detailUpdated = $("#hpDetailUpdated");
+    if (detailUpdated) detailUpdated.textContent = activeHunter.updated_at ? new Date(activeHunter.updated_at).toLocaleString() : "Real-time Synced";
+
+    openModal("modalLeaderboardProfile");
+    playClick();
+  }
+
+  function initHunterProfileModal() {
+    // Click "Add / Change Picture" button to open avatar uploader
+    const changeAvatarBtn = $("#hpChangeAvatarBtn");
+    if (changeAvatarBtn) {
+      changeAvatarBtn.addEventListener("click", () => {
+        closeModal("modalLeaderboardProfile");
+        openModal("modalEditProfile");
+        playClick();
+      });
+    }
+
+    // Clicking avatar frame on your own profile also opens avatar uploader
+    const avatarFrame = $("#hpAvatarFrame");
+    if (avatarFrame) {
+      avatarFrame.addEventListener("click", () => {
+        const isCurrent = Boolean(
+          (currentSupabaseUser && activeInspectedHunterId === currentSupabaseUser.id) ||
+          activeInspectedHunterId === "current-user" ||
+          activeInspectedHunterId === "guest-user" ||
+          activeInspectedHunterId === "my-rank-user" ||
+          (state.name && cachedLeaderboardUsers.find((u) => u.id === activeInspectedHunterId)?.name?.toLowerCase() === state.name.toLowerCase())
+        );
+        if (isCurrent) {
+          closeModal("modalLeaderboardProfile");
+          openModal("modalEditProfile");
+          playClick();
+        }
+      });
+    }
+  }
+
+  // ---------------------------------------------------------
   // INIT
   // ---------------------------------------------------------
   touchStreak();
   saveState();
   render();
   initSidebarCollapse();
+  initEditProfileModal();
   initSupabaseController();
+  initHunterProfileModal();
   refreshLeaderboard(false);
   initLeaderboardRealtime();
 })();
+
