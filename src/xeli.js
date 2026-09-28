@@ -1308,6 +1308,8 @@ const ACHIEVEMENT_GROUPS = [
     roadmapMarker: $("#roadmapMarker"), roadmapMarkerLv: $("#roadmapMarkerLv"),
     calendarGrid: $("#calendarGrid"), calendarMonths: $("#calendarMonths"), calendarCaption: $("#calendarCaption"),
     calendarScroll: $("#calendarScroll"), calendarMonthsFlow: $("#calendarMonthsFlow"),
+    calendarMonthDetail: $("#calendarMonthDetail"),
+    calViewHeatmapBtn: $("#calViewHeatmapBtn"), calViewMonthBtn: $("#calViewMonthBtn"),
     calNavQuickMonths: $("#calNavQuickMonths"), calNavPrevBtn: $("#calNavPrevBtn"),
     calNavNextBtn: $("#calNavNextBtn"), calNavTodayBtn: $("#calNavTodayBtn"),
     calFloatingTooltip: $("#calFloatingTooltip"),
@@ -1925,7 +1927,7 @@ const ACHIEVEMENT_GROUPS = [
       posClass = "pos-silver";
       posBadgeHtml = `
         <span class="lb-trophy silver" title="2nd Place · Grand Sovereign">
-          <svg viewBox="0 0 24 24" class="svg-crown"><path d="M5 16 3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5Zm14 3c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h14v1Z"/></svg>
+          <img class="lb-rank-icon-img rank-silver" src="/assets/silver_rank_icon.png" alt="Silver" style="width:16px;height:16px;" />
         </span>
         <span class="lb-pos-num">#2</span>
       `;
@@ -2095,15 +2097,35 @@ const ACHIEVEMENT_GROUPS = [
           });
         }
       } else if (currentRankFilter !== "ALL") {
+        const rankIconMap = {
+          "Bronze": "/assets/bronze_rank_icon.png",
+          "Silver": "/assets/silver_rank_icon.png",
+          "Gold": "/assets/gold_rank_icon.png",
+          "Platinum": "/assets/platinum_rank_icon.png",
+        };
+        const rankIconSrc = rankIconMap[currentRankFilter] || "/assets/silver_rank_icon.png";
+        const rankClass = currentRankFilter.toLowerCase();
+
         el.leaderboardList.innerHTML = `
           <div class="lb-empty-state">
-            <div class="lb-empty-icon">🛡️</div>
+            <div class="lb-empty-icon">
+              <img class="lb-empty-rank-icon rank-${rankClass}" src="${rankIconSrc}" alt="${escapeHtml(currentRankFilter)}" />
+            </div>
             <div class="lb-empty-title">No ${escapeHtml(currentRankFilter)} Hunters Yet</div>
             <div class="lb-empty-sub">
               No registered hunters currently hold ${escapeHtml(currentRankFilter)} tier rank. Complete high-tier quests and lab trials to elevate your standing!
             </div>
+            <button class="lb-retry-btn" id="lbClearRankFilterBtn" type="button">Show All Ranks</button>
           </div>
         `;
+        const clearRankBtn = $("#lbClearRankFilterBtn");
+        if (clearRankBtn) {
+          clearRankBtn.addEventListener("click", () => {
+            currentRankFilter = "ALL";
+            $$("[data-rank-filter]").forEach((b) => b.classList.toggle("is-active", b.dataset.rankFilter === "ALL"));
+            renderLeaderboard();
+          });
+        }
       } else {
         el.leaderboardList.innerHTML = `
           <div class="lb-empty-state">
@@ -2256,7 +2278,13 @@ const ACHIEVEMENT_GROUPS = [
   // ---------------------------------------------------------
   // RENDER: progress calendar (Month Matrix with Spaced Months)
   // ---------------------------------------------------------
+  // RENDER: progress calendar (Gap-Free Day in a Box Matrix & Month Grid)
+  // ---------------------------------------------------------
   const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const FULL_MONTH_NAMES = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ];
 
   function expToLevel(exp) {
     if (!exp) return 0;
@@ -2267,12 +2295,18 @@ const ACHIEVEMENT_GROUPS = [
   }
 
   let calNavInitialized = false;
+  let currentCalViewMode = "heatmap"; // "heatmap" | "month"
+  let selectedMonthDetailYear = 2026;
+  let selectedMonthDetailIndex = 8; // September
 
   function renderCalendar() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Build the past 12-13 months (from 12 months ago through current month)
+    selectedMonthDetailYear = today.getFullYear();
+    selectedMonthDetailIndex = today.getMonth();
+
+    // Build past 12-13 months (from 12 months ago through current month)
     const monthBlocks = [];
     const numMonths = 12; // 12 past months + current month = 13 months
     for (let offset = numMonths; offset >= 0; offset--) {
@@ -2283,21 +2317,35 @@ const ACHIEVEMENT_GROUPS = [
       const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
       const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 = Sunday
 
+      // Construct columns strictly for THIS month only:
+      // - Each month calculates its own firstDayOfMonth and daysInMonth
+      // - Leading & trailing slots are pure empty placeholders with the same box dimensions
+      // - Zero dates from another month overflow into this month's data grid
       const columns = [];
       let curCol = [];
+
+      // Leading empty placeholders for firstDayOfWeek (Sunday = 0, Monday = 1, Tuesday = 2, ...)
       for (let s = 0; s < firstDayOfWeek; s++) {
-        curCol.push(null);
+        curCol.push({ isEmpty: true, date: null });
       }
+
+      // Days belonging exclusively to THIS month (dayNum 1 through totalDaysInMonth)
       for (let dayNum = 1; dayNum <= totalDaysInMonth; dayNum++) {
-        curCol.push(new Date(year, month, dayNum));
+        curCol.push({
+          date: new Date(year, month, dayNum),
+          dayNum,
+          isEmpty: false,
+        });
         if (curCol.length === 7) {
           columns.push(curCol);
           curCol = [];
         }
       }
+
+      // Trailing empty placeholders to complete the last 7-day column
       if (curCol.length > 0) {
         while (curCol.length < 7) {
-          curCol.push(null);
+          curCol.push({ isEmpty: true, date: null });
         }
         columns.push(curCol);
       }
@@ -2306,6 +2354,7 @@ const ACHIEVEMENT_GROUPS = [
         year,
         month,
         name: MONTH_ABBR[month],
+        fullName: FULL_MONTH_NAMES[month],
         isCurrentMonth,
         columns,
       });
@@ -2314,29 +2363,45 @@ const ACHIEVEMENT_GROUPS = [
     let totalYearExp = 0;
     const monthExpMap = {};
 
-    // Generate Month Cards with 14px space between every month
+    // Generate Month Cards: Solid columns with every day in a box
     const monthCardsHtml = monthBlocks.map((b) => {
       let monthExp = 0;
 
       const colsHtml = b.columns.map((col) => {
-        const colCells = col.map((day) => {
-          if (!day) {
-            return "<span class=\"cal-cell is-empty\" aria-hidden=\"true\"></span>";
+        const colCells = col.map((cell) => {
+          if (cell.isEmpty || !cell.date) {
+            return `<span class="cal-cell is-empty" aria-hidden="true"></span>`;
           }
-          if (day > today) {
-            return "<span class=\"cal-cell is-future\" aria-hidden=\"true\"></span>";
-          }
+
+          const day = cell.date;
+          const dayTime = day.getTime();
+          const todayTime = today.getTime();
+          const isToday = (dayTime === todayTime);
+          const isFuture = (dayTime > todayTime);
+
           const key = dateKey(day);
-          const exp = state.dailyExp[key] || 0;
+          const exp = !isFuture ? (state.dailyExp[key] || 0) : 0;
           if (exp > 0) {
             monthExp += exp;
             totalYearExp += exp;
           }
+
           const level = expToLevel(exp);
           const dayName = day.toLocaleDateString(undefined, { weekday: "short" });
           const dateStr = day.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-          const tooltipLabel = dayName + ", " + dateStr + ": " + exp + " EXP earned";
-          return "<span class=\"cal-cell\" data-level=\"" + level + "\" data-date=\"" + escapeHtml(dayName + ", " + dateStr) + "\" data-exp=\"" + exp + "\" data-date-key=\"" + key + "\" title=\"" + escapeHtml(tooltipLabel) + "\"></span>";
+
+          let cellClass = "cal-cell";
+          if (isToday) cellClass += " is-today";
+          if (isFuture) cellClass += " is-future";
+
+          let tooltipStatus = "0 EXP earned";
+          if (isFuture) tooltipStatus = "Upcoming Day";
+          else if (isToday) tooltipStatus = exp > 0 ? `+${exp} EXP (Today)` : "Today (Active)";
+          else if (exp > 0) tooltipStatus = `+${exp} EXP earned`;
+
+          const tooltipLabel = `${dayName}, ${dateStr}: ${tooltipStatus}`;
+
+          return `<span class="${cellClass}" data-level="${level}" data-date="${escapeHtml(dayName + ", " + dateStr)}" data-exp="${exp}" data-date-key="${key}" data-is-today="${isToday ? '1' : '0'}" data-is-future="${isFuture ? '1' : '0'}" title="${escapeHtml(tooltipLabel)}"></span>`;
         }).join("");
         return colCells;
       }).join("");
@@ -2345,22 +2410,22 @@ const ACHIEVEMENT_GROUPS = [
       monthExpMap[monthKey] = monthExp;
 
       const expBadge = monthExp > 0
-        ? "<span class=\"cal-month-exp-tag\">+" + monthExp.toLocaleString() + " XP</span>"
-        : (b.isCurrentMonth ? "<span class=\"cal-month-current-pill\">Current</span>" : "");
+        ? `<span class="cal-month-exp-tag">+${monthExp.toLocaleString()} XP</span>`
+        : (b.isCurrentMonth ? `<span class="cal-month-current-pill">Current</span>` : "");
 
       return (
-        "<div class=\"cal-month-card " + (b.isCurrentMonth ? "is-current-month" : "") + "\" id=\"calMonth-" + b.year + "-" + b.month + "\" data-month-key=\"" + monthKey + "\">" +
-          "<div class=\"cal-month-head\">" +
-            "<div class=\"cal-month-title-wrap\">" +
-              "<span class=\"cal-month-title\">" + b.name + "</span>" +
-              "<span class=\"cal-month-year\">" + b.year + "</span>" +
-            "</div>" +
+        `<div class="cal-month-card ${b.isCurrentMonth ? 'is-current-month' : ''}" id="calMonth-${b.year}-${b.month}" data-month-key="${monthKey}" data-year="${b.year}" data-month="${b.month}">` +
+          `<div class="cal-month-head" title="Click to inspect full ${b.fullName} calendar">` +
+            `<div class="cal-month-title-wrap">` +
+              `<span class="cal-month-title">${b.name}</span>` +
+              `<span class="cal-month-year">${b.year}</span>` +
+            `</div>` +
             expBadge +
-          "</div>" +
-          "<div class=\"cal-month-matrix\">" +
+          `</div>` +
+          `<div class="cal-month-matrix">` +
             colsHtml +
-          "</div>" +
-        "</div>"
+          `</div>` +
+        `</div>`
       );
     }).join("");
 
@@ -2374,10 +2439,10 @@ const ACHIEVEMENT_GROUPS = [
         const monthKey = b.year + "-" + b.month;
         const hasExp = (monthExpMap[monthKey] || 0) > 0;
         return (
-          "<button class=\"cal-nav-month-pill " + (b.isCurrentMonth ? "is-active" : "") + "\" data-month-target=\"calMonth-" + b.year + "-" + b.month + "\" type=\"button\" title=\"Jump to " + b.name + " " + b.year + "\">" +
-            "<span>" + b.name + "</span>" +
-            (hasExp ? "<span class=\"cal-nav-dot\"></span>" : "") +
-          "</button>"
+          `<button class="cal-nav-month-pill ${b.isCurrentMonth ? 'is-active' : ''}" data-month-target="calMonth-${b.year}-${b.month}" data-year="${b.year}" data-month="${b.month}" type="button" title="Jump to ${b.name} ${b.year}">` +
+            `<span>${b.name}</span>` +
+            (hasExp ? `<span class="cal-nav-dot"></span>` : "") +
+          `</button>`
         );
       }).join("");
     }
@@ -2385,6 +2450,9 @@ const ACHIEVEMENT_GROUPS = [
     if (el.calendarCaption) {
       el.calendarCaption.textContent = totalYearExp.toLocaleString() + " EXP earned in the last year";
     }
+
+    // Render detailed month view as well
+    renderMonthDetailView(selectedMonthDetailYear, selectedMonthDetailIndex);
 
     // Setup navigation listeners and tooltip once
     setupCalendarInteractions();
@@ -2397,9 +2465,171 @@ const ACHIEVEMENT_GROUPS = [
     }, 60);
   }
 
+  function renderMonthDetailView(year, month) {
+    const detailPanel = el.calendarMonthDetail || $("#calendarMonthDetail");
+    if (!detailPanel) return;
+
+    selectedMonthDetailYear = year;
+    selectedMonthDetailIndex = month;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const monthName = FULL_MONTH_NAMES[month];
+    const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 = Sunday
+    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+
+    let monthTotalExp = 0;
+    let monthActiveDays = 0;
+
+    // Collect all grid days strictly for THIS month only:
+    // Leading and trailing slots are pure empty placeholders with no foreign dates
+    const gridDays = [];
+
+    // Leading empty placeholders for firstDayOfWeek (Sunday-start grid)
+    for (let s = 0; s < firstDayOfWeek; s++) {
+      gridDays.push({ isEmpty: true, date: null });
+    }
+
+    // In-month days exclusively (1 through totalDaysInMonth)
+    for (let dayNum = 1; dayNum <= totalDaysInMonth; dayNum++) {
+      const d = new Date(year, month, dayNum);
+      const key = dateKey(d);
+      const isPastOrToday = d.getTime() <= today.getTime();
+      const exp = isPastOrToday ? (state.dailyExp[key] || 0) : 0;
+      if (exp > 0) {
+        monthTotalExp += exp;
+        monthActiveDays++;
+      }
+      gridDays.push({ date: d, dayNum, isEmpty: false, exp });
+    }
+
+    // Trailing empty placeholders to fill full 7-day rows
+    while (gridDays.length % 7 !== 0) {
+      gridDays.push({ isEmpty: true, date: null });
+    }
+
+    const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+    const weekdaysHtml = weekdays.map((w) => `<div>${w}</div>`).join("");
+
+    const daysHtml = gridDays.map((item) => {
+      if (item.isEmpty || !item.date) {
+        return `<div class="cal-md-day-box is-empty" aria-hidden="true"></div>`;
+      }
+
+      const d = item.date;
+      const dayNum = item.dayNum || d.getDate();
+      const dTime = d.getTime();
+      const todayTime = today.getTime();
+      const isToday = (dTime === todayTime);
+      const isFuture = (dTime > todayTime);
+      const exp = item.exp || 0;
+      const key = dateKey(d);
+
+      let boxClass = "cal-md-day-box";
+      if (isToday) boxClass += " is-today";
+      if (exp > 0) boxClass += " has-exp";
+      if (isFuture) boxClass += " is-future";
+
+      let expBadgeHtml = "";
+      if (exp > 0) {
+        expBadgeHtml = `<span class="cal-md-day-exp">+${exp} XP</span>`;
+      } else if (isFuture) {
+        expBadgeHtml = `<span class="cal-md-day-exp" style="color:var(--dim); opacity:0.6;">Upcoming</span>`;
+      } else {
+        expBadgeHtml = `<span class="cal-md-day-exp" style="color:var(--dim); opacity:0.4;">0 XP</span>`;
+      }
+
+      const dateLabel = d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+      const tt = `${dateLabel}: ${exp > 0 ? `+${exp} EXP earned` : isFuture ? 'Upcoming Day' : '0 EXP'}`;
+
+      return (
+        `<div class="${boxClass}" data-date-key="${key}" title="${escapeHtml(tt)}">` +
+          `<span class="cal-md-day-num">${dayNum}</span>` +
+          (isToday ? `<span class="cal-md-today-tag">Today</span>` : "") +
+          expBadgeHtml +
+        `</div>`
+      );
+    }).join("");
+
+    detailPanel.innerHTML = (
+      `<div class="cal-md-head">` +
+        `<div class="cal-md-title-wrap">` +
+          `<button class="cal-md-nav-btn" id="calMdPrevMonthBtn" type="button" title="Previous Month">` +
+            `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>` +
+          `</button>` +
+          `<span class="cal-md-title">${monthName} ${year}</span>` +
+          `<button class="cal-md-nav-btn" id="calMdNextMonthBtn" type="button" title="Next Month">` +
+            `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>` +
+          `</button>` +
+        `</div>` +
+        `<div class="cal-md-meta">` +
+          `<span class="cal-md-exp-pill">+${monthTotalExp.toLocaleString()} EXP Earned</span>` +
+          `<span style="color:var(--dim);">Active Days: <b style="color:var(--paper);">${monthActiveDays}</b></span>` +
+        `</div>` +
+      `</div>` +
+      `<div class="cal-md-grid-wrap">` +
+        `<div class="cal-md-weekdays-row">${weekdaysHtml}</div>` +
+        `<div class="cal-md-days-grid">${daysHtml}</div>` +
+      `</div>`
+    );
+
+    // Month detail header buttons
+    const prevBtn = $("#calMdPrevMonthBtn");
+    const nextBtn = $("#calMdNextMonthBtn");
+    if (prevBtn) {
+      prevBtn.addEventListener("click", () => {
+        let prevM = selectedMonthDetailIndex - 1;
+        let prevY = selectedMonthDetailYear;
+        if (prevM < 0) { prevM = 11; prevY--; }
+        renderMonthDetailView(prevY, prevM);
+        playClick();
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener("click", () => {
+        let nextM = selectedMonthDetailIndex + 1;
+        let nextY = selectedMonthDetailYear;
+        if (nextM > 11) { nextM = 0; nextY++; }
+        renderMonthDetailView(nextY, nextM);
+        playClick();
+      });
+    }
+  }
+
   function setupCalendarInteractions() {
     if (calNavInitialized) return;
     calNavInitialized = true;
+
+    // View Switcher (Heatmap vs Month Grid)
+    const btnHeatmap = el.calViewHeatmapBtn || $("#calViewHeatmapBtn");
+    const btnMonth = el.calViewMonthBtn || $("#calViewMonthBtn");
+    const scrollContainer = el.calendarScroll || $("#calendarScroll");
+    const monthDetailPanel = el.calendarMonthDetail || $("#calendarMonthDetail");
+
+    function setCalView(mode) {
+      currentCalViewMode = mode;
+      if (mode === "heatmap") {
+        if (btnHeatmap) btnHeatmap.classList.add("is-active");
+        if (btnMonth) btnMonth.classList.remove("is-active");
+        if (scrollContainer) scrollContainer.style.display = "block";
+        if (monthDetailPanel) monthDetailPanel.style.display = "none";
+      } else {
+        if (btnMonth) btnMonth.classList.add("is-active");
+        if (btnHeatmap) btnHeatmap.classList.remove("is-active");
+        if (scrollContainer) scrollContainer.style.display = "none";
+        if (monthDetailPanel) monthDetailPanel.style.display = "flex";
+        renderMonthDetailView(selectedMonthDetailYear, selectedMonthDetailIndex);
+      }
+      playClick();
+    }
+
+    if (btnHeatmap) {
+      btnHeatmap.addEventListener("click", () => setCalView("heatmap"));
+    }
+    if (btnMonth) {
+      btnMonth.addEventListener("click", () => setCalView("month"));
+    }
 
     // Quick month jump buttons
     if (el.calNavQuickMonths) {
@@ -2407,34 +2637,71 @@ const ACHIEVEMENT_GROUPS = [
         const btn = e.target.closest(".cal-nav-month-pill");
         if (!btn) return;
         const targetId = btn.dataset.monthTarget;
-        const targetCard = document.getElementById(targetId);
-        if (targetCard && el.calendarScroll) {
-          const scrollTarget = targetCard.offsetLeft - el.calendarScroll.offsetLeft - 30;
-          el.calendarScroll.scrollTo({ left: Math.max(0, scrollTarget), behavior: "smooth" });
-          $$(".cal-nav-month-pill").forEach((p) => p.classList.remove("is-active"));
-          btn.classList.add("is-active");
+        const year = parseInt(btn.dataset.year || "2026", 10);
+        const month = parseInt(btn.dataset.month || "8", 10);
+
+        if (currentCalViewMode === "month") {
+          renderMonthDetailView(year, month);
+        } else {
+          const targetCard = document.getElementById(targetId);
+          if (targetCard && el.calendarScroll) {
+            const scrollTarget = targetCard.offsetLeft - el.calendarScroll.offsetLeft - 30;
+            el.calendarScroll.scrollTo({ left: Math.max(0, scrollTarget), behavior: "smooth" });
+          }
         }
+        $$(".cal-nav-month-pill").forEach((p) => p.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        playClick();
+      });
+    }
+
+    // Clicking month card header in heatmap opens detailed month view
+    if (el.calendarMonthsFlow) {
+      el.calendarMonthsFlow.addEventListener("click", (e) => {
+        const head = e.target.closest(".cal-month-head");
+        if (!head) return;
+        const card = head.closest(".cal-month-card");
+        if (!card) return;
+        const year = parseInt(card.dataset.year || "2026", 10);
+        const month = parseInt(card.dataset.month || "8", 10);
+        setCalView("month");
+        renderMonthDetailView(year, month);
       });
     }
 
     // Prev / Next / Today buttons
     if (el.calNavPrevBtn) {
       el.calNavPrevBtn.addEventListener("click", () => {
-        if (el.calendarScroll) {
+        if (currentCalViewMode === "month") {
+          let prevM = selectedMonthDetailIndex - 1;
+          let prevY = selectedMonthDetailYear;
+          if (prevM < 0) { prevM = 11; prevY--; }
+          renderMonthDetailView(prevY, prevM);
+        } else if (el.calendarScroll) {
           el.calendarScroll.scrollBy({ left: -240, behavior: "smooth" });
         }
+        playClick();
       });
     }
     if (el.calNavNextBtn) {
       el.calNavNextBtn.addEventListener("click", () => {
-        if (el.calendarScroll) {
+        if (currentCalViewMode === "month") {
+          let nextM = selectedMonthDetailIndex + 1;
+          let nextY = selectedMonthDetailYear;
+          if (nextM > 11) { nextM = 0; nextY++; }
+          renderMonthDetailView(nextY, nextM);
+        } else if (el.calendarScroll) {
           el.calendarScroll.scrollBy({ left: 240, behavior: "smooth" });
         }
+        playClick();
       });
     }
     if (el.calNavTodayBtn) {
       el.calNavTodayBtn.addEventListener("click", () => {
-        if (el.calendarScroll) {
+        const now = new Date();
+        if (currentCalViewMode === "month") {
+          renderMonthDetailView(now.getFullYear(), now.getMonth());
+        } else if (el.calendarScroll) {
           el.calendarScroll.scrollTo({ left: el.calendarScroll.scrollWidth, behavior: "smooth" });
           const currentPill = $(".cal-nav-month-pill:last-child");
           if (currentPill) {
@@ -2442,6 +2709,7 @@ const ACHIEVEMENT_GROUPS = [
             currentPill.classList.add("is-active");
           }
         }
+        playClick();
       });
     }
 
@@ -2463,7 +2731,7 @@ const ACHIEVEMENT_GROUPS = [
       };
 
       el.calendarMonthsFlow.addEventListener("mouseover", (e) => {
-        const cell = e.target.closest(".cal-cell:not(.is-empty):not(.is-future)");
+        const cell = e.target.closest(".cal-cell");
         if (!cell) {
           tooltip.style.display = "none";
           activeCell = null;
@@ -2472,14 +2740,32 @@ const ACHIEVEMENT_GROUPS = [
         activeCell = cell;
         const date = cell.dataset.date || "";
         const exp = parseInt(cell.dataset.exp || "0", 10);
-        const expClass = exp > 0 ? "cal-tt-exp-positive" : "cal-tt-exp-zero";
-        const statusText = exp > 0 ? "Hunter Activity Recorded" : "No Submissions";
+        const isToday = cell.dataset.isToday === "1";
+        const isFuture = cell.dataset.isFuture === "1";
+
+        let expClass = "cal-tt-exp-zero";
+        let statusText = "No Submissions";
+        let expText = "0 EXP";
+
+        if (exp > 0) {
+          expClass = "cal-tt-exp-positive";
+          statusText = isToday ? "Activity Completed Today" : "Hunter Activity Recorded";
+          expText = "+" + exp + " EXP";
+        } else if (isToday) {
+          expClass = "cal-tt-exp-positive";
+          statusText = "Current Active Day (Today)";
+          expText = "Today";
+        } else if (isFuture) {
+          statusText = "Upcoming Day";
+          expText = "Pending";
+        }
+
         tooltip.innerHTML = (
-          "<div class=\"cal-tt-date\">" + date + "</div>" +
-          "<div class=\"cal-tt-body\">" +
-            "<span class=\"cal-tt-pill " + expClass + "\">" + (exp > 0 ? "+" + exp + " EXP" : "0 EXP") + "</span>" +
-            "<span class=\"cal-tt-status\">" + statusText + "</span>" +
-          "</div>"
+          `<div class="cal-tt-date">${date}</div>` +
+          `<div class="cal-tt-body">` +
+            `<span class="cal-tt-pill ${expClass}">${expText}</span>` +
+            `<span class="cal-tt-status">${statusText}</span>` +
+          `</div>`
         );
         tooltip.style.display = "block";
         positionTooltip(e);

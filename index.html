@@ -425,6 +425,16 @@
           <div class="cal-nav-quick-scroll-wrap">
             <div class="cal-nav-quick-months" id="calNavQuickMonths"></div>
           </div>
+          <div class="cal-view-switch-group">
+            <button class="cal-view-btn is-active" id="calViewHeatmapBtn" type="button" title="52-Week Year Heatmap">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M3 3h4v4H3zm6 0h4v4H9zm6 0h4v4h-4zm-12 6h4v4H3zm6 0h4v4H9zm6 0h4v4h-4zm-12 6h4v4H3zm6 0h4v4H9zm6 0h4v4h-4z"/></svg>
+              <span>Heatmap</span>
+            </button>
+            <button class="cal-view-btn" id="calViewMonthBtn" type="button" title="Full Month Matrix (Day in a Box)">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>Month Grid</span>
+            </button>
+          </div>
           <div class="cal-nav-actions">
             <button class="cal-nav-btn" id="calNavPrevBtn" type="button" title="Scroll to earlier months" aria-label="Previous Month">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -453,6 +463,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Dedicated Single Month Grid View (Every Day In A Box) -->
+        <div class="calendar-month-detail-panel" id="calendarMonthDetail" style="display:none;"></div>
 
         <!-- Floating Interactive Day Tooltip -->
         <div class="cal-floating-tooltip" id="calFloatingTooltip" style="display:none;"></div>
@@ -518,11 +531,10 @@
         <div class="panel-head leaderboard-head">
           <div class="leaderboard-title-group">
             <div class="leaderboard-trophy-icon">
-              <svg viewBox="0 0 24 24" class="svg-trophy"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2ZM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8Zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1Z"/></svg>
+              <img class="leaderboard-trophy-img" src="/assets/leaderboard_trophy_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=1iAbRKSoZ4i0lj9LZBeyn02MSX9EAfikn';" alt="Leaderboard Trophy" />
             </div>
             <div>
               <h2 class="leaderboard-title">Global Leaderboard</h2>
-              <span class="leaderboard-sub">Real registered hunters from Supabase Cloud · Ranked by Total XP</span>
             </div>
           </div>
           <div class="leaderboard-head-actions">
@@ -587,10 +599,10 @@
           <button class="lb-filter-btn is-active" data-rank-filter="ALL" type="button">All Ranks</button>
           <button class="lb-filter-btn" data-rank-filter="Sovereign" type="button"><span class="lb-rank-dot rank-s"></span>Sovereign</button>
           <button class="lb-filter-btn" data-rank-filter="Diamond" type="button"><span class="lb-rank-dot rank-a"></span>Diamond</button>
-          <button class="lb-filter-btn" data-rank-filter="Platinum" type="button"><span class="lb-rank-dot rank-b"></span>Platinum</button>
-          <button class="lb-filter-btn" data-rank-filter="Gold" type="button"><span class="lb-rank-dot rank-c"></span>Gold</button>
-          <button class="lb-filter-btn" data-rank-filter="Silver" type="button"><span class="lb-rank-dot rank-d"></span>Silver</button>
-          <button class="lb-filter-btn" data-rank-filter="Bronze" type="button"><span class="lb-rank-dot rank-e"></span>Bronze</button>
+          <button class="lb-filter-btn" data-rank-filter="Platinum" type="button"><img class="lb-rank-icon-img rank-platinum" src="/assets/platinum_rank_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=1E_5hgZkRgEHA9WwHh4jQ-opOl-AjPSIg';" alt="Platinum" />Platinum</button>
+          <button class="lb-filter-btn" data-rank-filter="Gold" type="button"><img class="lb-rank-icon-img rank-gold" src="/assets/gold_rank_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=176Ybpwmts53BAGu7vsCN-zs4J4G5gOEc';" alt="Gold" />Gold</button>
+          <button class="lb-filter-btn" data-rank-filter="Silver" type="button"><img class="lb-rank-icon-img rank-silver" src="/assets/silver_rank_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=1l_9oODCMR4Qn0KsXjX5u0GIvy7EZ3Pph';" alt="Silver" />Silver</button>
+          <button class="lb-filter-btn" data-rank-filter="Bronze" type="button"><img class="lb-rank-icon-img rank-bronze" src="/assets/bronze_rank_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=1ggZNHhaX-7mNkQdYO7j3gpzkkNqdW2in';" alt="Bronze" />Bronze</button>
         </div>
 
         <!-- Collapsible Rank Progression Path (Accessible from tab) -->

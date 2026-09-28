@@ -148,12 +148,27 @@ CREATE TABLE IF NOT EXISTS public.unlocked_achievements (
   CONSTRAINT uq_user_achievement UNIQUE (user_id, achievement_id)
 );
 
+-- Table 7: user_problem_stats (Challenge Lab Progress & Analytics)
+CREATE TABLE IF NOT EXISTS public.user_problem_stats (
+  user_id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
+  solved_total INT NOT NULL DEFAULT 0,
+  total_problems INT NOT NULL DEFAULT 76,
+  solved_easy INT NOT NULL DEFAULT 0,
+  total_easy INT NOT NULL DEFAULT 10,
+  solved_medium INT NOT NULL DEFAULT 0,
+  total_medium INT NOT NULL DEFAULT 46,
+  solved_hard INT NOT NULL DEFAULT 0,
+  total_hard INT NOT NULL DEFAULT 20,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_quests_user_id ON public.quests(user_id);
 CREATE INDEX IF NOT EXISTS idx_solved_challenges_user_id ON public.solved_challenges(user_id);
 CREATE INDEX IF NOT EXISTS idx_daily_exp_user_day ON public.daily_exp(user_id, day DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_log_user_created ON public.activity_log(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_unlocked_achievements_user_id ON public.unlocked_achievements(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_problem_stats_user_id ON public.user_problem_stats(user_id);
 
 -- Trigger for auto-updating profiles.updated_at
 DROP TRIGGER IF EXISTS trg_profiles_updated_at ON public.profiles;
@@ -303,6 +318,20 @@ CREATE POLICY "activity_log_all_own"
 DROP POLICY IF EXISTS "unlocked_achievements_all_own" ON public.unlocked_achievements;
 CREATE POLICY "unlocked_achievements_all_own"
   ON public.unlocked_achievements FOR ALL
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+-- 4.7 User Problem Stats policies
+ALTER TABLE public.user_problem_stats ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "user_problem_stats_select_all" ON public.user_problem_stats;
+CREATE POLICY "user_problem_stats_select_all"
+  ON public.user_problem_stats FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "user_problem_stats_manage_own" ON public.user_problem_stats;
+CREATE POLICY "user_problem_stats_manage_own"
+  ON public.user_problem_stats FOR ALL
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
