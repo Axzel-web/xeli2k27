@@ -1425,6 +1425,112 @@ button{ font-family:inherit; }
     inset 0 0 20px rgba(16, 185, 129, 0.08),
     0 14px 34px rgba(0, 0, 0, 0.8) !important;
 }
+
+/* ============================================================
+   FUTURISTIC TEAL/CYAN NETWORKING CHALLENGE CARD REDESIGN
+   ============================================================ */
+.challenge-card.networking-neon-card {
+  position: relative !important;
+  background-color: #030e16 !important;
+  background-image: 
+    radial-gradient(circle at 92% 50%, rgba(0, 245, 212, 0.24) 0%, rgba(0, 180, 216, 0.12) 42%, transparent 72%),
+    linear-gradient(90deg, rgba(3, 14, 22, 0.98) 0%, rgba(3, 14, 22, 0.93) 48%, rgba(3, 14, 22, 0.65) 75%, rgba(3, 14, 22, 0.22) 100%),
+    url('/assets/networking_card_art.png?v=2') !important;
+  background-size: cover, cover, auto 94% !important;
+  background-position: right center, left center, right 8px center !important;
+  background-repeat: no-repeat !important;
+  border: 1px solid rgba(0, 245, 212, 0.65) !important;
+  border-radius: var(--radius-m) !important;
+  box-shadow: 
+    0 -1px 2px 0 rgba(0, 245, 212, 0.45),
+    0 0 25px rgba(0, 200, 220, 0.22),
+    inset 0 0 20px rgba(0, 245, 212, 0.08),
+    0 14px 34px rgba(0, 0, 0, 0.85) !important;
+  overflow: hidden !important;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease !important;
+}
+
+/* Hover effect */
+.challenge-card.networking-neon-card:hover {
+  border-color: #00f5d4 !important;
+  box-shadow: 
+    0 -1px 2px 0 rgba(0, 245, 212, 0.8),
+    0 0 36px rgba(0, 245, 212, 0.45),
+    inset 0 0 28px rgba(0, 245, 212, 0.16),
+    0 18px 40px rgba(0, 0, 0, 0.92) !important;
+  transform: translateY(-4px) scale(1.01) !important;
+}
+
+/* Subtle tech grid / node circuit pattern overlay */
+.challenge-card.networking-neon-card::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: 
+    linear-gradient(rgba(0, 245, 212, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 212, 0.05) 1px, transparent 1px) !important;
+  background-size: 16px 16px !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+  opacity: 0.65 !important;
+}
+
+/* Geometric corner brackets / cyber accents with teal neon glow */
+.challenge-card.networking-neon-card::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-top: 2px solid #00f5d4 !important;
+  border-left: 2px solid #00f5d4 !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+  filter: drop-shadow(0 0 5px #00f5d4) !important;
+}
+
+/* Ensure all text and UI elements stay layered above backgrounds with pristine readability */
+.challenge-card.networking-neon-card > * {
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+/* Text legibility with dark backdrop protection */
+.challenge-card.networking-neon-card .cc-title {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Glowing cyber teal/cyan divider */
+.challenge-card.networking-neon-card .cc-divider {
+  background: linear-gradient(90deg, rgba(0, 245, 212, 0.5) 0%, rgba(0, 210, 255, 0.2) 70%, transparent 100%) !important;
+  height: 1.5px !important;
+  box-shadow: 0 0 6px rgba(0, 245, 212, 0.35) !important;
+}
+
+/* Solved state maintains green clearance without breaking the networking cyber theme */
+.challenge-card.networking-neon-card.is-solved {
+  border-color: rgba(16, 185, 129, 0.7) !important;
+  box-shadow: 
+    0 -1px 2px 0 rgba(16, 185, 129, 0.4),
+    0 0 25px rgba(16, 185, 129, 0.25),
+    inset 0 0 20px rgba(16, 185, 129, 0.08),
+    0 14px 34px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Sleek futuristic check indicators when card is not yet solved */
+.challenge-card.networking-neon-card:not(.is-solved) .cc-check {
+  background: rgba(3, 16, 26, 0.45) !important;
+  border: 1.5px solid rgba(0, 245, 212, 0.4) !important;
+  box-shadow: 0 0 8px rgba(0, 245, 212, 0.2) !important;
+  backdrop-filter: blur(4px);
+}
+.challenge-card.python-neon-card:not(.is-solved) .cc-check {
+  background: rgba(5, 14, 28, 0.45) !important;
+  border: 1.5px solid rgba(0, 210, 255, 0.4) !important;
+  box-shadow: 0 0 8px rgba(0, 210, 255, 0.2) !important;
+  backdrop-filter: blur(4px);
+}
  
 /* ============================================================
    MODALS

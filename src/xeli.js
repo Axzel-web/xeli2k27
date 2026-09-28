@@ -815,6 +815,82 @@ if age < 18 or not has_id:
 
 `,
   },
+  {
+    id: "py-level-6-loops-flow-control",
+    cat: "coding",
+    title: "Level 6: Loops & Flow Control",
+    difficulty: "Easy",
+    exp: 250,
+    type: "python-lab",
+    intro: "Learn iteration and loop control: for loops, range() intervals, looping over strings, while loops, break, continue, and compound shorthand assignment operators (+=, -=, *=).",
+    levelNumber: 6,
+    concepts: [
+      {
+        name: "for loop & range()",
+        desc: "repeat n times",
+        code: `for i in range(5):
+    print(i)
+
+# range(5)         -> 0, 1, 2, 3, 4
+# range(2, 5)      -> 2, 3, 4 (start, stop)
+# range(0, 10, 2)  -> 0, 2, 4, 6, 8 (start, stop, step)`,
+      },
+      {
+        name: "Looping over a string",
+        desc: "iterate character by character",
+        code: `word = "Python"
+for letter in word:
+    print(letter)`,
+      },
+      {
+        name: "while loop",
+        desc: "repeat until condition is false",
+        code: `count = 0
+while count < 5:
+    print(count)
+    count += 1   # count = count + 1`,
+      },
+      {
+        name: "break & continue",
+        desc: "loop flow controls",
+        code: `# break — stops the loop completely
+for i in range(10):
+    if i == 5:
+        break
+    print(i)   # prints 0 1 2 3 4
+
+# continue — skips to next iteration
+for i in range(5):
+    if i == 2:
+        continue
+    print(i)   # prints 0 1 3 4`,
+      },
+      {
+        name: "Shorthand operators",
+        desc: "+=, -=, *=",
+        code: `count += 1   # count = count + 1
+count -= 1   # count = count - 1
+count *= 2   # count = count * 2`,
+      },
+    ],
+    goals: [
+      {
+        id: "countdown",
+        text: "Countdown — while loop counting down from 10 to 1, then print 'Liftoff!'",
+        hint: "Initialize count = 10, loop while count >= 1, print(count), subtract count -= 1, and print 'Liftoff!' outside the loop",
+      },
+      {
+        id: "sum_of_numbers",
+        text: "Sum of Numbers — for loop and range() to calculate and print sum from 1 to 100",
+        hint: "Initialize total = 0, loop for n in range(1, 101): total += n, then print total outside the loop (5050)",
+      },
+    ],
+    starter: `# Level 6: Loops & Flow Control
+# Task 1: Countdown — using a while loop, print numbers from 10 to 1, then print "Liftoff!" after the loop ends
+# Task 2: Sum of numbers — using a for loop and range(), calculate and print the sum of all numbers from 1 to 100
+
+`,
+  },
 ];
  
 /* ============================================================
@@ -2050,9 +2126,11 @@ const ACHIEVEMENT_GROUPS = [
     el.challengeGrid.innerHTML = items
       .map((c, idx) => {
         const solved = state.solvedChallenges.includes(c.id);
-        const isTargetCard = c.cat === "coding" || c.type === "python-lab" || (c.id && c.id.startsWith("py-level-"));
+        const isPythonCard = c.cat === "coding" || c.type === "python-lab" || (c.id && c.id.startsWith("py-level-"));
+        const isNetworkingCard = c.cat === "networking";
+        const cardClass = isPythonCard ? "python-neon-card" : (isNetworkingCard ? "networking-neon-card" : "");
         return `
-        <button class="challenge-card ${isTargetCard ? "python-neon-card" : ""} ${solved ? "is-solved" : ""}" data-id="${c.id}">
+        <button class="challenge-card ${cardClass} ${solved ? "is-solved" : ""}" data-id="${c.id}">
           <div class="cc-top">
             <div class="cc-left">
               <span class="cc-icon"><svg viewBox="0 0 24 24">${CATEGORY_ICON[c.cat] || ""}</svg></span>

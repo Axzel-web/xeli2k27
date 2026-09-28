@@ -396,6 +396,29 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
 
           isMet = !runError && hasInput && hasIf && hasElif && hasGrades && hasComparison;
         }
+      } else if (c.id === "py-level-6-loops-flow-control") {
+        if (g.id === "countdown") {
+          // Task 1: Countdown
+          // Using a while loop, print numbers from 10 to 1, then print "Liftoff!"
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasWhile = /\bwhile\b/.test(cleanCode);
+          const hasDecrement = /(-=\s*1|count\s*-\s*1|n\s*-\s*1|i\s*-\s*1)/.test(cleanCode) || /-\s*1/.test(cleanCode);
+          const hasLiftoff = /liftoff/i.test(code) || /liftoff/i.test(stdout);
+          const hasPrint = /\bprint\s*\(/.test(code);
+          const hasOutputCountdown = /\b10\b/.test(stdout) && /\b1\b/.test(stdout);
+
+          isMet = !runError && hasWhile && (hasDecrement || hasOutputCountdown) && hasLiftoff && hasPrint;
+        } else if (g.id === "sum_of_numbers") {
+          // Task 2: Sum of numbers
+          // Using a for loop and range(), calculate and print the sum of all numbers from 1 to 100
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasFor = /\bfor\s+\w+\s+in\s+range\s*\(/.test(cleanCode);
+          const hasRunningTotal = /(\+=\s*\w+|\b\w+\s*=\s*\w+\s*\+\s*\w+)/.test(cleanCode);
+          const has5050 = /\b5050\b/.test(stdout) || /5050/.test(cleanCode) || /101/.test(cleanCode) || /100/.test(cleanCode);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasFor && hasRunningTotal && has5050 && hasPrint;
+        }
       } else {
         // Generic fallback for custom goals
         isMet = !runError && stdout.trim().length > 0;
