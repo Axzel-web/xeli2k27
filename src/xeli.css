@@ -1333,6 +1333,98 @@ button{ font-family:inherit; }
   border-color:rgba(16, 185, 129, 0.45);
   font-weight:700;
 }
+
+/* ============================================================
+   FUTURISTIC NEON-BLUE PYTHON CHALLENGE CARD REDESIGN
+   ============================================================ */
+.challenge-card.python-neon-card {
+  position: relative !important;
+  background-color: #050b18 !important;
+  background-image: 
+    radial-gradient(circle at 92% 50%, rgba(0, 210, 255, 0.26) 0%, rgba(0, 110, 255, 0.1) 45%, transparent 72%),
+    linear-gradient(90deg, rgba(5, 11, 24, 0.97) 0%, rgba(5, 11, 24, 0.92) 48%, rgba(5, 11, 24, 0.65) 75%, rgba(5, 11, 24, 0.28) 100%),
+    url('/assets/python_card_art.png') !important;
+  background-size: cover, cover, auto 92% !important;
+  background-position: right center, left center, right 6px center !important;
+  background-repeat: no-repeat !important;
+  border: 1px solid rgba(0, 210, 255, 0.65) !important;
+  border-radius: var(--radius-m) !important;
+  box-shadow: 
+    0 -1px 2px 0 rgba(0, 210, 255, 0.45),
+    0 0 25px rgba(0, 150, 255, 0.25),
+    inset 0 0 20px rgba(0, 210, 255, 0.08),
+    0 14px 34px rgba(0, 0, 0, 0.8) !important;
+  overflow: hidden !important;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease !important;
+}
+
+/* Hover effect */
+.challenge-card.python-neon-card:hover {
+  border-color: #00d2ff !important;
+  box-shadow: 
+    0 -1px 2px 0 rgba(0, 210, 255, 0.8),
+    0 0 36px rgba(0, 210, 255, 0.45),
+    inset 0 0 28px rgba(0, 210, 255, 0.16),
+    0 18px 40px rgba(0, 0, 0, 0.9) !important;
+  transform: translateY(-4px) scale(1.01) !important;
+}
+
+/* Subtle tech grid / circuit pattern overlay */
+.challenge-card.python-neon-card::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: 
+    linear-gradient(rgba(0, 210, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 210, 255, 0.05) 1px, transparent 1px) !important;
+  background-size: 16px 16px !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+  opacity: 0.65 !important;
+}
+
+/* Geometric corner brackets / cyber accents */
+.challenge-card.python-neon-card::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-top: 2px solid #00d2ff !important;
+  border-left: 2px solid #00d2ff !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+  filter: drop-shadow(0 0 5px #00d2ff) !important;
+}
+
+/* Ensure all text and UI elements stay layered above backgrounds with pristine readability */
+.challenge-card.python-neon-card > * {
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+/* Text legibility with dark backdrop protection */
+.challenge-card.python-neon-card .cc-title {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Glowing cyber neon divider */
+.challenge-card.python-neon-card .cc-divider {
+  background: linear-gradient(90deg, rgba(0, 210, 255, 0.45) 0%, rgba(0, 210, 255, 0.1) 70%, transparent 100%) !important;
+  height: 1.5px !important;
+  box-shadow: 0 0 6px rgba(0, 210, 255, 0.35) !important;
+}
+
+/* Solved state maintains green clearance without breaking the neon cyber theme */
+.challenge-card.python-neon-card.is-solved {
+  border-color: rgba(16, 185, 129, 0.7) !important;
+  box-shadow: 
+    0 -1px 2px 0 rgba(16, 185, 129, 0.4),
+    0 0 25px rgba(16, 185, 129, 0.25),
+    inset 0 0 20px rgba(16, 185, 129, 0.08),
+    0 14px 34px rgba(0, 0, 0, 0.8) !important;
+}
  
 /* ============================================================
    MODALS

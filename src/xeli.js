@@ -729,6 +729,92 @@ full = f"{first} {last}"`,
 
 `,
   },
+  {
+    id: "py-level-5-if-conditionals",
+    cat: "coding",
+    title: "Level 5: If Statements & Conditionals",
+    difficulty: "Easy",
+    exp: 220,
+    type: "python-lab",
+    intro: "Control execution flow using if, comparison operators (==, !=, >, <, >=, <=), else fallbacks, elif condition chains, and logical operators (and, or, not).",
+    levelNumber: 5,
+    concepts: [
+      {
+        name: "If statement",
+        desc: "runs code if true",
+        code: `age = 18
+
+if age >= 18:
+    print("You are an adult")`,
+      },
+      {
+        name: "Comparison operators",
+        desc: "evaluates to True/False",
+        code: `a = 5
+b = 10
+
+a == b   # equal to (note: double ==, not single =)
+a != b   # not equal to
+a > b    # greater than
+a < b    # less than
+a >= b   # greater than or equal to
+a <= b   # less than or equal to`,
+      },
+      {
+        name: "else (the fallback)",
+        desc: "runs when condition is False",
+        code: `age = 15
+
+if age >= 18:
+    print("You are an adult")
+else:
+    print("You are a minor")`,
+      },
+      {
+        name: "elif (multiple conditions)",
+        desc: "checks conditions in order",
+        code: `score = 75
+
+if score >= 90:
+    print("Grade: A")
+elif score >= 80:
+    print("Grade: B")
+elif score >= 70:
+    print("Grade: C")
+else:
+    print("Grade: F")`,
+      },
+      {
+        name: "Combining conditions",
+        desc: "and, or, not",
+        code: `age = 20
+has_id = True
+
+if age >= 18 and has_id:
+    print("Can enter")
+
+if age < 18 or not has_id:
+    print("Cannot enter")`,
+      },
+    ],
+    goals: [
+      {
+        id: "even_or_odd",
+        text: "Even or Odd — ask for a number, print whether it's Even or Odd using if/else and modulo (%)",
+        hint: "Use input() and int(), then check number % 2 == 0 to print Even or Odd",
+      },
+      {
+        id: "grade_checker",
+        text: "Grade Checker — ask for score (0–100), print letter grade (A, B, C, or F) using if/elif/else",
+        hint: "Prompt for score, check >= 90 (A), >= 80 (B), >= 70 (C), else F with if/elif/else",
+      },
+    ],
+    starter: `# Level 5: If Statements & Conditionals
+# Task 1: Ask for a number with input(), then print whether it's "Even" or "Odd" using if/else and %
+# Task 2: Ask for a score (0–100) with input(), then print their letter grade using if/elif/else
+
+`,
+  },
 ];
  
 /* ============================================================
@@ -1962,10 +2048,11 @@ const ACHIEVEMENT_GROUPS = [
       return;
     }
     el.challengeGrid.innerHTML = items
-      .map((c) => {
+      .map((c, idx) => {
         const solved = state.solvedChallenges.includes(c.id);
+        const isTargetCard = c.cat === "coding" || c.type === "python-lab" || (c.id && c.id.startsWith("py-level-"));
         return `
-        <button class="challenge-card ${solved ? "is-solved" : ""}" data-id="${c.id}">
+        <button class="challenge-card ${isTargetCard ? "python-neon-card" : ""} ${solved ? "is-solved" : ""}" data-id="${c.id}">
           <div class="cc-top">
             <div class="cc-left">
               <span class="cc-icon"><svg viewBox="0 0 24 24">${CATEGORY_ICON[c.cat] || ""}</svg></span>

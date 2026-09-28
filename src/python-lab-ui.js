@@ -371,6 +371,31 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
 
           isMet = !runError && hasInput && hasRevSlice && !hasLoop && hasPrint;
         }
+      } else if (c.id === "py-level-5-if-conditionals") {
+        if (g.id === "even_or_odd") {
+          // Task 1: Even or Odd
+          // Ask for a number with input(), then print "Even" or "Odd" using if/else and modulo (%)
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasInput = /\binput\s*\(/.test(code);
+          const hasModulo = /%\s*2\b|%/.test(cleanCode);
+          const hasIfElse = /\bif\b/.test(cleanCode) && /\belse\s*:/.test(cleanCode);
+          const hasKeywords = /even/i.test(code) && /odd/i.test(code);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasInput && hasModulo && hasIfElse && hasKeywords && hasPrint;
+        } else if (g.id === "grade_checker") {
+          // Task 2: Grade Checker
+          // Ask for a score (0-100), print letter grade using if/elif/else
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasInput = /\binput\s*\(/.test(code) || /score\s*=/.test(cleanCode);
+          const hasElif = /\belif\b/.test(cleanCode);
+          const hasIf = /\bif\b/.test(cleanCode);
+          const hasGrades = /['"]?A['"]?.*['"]?B['"]?.*['"]?C['"]?.*['"]?F['"]?/s.test(cleanCode) || 
+                            (/[ABC]/i.test(cleanCode) && /\b(90|80|70)\b/.test(cleanCode));
+          const hasComparison = /[><]=?/.test(cleanCode);
+
+          isMet = !runError && hasInput && hasIf && hasElif && hasGrades && hasComparison;
+        }
       } else {
         // Generic fallback for custom goals
         isMet = !runError && stdout.trim().length > 0;
@@ -614,7 +639,7 @@ __stderr_capture = StringIO()
 sys.stdout = __stdout_capture
 sys.stderr = __stderr_capture
 
-__sim_inputs = ["10", "3", "2004", "Python", "Axzel Rivera", "hello", "world", "15", "5", "2000", "42", "7", "1998"]
+__sim_inputs = ["10", "85", "3", "2004", "Python", "Axzel Rivera", "hello", "world", "15", "5", "2000", "42", "7", "1998"]
 __in_idx = 0
 
 def __safe_input(prompt=""):
