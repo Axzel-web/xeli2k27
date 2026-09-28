@@ -319,6 +319,58 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
           // And check that no third temp variable was used for the swap
           isMet = !runError && hasSingleLineSwap;
         }
+      } else if (c.id === "py-level-3-arithmetic-input-typecasting") {
+        if (g.id === "mini_calculator") {
+          // Task 1: Mini Calculator — ask for 2 numbers, print results of all 7 operators (+, -, *, /, //, %, **)
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasInput = /\binput\s*\(/.test(code);
+          const hasTypecast = /\b(int|float)\s*\(/.test(code);
+          const hasAdd = /\+/.test(cleanCode);
+          const hasSub = /(?<!-)-(?!-)/.test(cleanCode);
+          const hasMul = /(?<!\*)\*(?!\*)/.test(cleanCode);
+          const hasDiv = /(?<!\/)\/(?!\/)/.test(cleanCode);
+          const hasFloor = /\/\//.test(cleanCode);
+          const hasMod = /%/.test(cleanCode);
+          const hasExp = /\*\*/.test(cleanCode);
+
+          const hasAll7Ops = hasAdd && hasSub && hasMul && hasDiv && hasFloor && hasMod && hasExp;
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasInput && hasTypecast && hasAll7Ops && hasPrint;
+        } else if (g.id === "age_from_birth_year") {
+          // Task 2: Age from Birth Year — ask for birth year, calculate age via subtraction
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasInput = /\binput\s*\(/.test(code);
+          const hasTypecast = /\b(int|float)\s*\(/.test(code);
+          const hasSubtraction = /(?<!-)-(?!-)/.test(cleanCode);
+          const hasAgeLogic = /(birth|year|age|\b20\d\d\b)/i.test(code);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasInput && hasTypecast && hasSubtraction && hasAgeLogic && hasPrint;
+        }
+      } else if (c.id === "py-level-4-strings-indexing-slicing") {
+        if (g.id === "name_manipulation") {
+          // Task 1: Name manipulation
+          // Store full name in a variable. Print: uppercase, lowercase, first 3 letters (slicing), len()
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasUpper = /\.upper\s*\(\s*\)/.test(cleanCode);
+          const hasLower = /\.lower\s*\(\s*\)/.test(cleanCode);
+          const hasSlice = /\[\s*(0\s*)?:\s*3\s*\]/.test(cleanCode);
+          const hasLen = /\blen\s*\(/.test(cleanCode);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasUpper && hasLower && hasSlice && hasLen && hasPrint;
+        } else if (g.id === "reverse_string") {
+          // Task 2: Reverse a string
+          // Ask for word with input(), print it reversed without a loop using slicing [::-1]
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasInput = /\binput\s*\(/.test(code);
+          const hasRevSlice = /\[\s*:\s*:\s*-1\s*\]/.test(cleanCode);
+          const hasLoop = /\b(for\s+\w+\s+in|while\b)/.test(cleanCode);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasInput && hasRevSlice && !hasLoop && hasPrint;
+        }
       } else {
         // Generic fallback for custom goals
         isMet = !runError && stdout.trim().length > 0;
@@ -371,6 +423,28 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith("#")) return;
 
+        // Input assignment: var = int(input("...")) or var = input("...")
+        const inputMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=\s*(?:(int|float)\s*\(\s*)?input\s*\((.*?)\)\s*\)?$/);
+        if (inputMatch) {
+          const varName = inputMatch[1];
+          const castType = inputMatch[2];
+          const rawPrompt = inputMatch[3].trim();
+          if (rawPrompt) {
+            const promptText = rawPrompt.replace(/^['"]|['"]$/g, "");
+            stdout += promptText;
+          }
+          const simInputs = [10, 3, 2004, 15, 5, 2000, 42, 7];
+          const curIdx = Object.keys(vars).filter((k) => k.startsWith("__inp_")).length;
+          vars[`__inp_${curIdx}`] = true;
+          let inputVal = simInputs[curIdx % simInputs.length];
+          stdout += String(inputVal) + "\n";
+          if (castType === "int") inputVal = parseInt(inputVal, 10);
+          else if (castType === "float") inputVal = parseFloat(inputVal);
+          else inputVal = String(inputVal);
+          vars[varName] = inputVal;
+          return;
+        }
+
         // Tuple swap: a, b = b, a
         const swapMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*,\s*([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)\s*,\s*([a-zA-Z_]\w*)$/);
         if (swapMatch) {
@@ -383,7 +457,7 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
           return;
         }
 
-        // Variable assignment: name = "AXZEL" or age = 21
+        // Variable assignment: name = "AXZEL", age = 21, or math
         const assignMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/);
         if (assignMatch) {
           const varName = assignMatch[1];
@@ -397,7 +471,19 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
           } else if (!isNaN(Number(rawVal))) {
             vars[varName] = Number(rawVal);
           } else {
-            vars[varName] = rawVal;
+            try {
+              let jsExpr = rawVal.replace(/\/\//g, "/").replace(/\*\*/g, "**");
+              Object.keys(vars).forEach((k) => {
+                if (!k.startsWith("__")) {
+                  const reg = new RegExp(`\\b${k}\\b`, "g");
+                  jsExpr = jsExpr.replace(reg, JSON.stringify(vars[k]));
+                }
+              });
+              const evalRes = Function(`"use strict"; return (${jsExpr})`)();
+              vars[varName] = evalRes;
+            } catch {
+              vars[varName] = rawVal;
+            }
           }
           return;
         }
@@ -405,7 +491,15 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
         // Print statement: print(...)
         const printMatch = trimmed.match(/^print\s*\((.*)\)$/);
         if (printMatch) {
-          const argsRaw = printMatch[1];
+          const argsRaw = printMatch[1].trim();
+          // Check for f-string: f"Age: {age}"
+          const fstringMatch = argsRaw.match(/^f['"](.*)['"]$/);
+          if (fstringMatch) {
+            let res = fstringMatch[1].replace(/\{([a-zA-Z_]\w*)\}/g, (_, v) => (vars[v] !== undefined ? vars[v] : ""));
+            stdout += res + "\n";
+            return;
+          }
+
           const parts = argsRaw.split(",").map((p) => p.trim());
           const outParts = parts.map((part) => {
             const typeMatch = part.match(/^type\s*\(([a-zA-Z_]\w*)\)$/);
@@ -423,7 +517,51 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
             if (vars[part] !== undefined) {
               return String(vars[part]);
             }
-            return part;
+            // Evaluate string methods like name.upper(), name.lower(), len(name)
+            const upperMatch = part.match(/^([a-zA-Z_]\w*)\.upper\(\)$/);
+            if (upperMatch && vars[upperMatch[1]] !== undefined) {
+              return String(vars[upperMatch[1]]).toUpperCase();
+            }
+            const lowerMatch = part.match(/^([a-zA-Z_]\w*)\.lower\(\)$/);
+            if (lowerMatch && vars[lowerMatch[1]] !== undefined) {
+              return String(vars[lowerMatch[1]]).toLowerCase();
+            }
+            const lenMatch = part.match(/^len\(([a-zA-Z_]\w*)\)$/);
+            if (lenMatch && vars[lenMatch[1]] !== undefined) {
+              return String(String(vars[lenMatch[1]]).length);
+            }
+            // Evaluate string slicing: word[0], word[-1], word[0:3], word[:3], word[::-1]
+            const sliceMatch = part.match(/^([a-zA-Z_]\w*)\[([^\]]+)\]$/);
+            if (sliceMatch && vars[sliceMatch[1]] !== undefined) {
+              const strVal = String(vars[sliceMatch[1]]);
+              const sl = sliceMatch[2].trim();
+              if (sl === "::-1") {
+                return strVal.split("").reverse().join("");
+              }
+              if (sl.startsWith(":") || sl.startsWith("0:")) {
+                const end = parseInt(sl.replace(/^[0:]*/, "") || "3", 10);
+                return strVal.slice(0, end);
+              }
+              const idx = parseInt(sl, 10);
+              if (!isNaN(idx)) {
+                return idx < 0 ? strVal[strVal.length + idx] || "" : strVal[idx] || "";
+              }
+            }
+            // Evaluate math in print e.g. print(a + b), print(a // b)
+            try {
+              let jsExpr = part.replace(/\/\//g, "/").replace(/\*\*/g, "**");
+              Object.keys(vars).forEach((k) => {
+                if (!k.startsWith("__")) {
+                  const reg = new RegExp(`\\b${k}\\b`, "g");
+                  jsExpr = jsExpr.replace(reg, JSON.stringify(vars[k]));
+                }
+              });
+              const val = Function(`"use strict"; return (${jsExpr})`)();
+              if (part.includes("//")) return String(Math.floor(val));
+              return String(val);
+            } catch {
+              return part;
+            }
           });
           stdout += outParts.join(" ") + "\n";
         }
@@ -466,14 +604,32 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
 
       if (pyodide) {
         consoleMeta.textContent = "Running script...";
-        // Setup Python stdout/stderr interception
+        // Setup Python stdout/stderr interception and interactive input support
         const wrapper = `
 import sys
+import builtins
 from io import StringIO
 __stdout_capture = StringIO()
 __stderr_capture = StringIO()
 sys.stdout = __stdout_capture
 sys.stderr = __stderr_capture
+
+__sim_inputs = ["10", "3", "2004", "Python", "Axzel Rivera", "hello", "world", "15", "5", "2000", "42", "7", "1998"]
+__in_idx = 0
+
+def __safe_input(prompt=""):
+    global __in_idx
+    if prompt:
+        sys.stdout.write(str(prompt))
+    if __in_idx < len(__sim_inputs):
+        val = __sim_inputs[__in_idx]
+        __in_idx += 1
+        sys.stdout.write(str(val) + "\\n")
+        return val
+    sys.stdout.write("Python\\n")
+    return "Python"
+
+builtins.input = __safe_input
 `;
         await pyodide.runPythonAsync(wrapper);
 

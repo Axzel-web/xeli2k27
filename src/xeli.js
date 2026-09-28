@@ -593,6 +593,142 @@ const CHALLENGES = [
 
 `,
   },
+  {
+    id: "py-level-3-arithmetic-input-typecasting",
+    cat: "coding",
+    title: "Level 3: Arithmetic, Input & Typecasting",
+    difficulty: "Easy",
+    exp: 180,
+    type: "python-lab",
+    intro: "Learn arithmetic operators (+, -, *, /, //, %, **), user input with input(), typecasting with int(), and combining strings and numbers in print().",
+    levelNumber: 3,
+    concepts: [
+      {
+        name: "Arithmetic operators",
+        desc: "7 operators in Python",
+        code: `a = 10
+b = 3
+
+print(a + b)   # 13   addition
+print(a - b)   # 7    subtraction
+print(a * b)   # 30   multiplication
+print(a / b)   # 3.333... division (always gives a float)
+print(a // b)  # 3    floor division (drops the decimal, rounds down)
+print(a % b)   # 1    modulo (the remainder)
+print(a ** b)  # 1000 exponent (a to the power of b)`,
+      },
+      {
+        name: "Getting input from users",
+        desc: "input() function",
+        code: `name = input("What's your name? ")
+print("Hello, " + name)`,
+      },
+      {
+        name: "Typecasting",
+        desc: "convert with int()",
+        code: `age = int(input("Enter your age: "))
+print(age + 1)`,
+      },
+      {
+        name: "Combining str & numbers in print",
+        desc: "commas or f-strings",
+        code: `age = 22
+print("Age:", age)          # print() handles the comma for you
+print(f"Age: {age}")        # f-string — cleanest, used a lot going forward`,
+      },
+    ],
+    goals: [
+      {
+        id: "mini_calculator",
+        text: "Mini Calculator — ask for 2 numbers, print results of all 7 operators",
+        hint: "Use input() and int() for 2 numbers, then print +, -, *, /, //, %, and **",
+      },
+      {
+        id: "age_from_birth_year",
+        text: "Age from Birth Year — ask for birth year, calculate age via subtraction",
+        hint: "Ask for birth year with input(), cast with int(), and subtract from current year",
+      },
+    ],
+    starter: `# Level 3: Arithmetic, Input & Typecasting
+# Task 1: Mini Calculator — ask for 2 numbers, print results of all 7 operators (+, -, *, /, //, %, **)
+# Task 2: Age from Birth Year — ask for birth year, calculate age via subtraction
+
+`,
+  },
+  {
+    id: "py-level-4-strings-indexing-slicing",
+    cat: "coding",
+    title: "Level 4: Strings, Indexing & Slicing",
+    difficulty: "Easy",
+    exp: 200,
+    type: "python-lab",
+    intro: "Master strings, character indexing, slice extraction ([start:end:step]), essential methods (.upper(), .lower(), .strip(), .replace(), len()), and f-strings.",
+    levelNumber: 4,
+    concepts: [
+      {
+        name: "Strings (str)",
+        desc: "text in quotes",
+        code: `name = "axzel"
+message = 'hello there'`,
+      },
+      {
+        name: "Indexing",
+        desc: "grabbing single characters",
+        code: `word = "AXZEL"
+print(word[0])   # 'A'
+print(word[1])   # 'X'
+print(word[-1])  # 'L' (negative index counts from end)`,
+      },
+      {
+        name: "Slicing",
+        desc: "grabbing a chunk [start:end]",
+        code: `word = "Python"
+print(word[0:3])   # Pyt
+print(word[2:])    # thon (leave end blank = to the end)
+print(word[:4])    # Pyth (leave start blank = from beginning)`,
+      },
+      {
+        name: "Useful string methods",
+        desc: "transforming strings",
+        code: `name = "  Axzel  "
+
+print(name.upper())                   # "  AXZEL  "
+print(name.lower())                   # "  axzel  "
+print(name.strip())                   # "Axzel" (removes spaces)
+print(name.replace("Axzel", "Juan"))  # "  Juan  "
+print(len(name))                      # length including spaces`,
+      },
+      {
+        name: "Concatenation vs f-string",
+        desc: "combining strings",
+        code: `first = "Axzel"
+last = "Rivera"
+
+# Concatenation
+full = first + " " + last
+
+# f-string (cleaner, preferred)
+full = f"{first} {last}"`,
+      },
+    ],
+    goals: [
+      {
+        id: "name_manipulation",
+        text: "Name Manipulation — store full name, print uppercase, lowercase, first 3 letters, and length",
+        hint: "Store your name in a variable, then use .upper(), .lower(), slicing [:3], and len()",
+      },
+      {
+        id: "reverse_string",
+        text: "Reverse a String — ask user for a word with input(), print it reversed using slicing [::-1]",
+        hint: "Use input() to get a word, then slice with [::-1] without using loops",
+      },
+    ],
+    starter: `# Level 4: Strings, Indexing & Slicing
+# Task 1: Store your full name in a variable. Print it in all uppercase, all lowercase, first 3 letters (slicing), and length using len().
+# Task 2: Ask for a word with input(), then print it reversed without a loop using slicing [::-1].
+
+`,
+  },
 ];
  
 /* ============================================================
