@@ -1535,11 +1535,23 @@ button{ font-family:inherit; }
 /* ============================================================
    FRONTEND DEV TRACK & 3 OPTION BUTTON CARDS (HTML, CSS, JS)
    ============================================================ */
+.challenge-grid.is-frontend-mode,
+#challengeGrid.is-frontend-mode,
+.challenge-grid:has(.fe-options-wrapper),
+#challengeGrid:has(.fe-options-wrapper) {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
 .fe-options-wrapper {
+  grid-column: 1 / -1 !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 20px !important;
   width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .fe-options-header {
@@ -1548,6 +1560,7 @@ button{ font-family:inherit; }
   align-items: flex-start !important;
   flex-wrap: wrap !important;
   gap: 12px !important;
+  width: 100% !important;
 }
 
 .fe-track-pill {
@@ -1567,7 +1580,7 @@ button{ font-family:inherit; }
 
 .fe-track-title {
   font-family: 'Rajdhani', sans-serif !important;
-  font-size: 22px !important;
+  font-size: 24px !important;
   font-weight: 700 !important;
   color: #ffffff !important;
   margin: 0 0 4px 0 !important;
@@ -1576,8 +1589,9 @@ button{ font-family:inherit; }
 
 .fe-track-sub {
   color: var(--dim) !important;
-  font-size: 13px !important;
+  font-size: 13.5px !important;
   margin: 0 !important;
+  line-height: 1.5 !important;
 }
 
 .fe-back-btn {
@@ -1586,77 +1600,91 @@ button{ font-family:inherit; }
   border-color: rgba(0, 210, 255, 0.4) !important;
   color: #00d2ff !important;
   cursor: pointer !important;
+  white-space: nowrap !important;
 }
 
+/* 3-Column Responsive Rectangle Grid */
 .fe-cards-grid {
   display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   gap: 18px !important;
   width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
+  .fe-cards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: 14px !important;
+  }
+}
+
+@media (max-width: 600px) {
   .fe-cards-grid {
     grid-template-columns: 1fr !important;
   }
 }
 
+/* Horizontal / Landscape Rectangle Card */
 .fe-option-card {
   position: relative !important;
   display: flex !important;
   flex-direction: column !important;
-  background: #060911 !important;
+  justify-content: space-between !important;
+  background: linear-gradient(160deg, #0a1122 0%, #050812 100%) !important;
   border-radius: var(--radius-m) !important;
-  padding: 22px 20px !important;
+  padding: 20px 22px !important;
   cursor: pointer !important;
   text-align: left !important;
   transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   user-select: none !important;
+  box-sizing: border-box !important;
+  min-height: 190px !important;
 }
 
 .fe-option-card:hover {
-  transform: translateY(-4px) scale(1.01) !important;
+  transform: translateY(-4px) !important;
 }
 
 /* HTML Card: Orange glow */
 .fe-card-html {
-  border: 1px solid rgba(228, 77, 38, 0.55) !important;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(228, 77, 38, 0.06) !important;
+  border: 1px solid rgba(228, 77, 38, 0.6) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(228, 77, 38, 0.08) !important;
 }
 .fe-card-html:hover,
 .fe-card-html.is-selected {
   border-color: #ff5722 !important;
-  box-shadow: 0 0 32px rgba(228, 77, 38, 0.38), inset 0 0 24px rgba(228, 77, 38, 0.14), 0 14px 34px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 0 28px rgba(228, 77, 38, 0.45), inset 0 0 22px rgba(228, 77, 38, 0.16), 0 12px 28px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* CSS Card: Cyan / Blue glow */
 .fe-card-css {
-  border: 1px solid rgba(0, 210, 255, 0.55) !important;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 210, 255, 0.06) !important;
+  border: 1px solid rgba(0, 210, 255, 0.6) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 210, 255, 0.08) !important;
 }
 .fe-card-css:hover,
 .fe-card-css.is-selected {
   border-color: #00d2ff !important;
-  box-shadow: 0 0 32px rgba(0, 210, 255, 0.38), inset 0 0 24px rgba(0, 210, 255, 0.14), 0 14px 34px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 0 28px rgba(0, 210, 255, 0.45), inset 0 0 22px rgba(0, 210, 255, 0.16), 0 12px 28px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* JS Card: Yellow / Gold glow */
 .fe-card-js {
-  border: 1px solid rgba(247, 223, 30, 0.55) !important;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(247, 223, 30, 0.06) !important;
+  border: 1px solid rgba(247, 223, 30, 0.6) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(247, 223, 30, 0.08) !important;
 }
 .fe-card-js:hover,
 .fe-card-js.is-selected {
   border-color: #facc15 !important;
-  box-shadow: 0 0 32px rgba(247, 223, 30, 0.38), inset 0 0 24px rgba(247, 223, 30, 0.14), 0 14px 34px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 0 28px rgba(247, 223, 30, 0.45), inset 0 0 22px rgba(247, 223, 30, 0.16), 0 12px 28px rgba(0, 0, 0, 0.8) !important;
 }
 
 .fe-card-top {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  margin-bottom: 14px !important;
+  margin-bottom: 12px !important;
 }
 
 .fe-card-tag {
@@ -1667,25 +1695,26 @@ button{ font-family:inherit; }
   border-radius: 4px !important;
   letter-spacing: .04em !important;
 }
-.tag-html { background: rgba(228, 77, 38, 0.2) !important; color: #ff6e40 !important; border: 1px solid rgba(228, 77, 38, 0.4) !important; }
-.tag-css { background: rgba(0, 210, 255, 0.2) !important; color: #00d2ff !important; border: 1px solid rgba(0, 210, 255, 0.4) !important; }
-.tag-js { background: rgba(247, 223, 30, 0.2) !important; color: #facc15 !important; border: 1px solid rgba(247, 223, 30, 0.4) !important; }
+.tag-html { background: rgba(228, 77, 38, 0.22) !important; color: #ff6e40 !important; border: 1px solid rgba(228, 77, 38, 0.45) !important; }
+.tag-css { background: rgba(0, 210, 255, 0.22) !important; color: #00d2ff !important; border: 1px solid rgba(0, 210, 255, 0.45) !important; }
+.tag-js { background: rgba(247, 223, 30, 0.22) !important; color: #facc15 !important; border: 1px solid rgba(247, 223, 30, 0.45) !important; }
 
 .fe-card-icon svg {
-  width: 28px !important;
-  height: 28px !important;
+  width: 26px !important;
+  height: 26px !important;
 }
-.fe-card-html .fe-card-icon svg { fill: #ff5722 !important; filter: drop-shadow(0 0 8px rgba(228, 77, 38, 0.6)) !important; }
-.fe-card-css .fe-card-icon svg { fill: #00d2ff !important; filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.6)) !important; }
-.fe-card-js .fe-card-icon svg { fill: #facc15 !important; filter: drop-shadow(0 0 8px rgba(247, 223, 30, 0.6)) !important; }
+.fe-card-html .fe-card-icon svg { fill: #ff5722 !important; filter: drop-shadow(0 0 8px rgba(228, 77, 38, 0.7)) !important; }
+.fe-card-css .fe-card-icon svg { fill: #00d2ff !important; filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.7)) !important; }
+.fe-card-js .fe-card-icon svg { fill: #facc15 !important; filter: drop-shadow(0 0 8px rgba(247, 223, 30, 0.7)) !important; }
 
 .fe-card-title {
   font-family: 'Rajdhani', sans-serif !important;
-  font-size: 34px !important;
+  font-size: 28px !important;
   font-weight: 800 !important;
   letter-spacing: .02em !important;
   margin-bottom: 2px !important;
-  line-height: 1 !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
 }
 .fe-card-html .fe-card-title { color: #ff6e40 !important; }
 .fe-card-css .fe-card-title { color: #00d2ff !important; }
@@ -1696,15 +1725,16 @@ button{ font-family:inherit; }
   font-size: 13.5px !important;
   font-weight: 600 !important;
   color: #cbd5e1 !important;
-  letter-spacing: .03em !important;
-  margin-bottom: 10px !important;
+  letter-spacing: .02em !important;
+  margin-bottom: 8px !important;
+  line-height: 1.25 !important;
 }
 
 .fe-card-desc {
-  font-size: 12.5px !important;
+  font-size: 12px !important;
   color: var(--dim) !important;
   line-height: 1.5 !important;
-  margin: 0 0 16px 0 !important;
+  margin: 0 0 14px 0 !important;
   flex: 1 1 auto !important;
 }
 
@@ -1712,7 +1742,7 @@ button{ font-family:inherit; }
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  padding-top: 14px !important;
+  padding-top: 12px !important;
   border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
   gap: 8px !important;
   flex-wrap: wrap !important;

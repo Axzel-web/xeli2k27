@@ -2647,7 +2647,7 @@ const ACHIEVEMENT_GROUPS = [
             </div>
             <div class="fe-card-title">HTML</div>
             <div class="fe-card-full-name">HyperText Markup Language</div>
-            <p class="fe-card-desc">Semantic document structure, web forms, accessible element hierarchies, media embedding, and DOM tree layout foundations.</p>
+            <p class="fe-card-desc">Semantic document structure, web forms, media embedding, and DOM layout foundations.</p>
             <div class="fe-card-footer">
               <span class="fe-card-topics">Semantics · Forms · DOM</span>
               <span class="fe-card-action">Select HTML Track →</span>
@@ -2664,7 +2664,7 @@ const ACHIEVEMENT_GROUPS = [
             </div>
             <div class="fe-card-title">CSS</div>
             <div class="fe-card-full-name">Cascading Style Sheets</div>
-            <p class="fe-card-desc">Modern Flexbox alignment, 2D CSS Grid architecture, viewport responsiveness, keyframe animations, and cyber styling.</p>
+            <p class="fe-card-desc">Modern Flexbox alignment, 2D CSS Grid architecture, responsiveness, and keyframe animations.</p>
             <div class="fe-card-footer">
               <span class="fe-card-topics">Flexbox · Grid · Animations</span>
               <span class="fe-card-action">Select CSS Track →</span>
@@ -2681,7 +2681,7 @@ const ACHIEVEMENT_GROUPS = [
             </div>
             <div class="fe-card-title">JS</div>
             <div class="fe-card-full-name">JavaScript &amp; Web APIs</div>
-            <p class="fe-card-desc">Dynamic DOM manipulation, reactive event listeners, asynchronous fetch requests, REST API parsing, and interactive logic.</p>
+            <p class="fe-card-desc">Dynamic DOM manipulation, reactive event listeners, asynchronous fetch, and interactive web APIs.</p>
             <div class="fe-card-footer">
               <span class="fe-card-topics">DOM Events · Async · APIs</span>
               <span class="fe-card-action">Select JS Track →</span>
@@ -2725,9 +2725,11 @@ const ACHIEVEMENT_GROUPS = [
 
   function renderChallenges() {
     if (labCategory === "frontend") {
+      el.challengeGrid.classList.add("is-frontend-mode");
       renderFrontendOptionsView();
       return;
     }
+    el.challengeGrid.classList.remove("is-frontend-mode");
     const items = CHALLENGES.filter((c) => c.cat === labCategory);
     if (!items.length) {
       el.challengeGrid.innerHTML = `<p class="empty-note">No trials in this track yet.</p>`;
