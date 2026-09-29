@@ -1531,6 +1531,234 @@ button{ font-family:inherit; }
   box-shadow: 0 0 8px rgba(0, 210, 255, 0.2) !important;
   backdrop-filter: blur(4px);
 }
+
+/* ============================================================
+   FRONTEND DEV TRACK & 3 OPTION BUTTON CARDS (HTML, CSS, JS)
+   ============================================================ */
+.fe-options-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+  width: 100% !important;
+}
+
+.fe-options-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+}
+
+.fe-track-pill {
+  display: inline-block !important;
+  padding: 3px 8px !important;
+  border-radius: 999px !important;
+  background: rgba(0, 210, 255, 0.12) !important;
+  border: 1px solid rgba(0, 210, 255, 0.35) !important;
+  color: #00d2ff !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: .06em !important;
+  text-transform: uppercase !important;
+  margin-bottom: 6px !important;
+}
+
+.fe-track-title {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin: 0 0 4px 0 !important;
+  letter-spacing: .02em !important;
+}
+
+.fe-track-sub {
+  color: var(--dim) !important;
+  font-size: 13px !important;
+  margin: 0 !important;
+}
+
+.fe-back-btn {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  border-color: rgba(0, 210, 255, 0.4) !important;
+  color: #00d2ff !important;
+  cursor: pointer !important;
+}
+
+.fe-cards-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 18px !important;
+  width: 100% !important;
+}
+
+@media (max-width: 900px) {
+  .fe-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.fe-option-card {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: #060911 !important;
+  border-radius: var(--radius-m) !important;
+  padding: 22px 20px !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease !important;
+  overflow: hidden !important;
+  user-select: none !important;
+}
+
+.fe-option-card:hover {
+  transform: translateY(-4px) scale(1.01) !important;
+}
+
+/* HTML Card: Orange glow */
+.fe-card-html {
+  border: 1px solid rgba(228, 77, 38, 0.55) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(228, 77, 38, 0.06) !important;
+}
+.fe-card-html:hover,
+.fe-card-html.is-selected {
+  border-color: #ff5722 !important;
+  box-shadow: 0 0 32px rgba(228, 77, 38, 0.38), inset 0 0 24px rgba(228, 77, 38, 0.14), 0 14px 34px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* CSS Card: Cyan / Blue glow */
+.fe-card-css {
+  border: 1px solid rgba(0, 210, 255, 0.55) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 210, 255, 0.06) !important;
+}
+.fe-card-css:hover,
+.fe-card-css.is-selected {
+  border-color: #00d2ff !important;
+  box-shadow: 0 0 32px rgba(0, 210, 255, 0.38), inset 0 0 24px rgba(0, 210, 255, 0.14), 0 14px 34px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* JS Card: Yellow / Gold glow */
+.fe-card-js {
+  border: 1px solid rgba(247, 223, 30, 0.55) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(247, 223, 30, 0.06) !important;
+}
+.fe-card-js:hover,
+.fe-card-js.is-selected {
+  border-color: #facc15 !important;
+  box-shadow: 0 0 32px rgba(247, 223, 30, 0.38), inset 0 0 24px rgba(247, 223, 30, 0.14), 0 14px 34px rgba(0, 0, 0, 0.8) !important;
+}
+
+.fe-card-top {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 14px !important;
+}
+
+.fe-card-tag {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 3px 8px !important;
+  border-radius: 4px !important;
+  letter-spacing: .04em !important;
+}
+.tag-html { background: rgba(228, 77, 38, 0.2) !important; color: #ff6e40 !important; border: 1px solid rgba(228, 77, 38, 0.4) !important; }
+.tag-css { background: rgba(0, 210, 255, 0.2) !important; color: #00d2ff !important; border: 1px solid rgba(0, 210, 255, 0.4) !important; }
+.tag-js { background: rgba(247, 223, 30, 0.2) !important; color: #facc15 !important; border: 1px solid rgba(247, 223, 30, 0.4) !important; }
+
+.fe-card-icon svg {
+  width: 28px !important;
+  height: 28px !important;
+}
+.fe-card-html .fe-card-icon svg { fill: #ff5722 !important; filter: drop-shadow(0 0 8px rgba(228, 77, 38, 0.6)) !important; }
+.fe-card-css .fe-card-icon svg { fill: #00d2ff !important; filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.6)) !important; }
+.fe-card-js .fe-card-icon svg { fill: #facc15 !important; filter: drop-shadow(0 0 8px rgba(247, 223, 30, 0.6)) !important; }
+
+.fe-card-title {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-size: 34px !important;
+  font-weight: 800 !important;
+  letter-spacing: .02em !important;
+  margin-bottom: 2px !important;
+  line-height: 1 !important;
+}
+.fe-card-html .fe-card-title { color: #ff6e40 !important; }
+.fe-card-css .fe-card-title { color: #00d2ff !important; }
+.fe-card-js .fe-card-title { color: #facc15 !important; }
+
+.fe-card-full-name {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: #cbd5e1 !important;
+  letter-spacing: .03em !important;
+  margin-bottom: 10px !important;
+}
+
+.fe-card-desc {
+  font-size: 12.5px !important;
+  color: var(--dim) !important;
+  line-height: 1.5 !important;
+  margin: 0 0 16px 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.fe-card-footer {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.fe-card-topics {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  color: #64748b !important;
+}
+
+.fe-card-action {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: .03em !important;
+  transition: transform .15s ease !important;
+}
+.fe-card-html .fe-card-action { color: #ff6e40 !important; }
+.fe-card-css .fe-card-action { color: #00d2ff !important; }
+.fe-card-js .fe-card-action { color: #facc15 !important; }
+
+.fe-option-card:hover .fe-card-action {
+  transform: translateX(4px) !important;
+}
+
+.fe-sub-section {
+  margin-top: 10px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.fe-sub-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 14px !important;
+}
+
+.fe-sub-title {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin: 0 !important;
+}
  
 /* ============================================================
    MODALS
@@ -2044,6 +2272,20 @@ button{ font-family:inherit; }
 .lb-filter-btn:hover .lb-rank-icon-img.rank-platinum {
   transform: scale(1.15);
   filter: drop-shadow(0 0 6px rgba(147, 197, 253, 0.85));
+}
+.lb-rank-icon-img.rank-diamond {
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.6));
+}
+.lb-filter-btn:hover .lb-rank-icon-img.rank-diamond {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 7px rgba(125, 211, 252, 0.9));
+}
+.lb-rank-icon-img.rank-sovereign {
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.65));
+}
+.lb-filter-btn:hover .lb-rank-icon-img.rank-sovereign {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.95));
 }
 
 /* Leaderboard Controls Bar (Tabs + Live Search) */
@@ -7140,54 +7382,294 @@ body, button, input, select, textarea {
   to { opacity: 1; }
 }
 
+/* VS Code Container & Header */
+.py-vscode-container {
+  background: #181a1f !important;
+  border: 1px solid #282c34 !important;
+  border-radius: var(--radius-m) !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+}
+
+.py-vscode-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: #181a1f !important;
+  border-bottom: 1px solid #252830 !important;
+  padding: 0 12px 0 0 !important;
+  height: 38px !important;
+}
+
+.py-vscode-tabs {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+}
+
+.py-vscode-tab {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 100% !important;
+  padding: 0 16px !important;
+  background: #1e1e1e !important;
+  border-top: 2px solid #007acc !important;
+  border-right: 1px solid #252830 !important;
+  color: #ffffff !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 12px !important;
+  user-select: none !important;
+}
+
+.py-tab-icon {
+  font-size: 14px !important;
+}
+
+.py-tab-modified {
+  color: #00d2ff !important;
+  font-size: 10px !important;
+}
+
+.py-tab-close {
+  background: transparent !important;
+  border: none !important;
+  color: #8c8c8c !important;
+  cursor: pointer !important;
+  padding: 0 2px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  border-radius: 3px !important;
+}
+.py-tab-close:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+/* VS Code Breadcrumbs */
+.py-vscode-breadcrumbs {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 14px !important;
+  background: #1e1e1e !important;
+  border-bottom: 1px solid #282a30 !important;
+  color: #858585 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+}
+.py-bc-sep {
+  color: #555555 !important;
+}
+.py-bc-item.is-file {
+  color: #d4d4d4 !important;
+}
+.py-bc-symbol {
+  color: #c586c0 !important;
+}
+
 /* Editor Body */
 .py-editor-body {
   position: relative !important;
   display: flex !important;
-  background: #070a12 !important;
-  min-height: 250px !important;
+  background: #1e1e1e !important;
+  min-height: 280px !important;
   flex: 1 1 auto !important;
-  border-bottom: 1px solid #1e2c48 !important;
+  border-bottom: 1px solid #282a30 !important;
   min-width: 0 !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
 
 .py-gutter {
-  width: 42px !important;
-  padding: 12px 6px !important;
-  background: #05070d !important;
-  color: #475569 !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 12.5px !important;
-  line-height: 1.55 !important;
+  width: 48px !important;
+  padding: 12px 0 !important;
+  background: #1e1e1e !important;
+  color: #858585 !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
+  font-size: 13px !important;
+  line-height: 21px !important;
   text-align: right !important;
   user-select: none !important;
   overflow: hidden !important;
   white-space: pre !important;
-  border-right: 1px solid #1e2c48 !important;
+  border-right: 1px solid #2b2b2b !important;
   flex-shrink: 0 !important;
 }
 
-.py-textarea {
+.py-line-num {
+  padding-right: 12px !important;
+  line-height: 21px !important;
+  height: 21px !important;
+  color: #858585 !important;
+}
+.py-line-num.is-active-line {
+  color: #c6c6c6 !important;
+  font-weight: 700 !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.py-code-stage {
+  position: relative !important;
   flex: 1 !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  min-height: 280px !important;
+  overflow: hidden !important;
+  background: #1e1e1e !important;
+}
+
+.py-active-line-bg {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 21px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  display: none;
+}
+
+.py-highlight-layer {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
   padding: 12px 14px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
+  font-size: 13px !important;
+  line-height: 21px !important;
+  letter-spacing: 0px !important;
+  tab-size: 4 !important;
+  -moz-tab-size: 4 !important;
+  white-space: pre !important;
+  word-break: normal !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+  box-sizing: border-box !important;
+  color: #d4d4d4 !important;
   background: transparent !important;
-  color: #f1f5f9 !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 12.5px !important;
-  line-height: 1.55 !important;
+}
+
+.py-highlight-layer code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  white-space: inherit !important;
+  display: block !important;
+}
+
+.py-textarea {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 12px 14px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
+  font-size: 13px !important;
+  line-height: 21px !important;
+  letter-spacing: 0px !important;
+  tab-size: 4 !important;
+  -moz-tab-size: 4 !important;
   border: none !important;
   outline: none !important;
   resize: none !important;
   white-space: pre !important;
   overflow-wrap: normal !important;
-  overflow-x: auto !important;
-  tab-size: 4 !important;
-  caret-color: #00d2ff !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
+  overflow: auto !important;
+  z-index: 2 !important;
   box-sizing: border-box !important;
+  background: transparent !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  caret-color: #00d2ff !important;
+}
+
+.py-textarea::selection {
+  background: rgba(38, 79, 120, 0.75) !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* VS Code Python Syntax Highlighting Tokens */
+.py-tok-comment {
+  color: #6a9955 !important;
+  font-style: italic !important;
+}
+.py-tok-string {
+  color: #ce9178 !important;
+}
+.py-tok-number {
+  color: #b5cea8 !important;
+}
+.py-tok-decl {
+  color: #569cd6 !important;
+  font-weight: 600 !important;
+}
+.py-tok-control {
+  color: #c586c0 !important;
+  font-weight: 600 !important;
+}
+.py-tok-constant {
+  color: #569cd6 !important;
+  font-weight: 600 !important;
+}
+.py-tok-builtin {
+  color: #dcdcaa !important;
+}
+.py-tok-logical {
+  color: #569cd6 !important;
+}
+.py-tok-func {
+  color: #dcdcaa !important;
+}
+.py-tok-var {
+  color: #9cdcfe !important;
+}
+.py-tok-op {
+  color: #d4d4d4 !important;
+}
+.py-tok-bracket {
+  color: #ffd700 !important;
+}
+
+/* VS Code Status Bar */
+.py-vscode-statusbar {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  height: 24px !important;
+  background: #007acc !important;
+  color: #ffffff !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  padding: 0 10px !important;
+  user-select: none !important;
+}
+.py-sb-left,
+.py-sb-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+.py-sb-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 4px !important;
+  cursor: default !important;
+}
+.py-sb-lang {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 2px !important;
+  padding: 1px 6px !important;
 }
 
 /* Console Output */
@@ -7247,6 +7729,80 @@ body, button, input, select, textarea {
 
 .py-console-body.is-error {
   color: #f87171 !important;
+}
+
+/* Interactive Terminal Input Bar */
+.py-console-body-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.py-terminal-input-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 12px !important;
+  background: #080e1b !important;
+  border-top: 1px solid #1e3a5f !important;
+  box-shadow: 0 -2px 10px rgba(0, 210, 255, 0.15) !important;
+}
+
+.py-term-prompt-icon {
+  color: #00d2ff !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.05em !important;
+}
+
+.py-term-prompt-text {
+  color: #38bdf8 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  max-width: 180px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.py-term-input-field {
+  flex: 1 1 auto !important;
+  background: #040711 !important;
+  border: 1px solid #00d2ff !important;
+  border-radius: 4px !important;
+  color: #f8fafc !important;
+  padding: 6px 10px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 12.5px !important;
+  outline: none !important;
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.25), inset 0 0 6px rgba(0, 0, 0, 0.8) !important;
+  transition: border-color .15s ease, box-shadow .15s ease !important;
+}
+
+.py-term-input-field:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 16px rgba(0, 210, 255, 0.5), inset 0 0 8px rgba(0, 0, 0, 0.9) !important;
+}
+
+.py-term-submit-btn {
+  padding: 5px 12px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  background: #0284c7 !important;
+  border-color: #00d2ff !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+
+.py-term-submit-btn:hover {
+  background: #0369a1 !important;
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.4) !important;
 }
 
 .cli-claim-btn.is-ready {

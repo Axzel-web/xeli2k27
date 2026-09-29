@@ -509,7 +509,8 @@
         <div class="tabs" id="labTabs">
           <button class="tab is-active" data-cat="coding">Coding · Python</button>
           <button class="tab" data-cat="networking">Networking</button>
-          <button class="tab" data-cat="sysadmin">System &amp; Sysadmin</button>
+          <button class="tab" data-cat="sysadmin">Sysadmin</button>
+          <button class="tab" data-cat="frontend">Frontend Dev</button>
         </div>
       </div>
       <p class="lab-sub">Clear a trial to earn a one-time EXP bonus. Trials run for real — code executes in an in-browser Python engine, no server required.</p>
@@ -597,8 +598,8 @@
         <!-- Rank clearance filter pills -->
         <div class="leaderboard-filters" id="leaderboardFilters">
           <button class="lb-filter-btn is-active" data-rank-filter="ALL" type="button">All Ranks</button>
-          <button class="lb-filter-btn" data-rank-filter="Sovereign" type="button"><span class="lb-rank-dot rank-s"></span>Sovereign</button>
-          <button class="lb-filter-btn" data-rank-filter="Diamond" type="button"><span class="lb-rank-dot rank-a"></span>Diamond</button>
+          <button class="lb-filter-btn" data-rank-filter="Sovereign" type="button"><img class="lb-rank-icon-img rank-sovereign" src="/assets/sovereign_rank_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=1P89H-JU-1oZhgkFDqm0wgfGGLBfCeo9o';" alt="Sovereign" />Sovereign</button>
+          <button class="lb-filter-btn" data-rank-filter="Diamond" type="button"><img class="lb-rank-icon-img rank-diamond" src="/assets/diamond_rank_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=1QzmM86-u9jj6Kui7x2ehnyLoaukGbaB-';" alt="Diamond" />Diamond</button>
           <button class="lb-filter-btn" data-rank-filter="Platinum" type="button"><img class="lb-rank-icon-img rank-platinum" src="/assets/platinum_rank_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=1E_5hgZkRgEHA9WwHh4jQ-opOl-AjPSIg';" alt="Platinum" />Platinum</button>
           <button class="lb-filter-btn" data-rank-filter="Gold" type="button"><img class="lb-rank-icon-img rank-gold" src="/assets/gold_rank_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=176Ybpwmts53BAGu7vsCN-zs4J4G5gOEc';" alt="Gold" />Gold</button>
           <button class="lb-filter-btn" data-rank-filter="Silver" type="button"><img class="lb-rank-icon-img rank-silver" src="/assets/silver_rank_icon.png" onerror="this.onerror=null;this.src='https://drive.google.com/uc?export=download&id=1l_9oODCMR4Qn0KsXjX5u0GIvy7EZ3Pph';" alt="Silver" />Silver</button>
@@ -1108,26 +1109,6 @@
         </div>
         <div class="hp-bar-track">
           <div class="hp-bar-fill" id="hpBarFill" style="width: 72.1%;"></div>
-        </div>
-      </div>
-
-      <!-- 3. Association Clearance Dossier (Secure Read-Only) -->
-      <div class="hp-overview-details">
-        <div class="hp-detail-row">
-          <span class="hp-detail-k">Hunter Identifier (UUID):</span>
-          <span class="hp-detail-v" id="hpDetailId">--</span>
-        </div>
-        <div class="hp-detail-row">
-          <span class="hp-detail-k">Clearance Authority:</span>
-          <span class="hp-detail-v" id="hpDetailClearance">Standard Hunter Clearance</span>
-        </div>
-        <div class="hp-detail-row">
-          <span class="hp-detail-k">Database Record:</span>
-          <span class="hp-detail-v text-green" id="hpDetailDbStatus">Verified in public.profiles</span>
-        </div>
-        <div class="hp-detail-row">
-          <span class="hp-detail-k">Last Synced:</span>
-          <span class="hp-detail-v" id="hpDetailUpdated">Real-time</span>
         </div>
       </div>
     </div>

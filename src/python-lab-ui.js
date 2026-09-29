@@ -16,6 +16,58 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+export function highlightPython(code) {
+  if (!code) return "";
+  const tokenRegex = /(#[^\n]*)|("""[\s\S]*?"""|\x27\x27\x27[\s\S]*?\x27\x27\x27)|((?:[brufBRUF]{1,2})?"(?:[^"\\\n]|\\.)*"|(?:[brufBRUF]{1,2})?\x27(?:[^\x27\\\n]|\\.)*\x27)|(\b\d+(?:\.\d+)?\b)|(\b(?:def|class|lambda|import|from|as|global|nonlocal|async|await)\b)|(\b(?:if|elif|else|for|while|break|continue|return|yield|try|except|finally|raise|pass|with|match|case)\b)|(\b(?:True|False|None)\b)|(\b(?:print|input|len|range|type|int|str|float|bool|list|dict|tuple|set|sum|min|max|abs|round|sorted|enumerate|zip|open|isinstance|id)\b)|(\b(?:and|or|not|is|in)\b)|(\b[a-zA-Z_]\w*(?=\s*\())|(\b[a-zA-Z_]\w*\b)|([+\-*/%&|^~=<>!]=?|\*\*|\/\/)|([()[\]{}])/g;
+
+  let result = "";
+  let lastIndex = 0;
+  let match;
+
+  while ((match = tokenRegex.exec(code)) !== null) {
+    if (match.index > lastIndex) {
+      result += escapeHtml(code.slice(lastIndex, match.index));
+    }
+    const [full, comment, multilineStr, str, num, declKeyword, controlKeyword, boolConst, builtin, logOp, funcCall, ident, op, bracket] = match;
+
+    if (comment) {
+      result += `<span class="py-tok-comment">${escapeHtml(comment)}</span>`;
+    } else if (multilineStr || str) {
+      result += `<span class="py-tok-string">${escapeHtml(multilineStr || str)}</span>`;
+    } else if (num) {
+      result += `<span class="py-tok-number">${escapeHtml(num)}</span>`;
+    } else if (declKeyword) {
+      result += `<span class="py-tok-decl">${escapeHtml(declKeyword)}</span>`;
+    } else if (controlKeyword) {
+      result += `<span class="py-tok-control">${escapeHtml(controlKeyword)}</span>`;
+    } else if (boolConst) {
+      result += `<span class="py-tok-constant">${escapeHtml(boolConst)}</span>`;
+    } else if (builtin) {
+      result += `<span class="py-tok-builtin">${escapeHtml(builtin)}</span>`;
+    } else if (logOp) {
+      result += `<span class="py-tok-logical">${escapeHtml(logOp)}</span>`;
+    } else if (funcCall) {
+      result += `<span class="py-tok-func">${escapeHtml(funcCall)}</span>`;
+    } else if (ident) {
+      result += `<span class="py-tok-var">${escapeHtml(ident)}</span>`;
+    } else if (op) {
+      result += `<span class="py-tok-op">${escapeHtml(op)}</span>`;
+    } else if (bracket) {
+      result += `<span class="py-tok-bracket">${escapeHtml(bracket)}</span>`;
+    } else {
+      result += escapeHtml(full);
+    }
+    lastIndex = tokenRegex.lastIndex;
+  }
+  if (lastIndex < code.length) {
+    result += escapeHtml(code.slice(lastIndex));
+  }
+  if (code.endsWith("\n")) {
+    result += " ";
+  }
+  return result;
+}
+
 export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
   const container = document.getElementById("chBody");
   if (!container) return;
@@ -92,7 +144,7 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
                       <span class="copy-text">Copy</span>
                     </button>
                   </div>
-                  <pre class="py-snippet-code"><code>${escapeHtml(concept.code)}</code></pre>
+                  <pre class="py-snippet-code"><code>${highlightPython(concept.code)}</code></pre>
                 </div>`
                     : ""
                 }
@@ -113,17 +165,34 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
         </div>
       </div>
 
-      <!-- Right Panel: Python Code Editor + Interactive Output Terminal -->
-      <div class="py-editor-wrapper">
-        <!-- Editor Header -->
-        <div class="py-window-header">
-          <div class="py-window-title">
-            <span class="py-window-icon">🐍</span>
-            <span>main.py — Python 3 Interactive Workspace</span>
+      <!-- Right Panel: VS Code-Style Python Editor + Terminal -->
+      <div class="py-editor-wrapper py-vscode-container">
+        <!-- VS Code Window Header / Tabs Bar -->
+        <div class="py-window-header py-vscode-header">
+          <div class="py-vscode-tabs">
+            <div class="py-vscode-tab is-active" id="pyActiveTab">
+              <span class="py-tab-icon">🐍</span>
+              <span class="py-tab-title">main.py</span>
+              <span class="py-tab-modified" id="pyTabModified" title="Unsaved changes" style="display:none;">●</span>
+              <button class="py-tab-close" id="pyTabClose" title="Reset starter code">×</button>
+            </div>
           </div>
           <div class="py-window-badges">
             <span class="py-engine-pill" id="pyEngineBadge">Pyodide Engine</span>
           </div>
+        </div>
+
+        <!-- VS Code Breadcrumbs Bar -->
+        <div class="py-vscode-breadcrumbs">
+          <span class="py-bc-item">xeli</span>
+          <span class="py-bc-sep">›</span>
+          <span class="py-bc-item">labs</span>
+          <span class="py-bc-sep">›</span>
+          <span class="py-bc-item">python</span>
+          <span class="py-bc-sep">›</span>
+          <span class="py-bc-item is-file">🐍 main.py</span>
+          <span class="py-bc-sep">›</span>
+          <span class="py-bc-item py-bc-symbol">{ } workspace</span>
         </div>
 
         <!-- Editor Toolbar -->
@@ -134,7 +203,7 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
           <button class="btn btn-secondary py-clear-btn" id="pyClearConsoleBtn" title="Clear console output">
             Clear Output
           </button>
-          <button class="btn btn-secondary py-reset-btn" id="pyResetBtn" title="Reset code back to starter template">
+          <button class="btn btn-secondary py-reset-btn" id="pyToolbarResetBtn" title="Reset code back to starter template">
             Reset Code
           </button>
           <div class="py-exec-status" id="pyExecStatus">
@@ -143,19 +212,47 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
           </div>
         </div>
 
-        <!-- Code Area -->
-        <div class="py-editor-body">
-          <div class="py-gutter" id="pyGutter">1</div>
-          <textarea class="py-textarea" id="pyCodeTextarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">${escapeHtml(currentCode)}</textarea>
+        <!-- Code Area with Syntax Highlighting Layer -->
+        <div class="py-editor-body" id="pyEditorBody">
+          <div class="py-gutter" id="pyGutter"></div>
+          <div class="py-code-stage" id="pyCodeStage">
+            <div class="py-active-line-bg" id="pyActiveLineBg"></div>
+            <pre class="py-highlight-layer" id="pyHighlightLayer" aria-hidden="true"><code id="pyCodeHighlight"></code></pre>
+            <textarea class="py-textarea" id="pyCodeTextarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">${escapeHtml(currentCode)}</textarea>
+          </div>
+        </div>
+
+        <!-- VS Code Status Bar -->
+        <div class="py-vscode-statusbar">
+          <div class="py-sb-left">
+            <span class="py-sb-item" title="Python Interpreter"><span class="py-sb-icon">🐍</span> Python 3.11.4 64-bit</span>
+            <span class="py-sb-item" id="pySbEngine" title="Execution Runtime">Pyodide WASM</span>
+          </div>
+          <div class="py-sb-right">
+            <span class="py-sb-item" id="pyCursorPos">Ln 1, Col 1</span>
+            <span class="py-sb-item" title="Indentation">Spaces: 4</span>
+            <span class="py-sb-item" title="Encoding">UTF-8</span>
+            <span class="py-sb-item" title="Line Sequence">LF</span>
+            <span class="py-sb-item py-sb-lang">{ } Python</span>
+          </div>
         </div>
 
         <!-- Console Output -->
-        <div class="py-console-panel">
+        <div class="py-console-panel" id="pyConsolePanel">
           <div class="py-console-head">
-            <span class="py-console-title">Console Output (stdout / stderr)</span>
+            <span class="py-console-title">TERMINAL / OUTPUT</span>
             <span class="py-console-meta" id="pyConsoleMeta">Press ▶ Run Code or [Ctrl+Enter] to execute</span>
           </div>
-          <pre class="py-console-body" id="pyConsoleBody">Python 3.11 (Pyodide WebAssembly)\nReady. Press "▶ Run Code" or press Ctrl+Enter to test your program.</pre>
+          <div class="py-console-body-wrap">
+            <pre class="py-console-body" id="pyConsoleBody">Python 3.11 (Pyodide WebAssembly)
+Ready. Press "▶ Run Code" or press Ctrl+Enter to test your program.</pre>
+            <div class="py-terminal-input-bar" id="pyTerminalInputBar" style="display:none;">
+              <span class="py-term-prompt-icon">&gt;&gt;&gt;</span>
+              <span class="py-term-prompt-text" id="pyTermPromptText">input:</span>
+              <input type="text" class="py-term-input-field" id="pyTermInputField" placeholder="Type here and press Enter..." autocomplete="off" spellcheck="false" />
+              <button type="button" class="btn btn-primary py-term-submit-btn" id="pyTermSubmitBtn">Send ↵</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -163,9 +260,17 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
 
   const textarea = document.getElementById("pyCodeTextarea");
   const gutter = document.getElementById("pyGutter");
+  const highlightCodeEl = document.getElementById("pyCodeHighlight");
+  const highlightLayer = document.getElementById("pyHighlightLayer");
+  const activeLineBg = document.getElementById("pyActiveLineBg");
+  const cursorPosEl = document.getElementById("pyCursorPos");
+  const tabModified = document.getElementById("pyTabModified");
+  const tabCloseBtn = document.getElementById("pyTabClose");
+
   const runBtn = document.getElementById("pyRunBtn");
   const clearBtn = document.getElementById("pyClearConsoleBtn");
   const resetBtn = document.getElementById("pyResetBtn");
+  const toolbarResetBtn = document.getElementById("pyToolbarResetBtn");
   const claimBtn = document.getElementById("pyClaimExpBtn");
   const consoleBody = document.getElementById("pyConsoleBody");
   const consoleMeta = document.getElementById("pyConsoleMeta");
@@ -174,50 +279,227 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
   const progressCounter = document.getElementById("pyProgressCounter");
   const progressBarFill = document.getElementById("pyProgressBarFill");
 
-  // Sync line numbers in gutter
-  function updateGutter() {
-    if (!textarea || !gutter) return;
-    const lines = textarea.value.split("\n").length;
-    let nums = "";
-    for (let i = 1; i <= Math.max(lines, 1); i++) {
-      nums += i + "\n";
-    }
-    gutter.textContent = nums;
-  }
-  updateGutter();
+  // Update cursor position and active line highlight
+  function updateCursorAndLine() {
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const val = textarea.value;
+    const textBefore = val.substring(0, start);
+    const lines = textBefore.split("\n");
+    const currentLineIdx = lines.length; // 1-based
+    const currentColIdx = lines[lines.length - 1].length + 1; // 1-based
 
-  // Scroll sync between gutter and textarea
+    if (cursorPosEl) {
+      cursorPosEl.textContent = `Ln ${currentLineIdx}, Col ${currentColIdx}`;
+    }
+
+    if (gutter) {
+      const lineEls = gutter.children;
+      for (let i = 0; i < lineEls.length; i++) {
+        if (i === currentLineIdx - 1) {
+          lineEls[i].classList.add("is-active-line");
+        } else {
+          lineEls[i].classList.remove("is-active-line");
+        }
+      }
+    }
+
+    if (activeLineBg) {
+      const lineHeight = 21;
+      const topPad = 12;
+      const topOffset = topPad + (currentLineIdx - 1) * lineHeight - textarea.scrollTop;
+      activeLineBg.style.top = `${topOffset}px`;
+      activeLineBg.style.display = (topOffset >= 0 && topOffset <= textarea.clientHeight) ? "block" : "none";
+    }
+
+    if (tabModified) {
+      tabModified.style.display = val !== (c.starter || "") ? "inline-block" : "none";
+    }
+  }
+
+  // Full Editor Sync: highlighting, line numbers, scrolling, cursor
+  function syncEditor() {
+    if (!textarea) return;
+    const code = textarea.value;
+
+    if (highlightCodeEl) {
+      highlightCodeEl.innerHTML = highlightPython(code);
+    }
+
+    if (gutter) {
+      const totalLines = Math.max(code.split("\n").length, 1);
+      let html = "";
+      for (let i = 1; i <= totalLines; i++) {
+        html += `<div class="py-line-num">${i}</div>`;
+      }
+      gutter.innerHTML = html;
+    }
+
+    if (highlightLayer) {
+      highlightLayer.scrollTop = textarea.scrollTop;
+      highlightLayer.scrollLeft = textarea.scrollLeft;
+    }
+    if (gutter) {
+      gutter.scrollTop = textarea.scrollTop;
+    }
+
+    updateCursorAndLine();
+  }
+
+  syncEditor();
+
+  // Scroll sync between gutter, highlight layer, and textarea
   textarea.addEventListener("scroll", () => {
-    if (gutter) gutter.scrollTop = textarea.scrollTop;
+    if (highlightLayer) {
+      highlightLayer.scrollTop = textarea.scrollTop;
+      highlightLayer.scrollLeft = textarea.scrollLeft;
+    }
+    if (gutter) {
+      gutter.scrollTop = textarea.scrollTop;
+    }
+    updateCursorAndLine();
   });
 
-  // Handle Tab key inside textarea
+  textarea.addEventListener("click", updateCursorAndLine);
+  textarea.addEventListener("keyup", (e) => {
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"].includes(e.key)) {
+      updateCursorAndLine();
+    }
+  });
+
+  // VS Code Keystroke Handling
   textarea.addEventListener("keydown", (e) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      textarea.value = textarea.value.substring(0, start) + "    " + textarea.value.substring(end);
-      textarea.selectionStart = textarea.selectionEnd = start + 4;
-      updateGutter();
-      playCliSound("tab");
-    } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+
+    // Run code shortcut: Ctrl+Enter or Cmd+Enter
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
       executeCode();
-    } else if (e.key === "Enter") {
-      playCliSound("enter");
-      setTimeout(updateGutter, 0);
-    } else if (e.key === "Backspace") {
-      playCliSound("backspace");
-      setTimeout(updateGutter, 0);
-    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      return;
+    }
+
+    // Toggle comment shortcut: Ctrl+/ or Cmd+/
+    if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+      e.preventDefault();
+      const before = val.substring(0, start);
+      const lastNewline = before.lastIndexOf("\n");
+      const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
+      let nextNewline = val.indexOf("\n", end);
+      if (nextNewline === -1) nextNewline = val.length;
+
+      const lineContent = val.substring(lineStart, nextNewline);
+      if (lineContent.startsWith("# ")) {
+        textarea.value = val.substring(0, lineStart) + lineContent.substring(2) + val.substring(nextNewline);
+        textarea.selectionStart = Math.max(lineStart, start - 2);
+        textarea.selectionEnd = Math.max(lineStart, end - 2);
+      } else {
+        textarea.value = val.substring(0, lineStart) + "# " + lineContent + val.substring(nextNewline);
+        textarea.selectionStart = start + 2;
+        textarea.selectionEnd = end + 2;
+      }
+      syncEditor();
       playCliSound("key");
-      setTimeout(updateGutter, 0);
+      return;
+    }
+
+    // Tab key indent & Shift+Tab dedent (4 spaces)
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        const before = val.substring(0, start);
+        const lastNewline = before.lastIndexOf("\n");
+        const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
+        const lineText = val.substring(lineStart, start);
+        if (lineText.startsWith("    ")) {
+          textarea.value = val.substring(0, lineStart) + val.substring(lineStart + 4);
+          textarea.selectionStart = textarea.selectionEnd = Math.max(lineStart, start - 4);
+        } else if (lineText.startsWith("  ")) {
+          textarea.value = val.substring(0, lineStart) + val.substring(lineStart + 2);
+          textarea.selectionStart = textarea.selectionEnd = Math.max(lineStart, start - 2);
+        }
+      } else {
+        textarea.value = val.substring(0, start) + "    " + val.substring(end);
+        textarea.selectionStart = textarea.selectionEnd = start + 4;
+      }
+      syncEditor();
+      playCliSound("tab");
+      return;
+    }
+
+    // Auto-indent on Enter (and add 4 spaces if line ends with :)
+    if (e.key === "Enter") {
+      const before = val.substring(0, start);
+      const lastNewline = before.lastIndexOf("\n");
+      const currentLine = lastNewline === -1 ? before : before.substring(lastNewline + 1);
+      const matchIndent = currentLine.match(/^\s*/)[0];
+      const extraIndent = currentLine.trim().endsWith(":") ? "    " : "";
+      const indent = matchIndent + extraIndent;
+
+      e.preventDefault();
+      textarea.value = val.substring(0, start) + "\n" + indent + val.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + 1 + indent.length;
+      syncEditor();
+      playCliSound("enter");
+      return;
+    }
+
+    // Auto-closing quotes and brackets
+    const pairs = {
+      "(": ")",
+      "[": "]",
+      "{": "}",
+      '"': '"',
+      "'": "'"
+    };
+
+    if (pairs[e.key]) {
+      const closing = pairs[e.key];
+      // If typing quote and next char is the same quote, just advance cursor
+      if ((e.key === '"' || e.key === "'") && val[start] === e.key && start === end) {
+        e.preventDefault();
+        textarea.selectionStart = textarea.selectionEnd = start + 1;
+        updateCursorAndLine();
+        return;
+      }
+      e.preventDefault();
+      const selected = val.substring(start, end);
+      textarea.value = val.substring(0, start) + e.key + selected + closing + val.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + 1 + selected.length;
+      syncEditor();
+      playCliSound("key");
+      return;
+    }
+
+    // Smart Backspace between matching pairs e.g. (|) -> |
+    if (e.key === "Backspace" && start === end && start > 0) {
+      const prevChar = val[start - 1];
+      const nextChar = val[start];
+      if ((prevChar === "(" && nextChar === ")") ||
+          (prevChar === "[" && nextChar === "]") ||
+          (prevChar === "{" && nextChar === "}") ||
+          (prevChar === '"' && nextChar === '"') ||
+          (prevChar === "'" && nextChar === "'")) {
+        e.preventDefault();
+        textarea.value = val.substring(0, start - 1) + val.substring(start + 1);
+        textarea.selectionStart = textarea.selectionEnd = start - 1;
+        syncEditor();
+        playCliSound("backspace");
+        return;
+      }
+      playCliSound("backspace");
+      setTimeout(syncEditor, 0);
+      return;
+    }
+
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      playCliSound("key");
     }
   });
 
   textarea.addEventListener("input", () => {
-    updateGutter();
+    syncEditor();
   });
 
   // Copy buttons
@@ -242,19 +524,21 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
     });
   });
 
-  // Reset button
-  if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-      if (confirm("Reset editor back to initial starter code?")) {
-        textarea.value = c.starter || "";
-        updateGutter();
-        consoleBody.textContent = 'Code reset. Press "▶ Run Code" to test.';
-        consoleBody.className = "py-console-body";
-        consoleMeta.textContent = "Code reset to starter template";
-        playCliSound("key");
-      }
-    });
+  // Reset code handler
+  function triggerResetCode() {
+    if (confirm("Reset editor back to initial starter code?")) {
+      textarea.value = c.starter || "";
+      syncEditor();
+      consoleBody.textContent = 'Code reset. Press "▶ Run Code" to test.';
+      consoleBody.className = "py-console-body";
+      consoleMeta.textContent = "Code reset to starter template";
+      playCliSound("key");
+    }
   }
+
+  if (resetBtn) resetBtn.addEventListener("click", triggerResetCode);
+  if (toolbarResetBtn) toolbarResetBtn.addEventListener("click", triggerResetCode);
+  if (tabCloseBtn) tabCloseBtn.addEventListener("click", triggerResetCode);
 
   // Clear output
   clearBtn.addEventListener("click", () => {
@@ -419,6 +703,86 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
 
           isMet = !runError && hasFor && hasRunningTotal && has5050 && hasPrint;
         }
+      } else if (c.id === "py-level-7-mini-project-password-lock") {
+        const cleanCode = code.replace(/#.*$/gm, "");
+        if (g.id === "flag_and_attempts") {
+          // Task 1: Boolean Flag & Loop
+          const hasWhile = /\bwhile\b/.test(cleanCode);
+          const hasFlag = /\b(logged_in|is_logged_in|success|authenticated|access_granted|is_auth|flag|logged)\s*=\s*False\b/i.test(cleanCode) || /\b(False|True)\b/.test(cleanCode);
+          const hasAttempt = /\battempt\b/i.test(cleanCode) || /\b(count|tries)\b/i.test(cleanCode);
+          const hasIncrement = /(\+=\s*1|\b\w+\s*=\s*\w+\s*\+\s*1)/.test(cleanCode);
+
+          isMet = !runError && hasWhile && hasFlag && hasAttempt && hasIncrement;
+        } else if (g.id === "conditional_access_denied") {
+          // Task 2: Access Control & Bug Fix
+          const hasBreak = /\bbreak\b/.test(cleanCode);
+          const hasFlagTrue = /\b(logged_in|is_logged_in|success|authenticated|access_granted|is_auth|flag|logged)\s*=\s*True\b/i.test(cleanCode) || /while\s+.*:[\s\S]*?else\s*:/i.test(cleanCode);
+          const hasPostLoopCheck = /\bif\s+(not\s+\w+|\w+\s*==\s*False|\w+\s*!=\s*True)/i.test(cleanCode) || /else\s*:\s*print\s*\(.*ACCESS DENIED/i.test(cleanCode);
+          const hasGranted = /ACCESS GRANTED/i.test(code) || /ACCESS GRANTED/i.test(stdout);
+          const hasDeniedInCode = /ACCESS DENIED/i.test(code);
+          // Crucial bug check: In output with matching password, ACCESS GRANTED is printed, but ACCESS DENIED must NOT be printed!
+          const bothOutputsPrinted = /ACCESS GRANTED/i.test(stdout) && /ACCESS DENIED/i.test(stdout);
+
+          isMet = !runError && hasBreak && hasFlagTrue && hasPostLoopCheck && hasGranted && hasDeniedInCode && !bothOutputsPrinted;
+        }
+      } else if (c.id === "py-level-8-lists") {
+        if (g.id === "grocery_list_manager") {
+          // Level 8: Grocery List Manager
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasGroceries = /\bgroceries\s*=\s*\[\s*\]|\bgroceries\b/.test(cleanCode);
+          const hasAppend = (cleanCode.match(/\.append\s*\(/g) || []).length >= 3;
+          const hasLen = /\blen\s*\(\s*groceries\s*\)/.test(cleanCode);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasGroceries && hasAppend && hasLen && hasPrint;
+        }
+      } else if (c.id === "py-level-9-tuples") {
+        if (g.id === "tuple_basics") {
+          // Level 9: Tuple Basics
+          const cleanCode = code.replace(/#.*$/gm, "");
+          const hasTuple = /\(\s*[^)]+,\s*[^)]+,\s*[^)]+,\s*[^)]+\)/.test(cleanCode) || /\w+\s*=\s*\([^)]+\)/.test(cleanCode);
+          const hasIndex1 = /\[\s*1\s*\]/.test(cleanCode);
+          const hasNegIndex = /\[\s*-\s*1\s*\]/.test(cleanCode);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasTuple && hasIndex1 && hasNegIndex && hasPrint;
+        }
+      } else if (c.id === "py-level-10-dictionaries") {
+        const cleanCode = code.replace(/#.*$/gm, "");
+        if (g.id === "build_profile") {
+          // Level 10: Task 1: Build a Profile
+          const hasProfile = /\bprofile\s*=\s*\{[\s\S]*?\}/.test(cleanCode);
+          const hasKeyLookup = /\bprofile\s*\[\s*['"][^'"]+['"]\s*\]/.test(cleanCode);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasProfile && hasKeyLookup && hasPrint;
+        } else if (g.id === "loop_and_print") {
+          // Level 10: Task 2: Loop and Print
+          const hasItems = /\.items\s*\(\s*\)/.test(cleanCode);
+          const hasFor = /\bfor\s+\w+(\s*,\s*\w+)?\s+in\s+/.test(cleanCode);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasItems && hasFor && hasPrint;
+        }
+      } else if (c.id === "py-level-11-nested-data-structures") {
+        const cleanCode = code.replace(/#.*$/gm, "");
+        if (g.id === "person_with_hobbies") {
+          // Level 11: Task 1: Person with Hobbies
+          const hasHobbiesList = /['"]?hobbies['"]?\s*:\s*\[[\s\S]*?\]/.test(cleanCode);
+          const hasLoopHobby = /\bfor\s+\w+\s+in\s+.*hobbies/i.test(cleanCode) || /\bfor\s+\w+\s+in\s+\w+\[['"]hobbies['"]\]/i.test(cleanCode);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasHobbiesList && hasLoopHobby && hasPrint;
+        } else if (g.id === "list_of_friends") {
+          // Level 11: Task 2: List of Friends
+          const hasListOfDicts = /\[\s*\{[\s\S]*?\}\s*,\s*\{[\s\S]*?\}\s*,\s*\{[\s\S]*?\}\s*\]/.test(cleanCode) ||
+                                 (cleanCode.includes("[") && (cleanCode.match(/\{[^}]*name[^}]*\}/gi) || []).length >= 2);
+          const hasLoop = /\bfor\s+\w+\s+in\s+/.test(cleanCode);
+          const hasDictAccess = /\w+\[['"](name|age)['"]\]/i.test(cleanCode);
+          const hasPrint = /\bprint\s*\(/.test(code);
+
+          isMet = !runError && hasListOfDicts && hasLoop && hasDictAccess && hasPrint;
+        }
       } else {
         // Generic fallback for custom goals
         isMet = !runError && stdout.trim().length > 0;
@@ -459,17 +823,86 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
     }
   }
 
+  let activeInputResolve = null;
+
+  function requestTerminalInput(promptText) {
+    return new Promise((resolve) => {
+      activeInputResolve = resolve;
+      const bar = document.getElementById("pyTerminalInputBar");
+      const label = document.getElementById("pyTermPromptText");
+      const input = document.getElementById("pyTermInputField");
+
+      if (label) {
+        label.textContent = promptText ? promptText.trim() : "input:";
+      }
+      if (consoleMeta) {
+        consoleMeta.textContent = "Waiting for input in terminal below ↵";
+      }
+      if (bar && input) {
+        bar.style.display = "flex";
+        input.value = "";
+        input.placeholder = promptText ? `Enter: ${promptText.trim()}` : "Type input and press Enter...";
+        setTimeout(() => {
+          input.focus();
+        }, 50);
+        if (consoleBody) {
+          consoleBody.scrollTop = consoleBody.scrollHeight;
+        }
+      }
+    });
+  }
+
+  function submitTerminalInput() {
+    if (!activeInputResolve) return;
+    const input = document.getElementById("pyTermInputField");
+    const bar = document.getElementById("pyTerminalInputBar");
+    const val = input ? input.value : "";
+    if (bar) bar.style.display = "none";
+    if (consoleMeta) consoleMeta.textContent = "Running script...";
+    const resolve = activeInputResolve;
+    activeInputResolve = null;
+    resolve(val);
+  }
+
+  const termSubmitBtn = document.getElementById("pyTermSubmitBtn");
+  const termInputField = document.getElementById("pyTermInputField");
+  if (termSubmitBtn) {
+    termSubmitBtn.addEventListener("click", () => submitTerminalInput());
+  }
+  if (termInputField) {
+    termInputField.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitTerminalInput();
+      }
+    });
+  }
+
+  function preparePythonCodeForTerminal(rawCode) {
+    const lines = rawCode.split("\n");
+    const processed = lines.map((line) => {
+      const commentIdx = line.indexOf("#");
+      if (commentIdx !== -1) {
+        const codePart = line.substring(0, commentIdx);
+        const commentPart = line.substring(commentIdx);
+        return codePart.replace(/\binput\s*\(/g, "(await __terminal_input(") + commentPart;
+      }
+      return line.replace(/\binput\s*\(/g, "(await __terminal_input(");
+    });
+    return processed.join("\n");
+  }
+
   // Fallback JS-based lightweight Python executor in case Pyodide CDN is unreachable
-  function evaluateFallbackPython(code) {
+  async function evaluateFallbackPython(code, onInput) {
     const lines = code.split("\n");
     let stdout = "";
     let stderr = "";
     const vars = {};
 
     try {
-      lines.forEach((line) => {
+      for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#")) return;
+        if (!trimmed || trimmed.startsWith("#")) continue;
 
         // Input assignment: var = int(input("...")) or var = input("...")
         const inputMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=\s*(?:(int|float)\s*\(\s*)?input\s*\((.*?)\)\s*\)?$/);
@@ -477,20 +910,20 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
           const varName = inputMatch[1];
           const castType = inputMatch[2];
           const rawPrompt = inputMatch[3].trim();
+          let promptText = "";
           if (rawPrompt) {
-            const promptText = rawPrompt.replace(/^['"]|['"]$/g, "");
+            promptText = rawPrompt.replace(/^['"]|['"]$/g, "");
             stdout += promptText;
+            consoleBody.textContent = stdout;
           }
-          const simInputs = [10, 3, 2004, 15, 5, 2000, 42, 7];
-          const curIdx = Object.keys(vars).filter((k) => k.startsWith("__inp_")).length;
-          vars[`__inp_${curIdx}`] = true;
-          let inputVal = simInputs[curIdx % simInputs.length];
+          let inputVal = onInput ? await onInput(promptText) : "python123";
           stdout += String(inputVal) + "\n";
+          consoleBody.textContent = stdout;
           if (castType === "int") inputVal = parseInt(inputVal, 10);
           else if (castType === "float") inputVal = parseFloat(inputVal);
           else inputVal = String(inputVal);
           vars[varName] = inputVal;
-          return;
+          continue;
         }
 
         // Tuple swap: a, b = b, a
@@ -612,8 +1045,9 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
             }
           });
           stdout += outParts.join(" ") + "\n";
+          consoleBody.textContent = stdout;
         }
-      });
+      }
     } catch (err) {
       stderr += String(err.message || err) + "\n";
     }
@@ -652,54 +1086,85 @@ export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
 
       if (pyodide) {
         consoleMeta.textContent = "Running script...";
-        // Setup Python stdout/stderr interception and interactive input support
+        consoleBody.textContent = "";
+
+        // Provide real-time live stdout/stderr hooks
+        window.__py_stdout_write = (chunk) => {
+          stdout += chunk;
+          consoleBody.textContent = stdout;
+          consoleBody.scrollTop = consoleBody.scrollHeight;
+        };
+
+        window.__py_stderr_write = (chunk) => {
+          stderr += chunk;
+          consoleBody.textContent = (stdout ? stdout + "\n" : "") + stderr;
+          consoleBody.scrollTop = consoleBody.scrollHeight;
+        };
+
+        window.__js_terminal_input = async (promptStr) => {
+          return await requestTerminalInput(promptStr);
+        };
+
         const wrapper = `
 import sys
-import builtins
-from io import StringIO
-__stdout_capture = StringIO()
-__stderr_capture = StringIO()
-sys.stdout = __stdout_capture
-sys.stderr = __stderr_capture
+import js
 
-__sim_inputs = ["10", "85", "3", "2004", "Python", "Axzel Rivera", "hello", "world", "15", "5", "2000", "42", "7", "1998"]
-__in_idx = 0
+class __LiveStdout:
+    def __init__(self):
+        self.buffer = ""
+    def write(self, s):
+        val = str(s)
+        self.buffer += val
+        js.__py_stdout_write(val)
+    def flush(self):
+        pass
 
-def __safe_input(prompt=""):
-    global __in_idx
-    if prompt:
-        sys.stdout.write(str(prompt))
-    if __in_idx < len(__sim_inputs):
-        val = __sim_inputs[__in_idx]
-        __in_idx += 1
-        sys.stdout.write(str(val) + "\\n")
-        return val
-    sys.stdout.write("Python\\n")
-    return "Python"
+class __LiveStderr:
+    def __init__(self):
+        self.buffer = ""
+    def write(self, s):
+        val = str(s)
+        self.buffer += val
+        js.__py_stderr_write(val)
+    def flush(self):
+        pass
 
-builtins.input = __safe_input
+__live_out = __LiveStdout()
+__live_err = __LiveStderr()
+sys.stdout = __live_out
+sys.stderr = __live_err
+
+async def __terminal_input(prompt=""):
+    prompt_str = str(prompt) if prompt is not None else ""
+    if prompt_str:
+        sys.stdout.write(prompt_str)
+    val = await js.__js_terminal_input(prompt_str)
+    sys.stdout.write(str(val) + "\\n")
+    return str(val)
 `;
         await pyodide.runPythonAsync(wrapper);
 
+        const codeToRun = preparePythonCodeForTerminal(code);
+
         try {
-          await pyodide.runPythonAsync(code);
+          await pyodide.runPythonAsync(codeToRun);
         } catch (execErr) {
           runError = execErr;
+          if (execErr && execErr.message) {
+            stderr += (stderr ? "\n" : "") + execErr.message;
+          }
         }
 
         const teardown = `
-__out_val = __stdout_capture.getvalue()
-__err_val = __stderr_capture.getvalue()
 sys.stdout = sys.__stdout__
 sys.stderr = sys.__stderr__
-(__out_val, __err_val)
 `;
-        const pyResult = await pyodide.runPythonAsync(teardown);
-        stdout = pyResult.get(0) || "";
-        stderr = pyResult.get(1) || "";
+        try {
+          await pyodide.runPythonAsync(teardown);
+        } catch {}
       } else {
         // Fallback engine
-        const fallbackRes = evaluateFallbackPython(code);
+        const fallbackRes = await evaluateFallbackPython(code, requestTerminalInput);
         stdout = fallbackRes.stdout;
         stderr = fallbackRes.stderr;
         runError = fallbackRes.runError;

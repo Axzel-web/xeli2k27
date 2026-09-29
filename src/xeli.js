@@ -891,6 +891,476 @@ count *= 2   # count = count * 2`,
 
 `,
   },
+  {
+    id: "py-level-7-mini-project-password-lock",
+    cat: "coding",
+    title: "Level 7: Mini-Project — Password Lock",
+    difficulty: "Medium",
+    exp: 300,
+    type: "python-lab",
+    intro: "Grading Day 7 — Mini-Project 📝: Build a real terminal password security system with max 3 attempts. Trace and resolve the classic loop-exit bug using boolean state flags (logged_in = False / True) so 'ACCESS DENIED' only runs if login fails!",
+    levelNumber: 7,
+    concepts: [
+      {
+        name: "Boolean State Flags",
+        desc: "track success or failure state",
+        code: `logged_in = False
+# update flag when condition is met
+if password == correct_password:
+    logged_in = True
+    break`,
+      },
+      {
+        name: "Post-Loop Conditional",
+        desc: "execute only on failed attempts",
+        code: `# After while loop finishes:
+if not logged_in:
+    print("ACCESS DENIED TOO MANY FAILED ATTEMPTS")`,
+      },
+      {
+        name: "while loop with attempt counter",
+        desc: "limit repeated attempts",
+        code: `attempt = 0
+max_attempts = 3
+while attempt < max_attempts:
+    password = input("ENTER YOUR PASSWORD: ")
+    attempt += 1`,
+      },
+      {
+        name: "break statement",
+        desc: "exit loop immediately on success",
+        code: `if password == correct_password:
+    print("ACCESS GRANTED")
+    logged_in = True
+    break`,
+      },
+    ],
+    goals: [
+      {
+        id: "flag_and_attempts",
+        text: "Boolean Flag & Loop — Use a boolean flag (logged_in = False) and while loop for attempts (attempt < 3)",
+        hint: "Initialize logged_in = False and attempt = 0 before the while attempt < 3 loop.",
+      },
+      {
+        id: "conditional_access_denied",
+        text: "Access Control & Bug Fix — Set flag to True and break on match. Only print ACCESS DENIED when login fails!",
+        hint: "Inside 'if password == correct_password:', set logged_in = True and break. After the loop, check 'if not logged_in:' before printing ACCESS DENIED.",
+      },
+    ],
+    starter: `# Level 7: Mini-Project — Password Lock 📝
+# MISSION:
+# Build a password lock security system with a max of 3 attempts.
+#
+# REQUIREMENTS:
+# 1. Set correct_password = "python123"
+# 2. Track attempts with attempt = 0 (max 3 attempts)
+# 3. Use a boolean state flag (e.g. logged_in = False)
+# 4. Use a while loop (while attempt < 3):
+#      - Ask user: password = input("ENTER YOUR PASSWORD: ")
+#      - Increment attempt by 1
+#      - If password matches:
+#           * Print "ACCESS GRANTED"
+#           * Set logged_in = True
+#           * break
+#        Else:
+#           * Print "Incorrect password please try again"
+# 5. AFTER the loop:
+#      - Only print "ACCESS DENIED TOO MANY FAILED ATTEMPTS" if login failed!
+
+# Write your code below:
+
+
+`,
+  },
+  {
+    id: "py-level-8-lists",
+    cat: "coding",
+    title: "Level 8: Lists",
+    difficulty: "Easy",
+    exp: 220,
+    type: "python-lab",
+    intro: "A list is an ordered collection of items stored in one variable — can hold multiple values of any type (even mixed types), wrapped in square brackets []. Master indexing, slicing, appending, removing, and iterating over lists.",
+    levelNumber: 8,
+    concepts: [
+      {
+        name: "Lists & Mixed Types",
+        desc: "ordered collection in square brackets []",
+        code: `fruits = ["apple", "banana", "mango"]
+numbers = [10, 20, 30, 40]
+mixed = ["Axzel", 21, True]   # yes, mixed types allowed!`,
+      },
+      {
+        name: "Indexing and Slicing",
+        desc: "access items by index or slice range",
+        code: `fruits = ["apple", "banana", "mango"]
+
+print(fruits[0])     # apple
+print(fruits[-1])    # mango (last item)
+print(fruits[0:2])   # ['apple', 'banana'] (slicing works too)`,
+      },
+      {
+        name: "Adding, Removing & Changing",
+        desc: ".append(), .insert(), .remove(), item assignment",
+        code: `fruits = ["apple", "banana"]
+
+fruits.append("mango")       # adds to the end -> ["apple", "banana", "mango"]
+fruits.insert(1, "grape")    # inserts at index 1 -> ["apple", "grape", "banana", "mango"]
+fruits.remove("banana")      # removes by value -> ["apple", "grape", "mango"]
+fruits[0] = "kiwi"           # change item by index -> ["kiwi", "grape", "mango"]
+
+print(len(fruits))           # length works on lists too!`,
+      },
+      {
+        name: "Looping through a List",
+        desc: "for item in list and 'in' membership check",
+        code: `fruits = ["apple", "banana", "mango"]
+
+for fruit in fruits:
+    print(fruit)
+
+if "banana" in fruits:
+    print("Yes, banana is in the list!")`,
+      },
+    ],
+    goals: [
+      {
+        id: "grocery_list_manager",
+        text: "Grocery List Manager — Create empty list groceries, use .append() to add 5 items, print full list and len(groceries)",
+        hint: "groceries = []\ngroceries.append('apple')\n... (add 5 items)\nprint(groceries)\nprint(len(groceries))",
+      },
+    ],
+    starter: `# Level 8: Lists 📝
+# Task: Grocery List Manager
+# 1. Create an empty list called groceries
+# 2. Using .append(), add 5 different grocery items to it one at a time
+# 3. Then print the full list
+# 4. Print len(groceries) to show how many items are in it
+
+# Create empty list
+groceries = []
+
+# Add 5 items one by one using .append()
+
+
+# Print the full list and its length
+
+`,
+  },
+  {
+    id: "py-level-9-tuples",
+    cat: "coding",
+    title: "Level 9: Tuples",
+    difficulty: "Easy",
+    exp: 220,
+    type: "python-lab",
+    intro: "A tuple is like a list — an ordered collection of items — but immutable, meaning once created, you cannot change, add, or remove items from it. Written with parentheses (). Protects fixed pairs like coordinates or days from accidental modification.",
+    levelNumber: 9,
+    concepts: [
+      {
+        name: "Tuples & Immutability",
+        desc: "fixed, read-only collection with ()",
+        code: `coordinates = (10, 20)
+colors = ("red", "green", "blue")
+
+# Why tuples? Data that shouldn't change is protected!
+point = (5, 10)
+# point[0] = 99   # this will throw a TypeError!`,
+      },
+      {
+        name: "Indexing and Slicing",
+        desc: "access elements by index or range",
+        code: `point = (5, 10, 15)
+print(point[0])     # 5
+print(point[-1])    # 15 (last item)
+print(point[0:2])   # (5, 10)`,
+      },
+      {
+        name: "Looping through a Tuple",
+        desc: "iterate through items with for loop",
+        code: `colors = ("red", "green", "blue")
+for color in colors:
+    print(color)`,
+      },
+      {
+        name: "Tuple Unpacking",
+        desc: "unpack values directly into variables",
+        code: `point = (10, 20)
+x, y = point   # x becomes 10, y becomes 20
+
+print(x)   # 10
+print(y)   # 20`,
+      },
+    ],
+    goals: [
+      {
+        id: "tuple_basics",
+        text: "Tuple Basics — Create a tuple with 4 items (mixed types allowed). Print the tuple, item at index 1, and the last item using [-1]",
+        hint: "my_tuple = ('Axzel', 21, 5.9, True)\nprint(my_tuple)\nprint(my_tuple[1])\nprint(my_tuple[-1])",
+      },
+    ],
+    starter: `# Level 9: Tuples 📝
+# Task: Tuple Basics
+# 1. Create a tuple with 4 items of your choice (mixed types allowed: e.g. name, age, height, is_student)
+# 2. Print the whole tuple
+# 3. Print the item at index 1
+# 4. Print the last item using negative indexing [-1]
+
+
+
+`,
+  },
+  {
+    id: "py-level-10-dictionaries",
+    cat: "coding",
+    title: "Level 10: Dictionaries",
+    difficulty: "Medium",
+    exp: 260,
+    type: "python-lab",
+    intro: "A dictionary stores data as key-value pairs — instead of accessing items by position (like lists/tuples use index numbers), you access them by a meaningful key. Written with curly braces {}. Learn lookup, adding/updating, deleting, checking, and iterating with .items().",
+    levelNumber: 10,
+    concepts: [
+      {
+        name: "Key-Value Pairs & Access",
+        desc: "lookup data by meaningful keys with {}",
+        code: `person = {
+    "name": "Axzel",
+    "age": 21,
+    "city": "Laguna"
+}
+
+print(person["name"])   # Axzel
+print(person["age"])    # 21`,
+      },
+      {
+        name: "Adding, Updating & Deleting",
+        desc: "dict[key] = value and del keyword",
+        code: `person["job"] = "student"   # adds a new key-value pair
+person["age"] = 22           # updates existing value
+del person["job"]            # removes a key`,
+      },
+      {
+        name: "Looping with .items()",
+        desc: "iterate both keys and values together",
+        code: `person = {"name": "Axzel", "age": 21, "city": "Laguna"}
+
+for key, value in person.items():
+    print(f"{key}: {value}")`,
+      },
+      {
+        name: "Checking if a key exists",
+        desc: "use 'in' to check keys",
+        code: `if "name" in person:
+    print("Yes, name is a key")`,
+      },
+    ],
+    goals: [
+      {
+        id: "build_profile",
+        text: "Build a Profile — Create dictionary profile with at least 4 key-value pairs. Print full dictionary, then print one value with profile['key']",
+        hint: "profile = {'name': 'AXZEL', 'age': 21, 'course': 'computer engr', 'hobby': 'games'}\nprint(profile)\nprint(profile['name'])",
+      },
+      {
+        id: "loop_and_print",
+        text: "Loop and Print (.items()) — Loop through profile with .items() and print each pair formatted as f'{key}: {value}'",
+        hint: "for key, value in profile.items():\n    print(f'{key}: {value}')",
+      },
+    ],
+    starter: `# Level 10: Dictionaries 🐍
+# Task 1: Build a Profile
+# Create a dictionary called profile with at least 4 key-value pairs about yourself (name, age, course, hobby).
+# Print the whole dictionary, then print just the value for one specific key using profile["key"].
+
+# Task 2: Loop and Print
+# Using the same profile dictionary, loop through it with .items()
+# and print each key-value pair formatted as: f"{key}: {value}"
+
+
+
+`,
+  },
+  {
+    id: "py-level-11-nested-data-structures",
+    cat: "coding",
+    title: "Level 11: Nested Data Structures",
+    difficulty: "Medium",
+    exp: 280,
+    type: "python-lab",
+    intro: "Master real-world data modeling by combining lists and dictionaries: lists inside dictionaries (one person, multiple hobbies), dictionaries inside lists (records, database rows), and nested multi-tier structures.",
+    levelNumber: 11,
+    concepts: [
+      {
+        name: "Lists inside Dictionaries",
+        desc: "one key holding multiple values",
+        code: `person = {
+    "name": "Axzel",
+    "hobbies": ["gaming", "coding", "basketball"]
+}
+
+print(person["hobbies"])       # ['gaming', 'coding', 'basketball']
+print(person["hobbies"][0])    # gaming (first hobby)`,
+      },
+      {
+        name: "Dictionaries inside Lists",
+        desc: "list of structured records",
+        code: `students = [
+    {"name": "Axzel", "age": 21},
+    {"name": "Kirs", "age": 20}
+]
+
+print(students[0])              # {'name': 'Axzel', 'age': 21}
+print(students[0]["name"])      # Axzel
+print(students[1]["age"])       # 20`,
+      },
+      {
+        name: "Looping through Records",
+        desc: "iterate list of dictionaries",
+        code: `for student in students:
+    print(student["name"], student["age"])`,
+      },
+      {
+        name: "Nested Dictionaries",
+        desc: "chaining keys to go deeper",
+        code: `company = {
+    "employee1": {"name": "Axzel", "role": "Engineer"},
+    "employee2": {"name": "Kirs", "role": "Designer"}
+}
+
+print(company["employee1"]["name"])   # Axzel`,
+      },
+    ],
+    goals: [
+      {
+        id: "person_with_hobbies",
+        text: "Person with Hobbies — Create dictionary person with name, age, and hobbies (list of at least 3). Print name, then loop and print each hobby separately.",
+        hint: "person = {'name': 'ax', 'age': 21, 'hobbies': ['coding', 'configure', 'thinking']}\nprint(person['name'])\nfor hobby in person['hobbies']:\n    print(hobby)",
+      },
+      {
+        id: "list_of_friends",
+        text: "List of Friends — Create list of at least 3 dictionaries (each with 'name' and 'age' keys). Loop through list and print a sentence for each friend.",
+        hint: "friends = [{'name': 'Axzel', 'age': 21}, {'name': 'Kirs', 'age': 20}, {'name': 'Alex', 'age': 22}]\nfor friend in friends:\n    print(f\"{friend['name']} is {friend['age']} years old\")",
+      },
+    ],
+    starter: `# Level 11: Nested Data Structures (Lists & Dicts Combined) 🐍
+# Task 1: Person with Hobbies
+# Create a dictionary for a person with name, age, and a hobbies key that holds a list of at least 3 hobbies.
+# Print the person's name, then loop through and print each hobby separately.
+
+# Task 2: List of Friends
+# Create a list of at least 3 dictionaries, each representing a friend (name and age keys).
+# Loop through the list and print a sentence for each friend, like: f"{friend['name']} is {friend['age']} years old"
+
+
+
+`,
+  },
+
+  // ------------------------- FRONTEND DEV: HTML -------------------------
+  {
+    id: "fe-html-semantic-structure",
+    cat: "frontend",
+    subcat: "html",
+    title: "Semantic HTML5 & Document Outlines",
+    difficulty: "Easy",
+    exp: 140,
+    type: "lab",
+    intro: "Learn how to structure modern web pages using semantic HTML5 elements: <header>, <nav>, <main>, <section>, <article>, and <footer>.",
+    summary: "Semantic structure creates accessible, search-engine-friendly web documents without relying solely on generic <div> tags.",
+    tasks: [
+      "Use <header> and <nav> for primary navigation bars",
+      "Structure content using <main>, <section>, and <article>",
+      "Include accessible headings (h1-h6) and a <footer> block",
+    ],
+    starter: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Hunter Dossier</title>\n</head>\n<body>\n  <!-- Write semantic structure here -->\n</body>\n</html>`,
+  },
+  {
+    id: "fe-html-forms-accessible",
+    cat: "frontend",
+    subcat: "html",
+    title: "Interactive Web Forms & Validation",
+    difficulty: "Medium",
+    exp: 160,
+    type: "lab",
+    intro: "Construct robust web forms with input types, explicit <label> associations, required attributes, and pattern validation.",
+    summary: "Form controls and semantic validation attributes allow clean user input handling without relying solely on JavaScript.",
+    tasks: [
+      "Group fields with <fieldset> and <legend>",
+      "Associate <label> elements with inputs via 'for' and 'id'",
+      "Apply 'required' and pattern validation attributes",
+    ],
+    starter: `<form class="hunter-form">\n  <!-- Build accessible form with labels and inputs -->\n</form>`,
+  },
+
+  // ------------------------- FRONTEND DEV: CSS -------------------------
+  {
+    id: "fe-css-flexbox-layouts",
+    cat: "frontend",
+    subcat: "css",
+    title: "Modern Flexbox & Fluid Alignment",
+    difficulty: "Easy",
+    exp: 150,
+    type: "lab",
+    intro: "Master 1-dimensional layouts with CSS Flexbox: flex-direction, justify-content, align-items, flex-wrap, and responsive spacing.",
+    summary: "Flexbox provides dynamic alignment, distribution of space, and responsive wrapping for navigation bars and stat cards.",
+    tasks: [
+      "Set display: flex and justify-content: space-between",
+      "Center items vertically with align-items: center",
+      "Enable responsive wrapping with flex-wrap: wrap",
+    ],
+    starter: `.cyber-nav {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n}`,
+  },
+  {
+    id: "fe-css-grid-cyber-hud",
+    cat: "frontend",
+    subcat: "css",
+    title: "CSS Grid 2D Dashboard & Cyber Layouts",
+    difficulty: "Medium",
+    exp: 175,
+    type: "lab",
+    intro: "Construct 2-dimensional layouts using CSS Grid: grid-template-columns with repeat(auto-fit, minmax(...)), gap, and responsive HUD panels.",
+    summary: "CSS Grid excels at multi-column dashboards and responsive card decks without complicated float or clearing hacks.",
+    tasks: [
+      "Define auto-fit responsive grid template columns",
+      "Configure gaps and fractional unit distributions",
+      "Create mobile responsive layout with media queries",
+    ],
+    starter: `.hud-dashboard {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));\n  gap: 16px;\n}`,
+  },
+
+  // ------------------------- FRONTEND DEV: JS -------------------------
+  {
+    id: "fe-js-dom-events",
+    cat: "frontend",
+    subcat: "js",
+    title: "DOM Manipulation & Event Listeners",
+    difficulty: "Easy",
+    exp: 160,
+    type: "lab",
+    intro: "Query the DOM with querySelector, attach addEventListener click and change listeners, toggle CSS classes, and update innerText dynamically.",
+    summary: "Client-side interactivity begins with listening to user events and updating the DOM reactively.",
+    tasks: [
+      "Query target element with document.querySelector",
+      "Attach 'click' event listener with addEventListener",
+      "Toggle active class with element.classList.toggle()",
+    ],
+    starter: `const hunterCard = document.querySelector('.hunter-card');\nhunterCard.addEventListener('click', () => {\n  hunterCard.classList.toggle('is-active');\n});`,
+  },
+  {
+    id: "fe-js-async-fetch",
+    cat: "frontend",
+    subcat: "js",
+    title: "Async/Await & REST API Integration",
+    difficulty: "Medium",
+    exp: 180,
+    type: "lab",
+    intro: "Make asynchronous HTTP requests using the Fetch API, handle JSON data with async/await, and implement try/catch error boundaries.",
+    summary: "Modern web applications fetch live data from server endpoints and render dynamic UI based on responses.",
+    tasks: [
+      "Declare an async function and await fetch() request",
+      "Parse response with await res.json()",
+      "Handle network errors gracefully using try...catch",
+    ],
+    starter: `async function loadLeaderboardData() {\n  try {\n    const res = await fetch('/api/hunters');\n    const data = await res.json();\n    return data;\n  } catch (err) {\n    console.error('Error fetching hunters:', err);\n  }\n}`,
+  },
 ];
  
 /* ============================================================
@@ -2115,9 +2585,149 @@ const ACHIEVEMENT_GROUPS = [
     coding: '<path d="M9 7 3 12l6 5 1.4-1.4L5.8 12l4.6-3.6L9 7Zm6 0-1.4 1.4L18.2 12l-4.6 3.6L15 17l6-5-6-5Z"/>',
     networking: '<path d="M12 3 3 8v2h2v9h4v-6h6v6h4v-9h2V8L12 3Zm0 2.3 6 3.4v.3H6v-.3l6-3.4Z"/>',
     sysadmin: '<path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm1 2v12h14V6H5Zm1.6 2 3.6 3-3.6 3-1.2-1.4L8.4 11 5.4 9.4 6.6 8Zm5.4 6h6v2h-6v-2Z"/>',
+    frontend: '<path d="M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5"/>',
   };
- 
+
+  let frontendSubcat = "cards";
+
+  function renderFrontendSubChallenges(sub) {
+    const items = CHALLENGES.filter((c) => c.cat === "frontend" && c.subcat === sub);
+    if (!items.length) {
+      return `<p class="empty-note">No trials in this sub-track yet.</p>`;
+    }
+    return items
+      .map((c) => {
+        const solved = state.solvedChallenges.includes(c.id);
+        const subColor = c.subcat === "html" ? "border-color: rgba(228, 77, 38, 0.7);" : (c.subcat === "css" ? "border-color: rgba(0, 210, 255, 0.7);" : "border-color: rgba(247, 223, 30, 0.7);");
+        return `
+        <button class="challenge-card fe-trial-card ${solved ? "is-solved" : ""}" data-id="${c.id}" style="${subColor}">
+          <div class="cc-top">
+            <div class="cc-left">
+              <span class="cc-icon"><svg viewBox="0 0 24 24">${CATEGORY_ICON.frontend}</svg></span>
+              <span class="diff-tag">${c.difficulty}</span>
+              <span class="diff-tag" style="background:#0a192f;color:#38bdf8;border-color:#38bdf8;font-weight:700;">${c.subcat.toUpperCase()}</span>
+            </div>
+            <span class="cc-check">
+              <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg>
+            </span>
+          </div>
+          <span class="cc-title">${escapeHtml(c.title)}</span>
+          <div class="cc-divider"></div>
+          <div class="cc-bottom">
+            <span class="cc-exp-pill ${solved ? "is-cleared" : ""}">${solved ? "Cleared" : `+${c.exp} EXP`}</span>
+          </div>
+        </button>`;
+      })
+      .join("");
+  }
+
+  function renderFrontendOptionsView() {
+    el.challengeGrid.innerHTML = `
+      <div class="fe-options-wrapper">
+        <div class="fe-options-header">
+          <div>
+            <h3 class="fe-track-title">Select Web Technology Discipline</h3>
+            <p class="fe-track-sub">Choose a frontend specialization card below to access curated hands-on trials.</p>
+          </div>
+          ${frontendSubcat !== "cards" ? `
+            <button class="btn btn-secondary fe-back-btn" id="feBackToCardsBtn">
+              ← View All 3 Options (HTML, CSS, JS)
+            </button>
+          ` : ""}
+        </div>
+
+        <div class="fe-cards-grid">
+          <!-- Option Card 1: HTML -->
+          <div class="fe-option-card fe-card-html ${frontendSubcat === 'html' ? 'is-selected' : ''}" data-fe-cat="html" role="button" tabindex="0">
+            <div class="fe-card-top">
+              <span class="fe-card-tag tag-html">HTML5</span>
+              <span class="fe-card-icon">
+                <svg viewBox="0 0 24 24"><path d="m12 2 1.5 3h7.5l-2.5 15-6.5 2-6.5-2L3 5h7.5L12 2Zm-4.5 7h9l-.5 4H8l.2 2 4.3 1.2 4.3-1.2.3-2.5h-2.5l-.2 1.2-2 .5-2-.5-.1-1.2h6.8l.8-6.5H7.2L7.5 9Z"/></svg>
+              </span>
+            </div>
+            <div class="fe-card-title">HTML</div>
+            <div class="fe-card-full-name">HyperText Markup Language</div>
+            <p class="fe-card-desc">Semantic document structure, web forms, accessible element hierarchies, media embedding, and DOM tree layout foundations.</p>
+            <div class="fe-card-footer">
+              <span class="fe-card-topics">Semantics · Forms · DOM</span>
+              <span class="fe-card-action">Select HTML Track →</span>
+            </div>
+          </div>
+
+          <!-- Option Card 2: CSS -->
+          <div class="fe-option-card fe-card-css ${frontendSubcat === 'css' ? 'is-selected' : ''}" data-fe-cat="css" role="button" tabindex="0">
+            <div class="fe-card-top">
+              <span class="fe-card-tag tag-css">CSS3</span>
+              <span class="fe-card-icon">
+                <svg viewBox="0 0 24 24"><path d="m12 2 1.5 3h7.5l-2.5 15-6.5 2-6.5-2L3 5h7.5L12 2Zm-4.3 6.8h8.6l-.3 2.5H9.8l.2 2h5.5l-.6 5-2.9.8-2.9-.8-.2-2h-2l.3 3.5 4.8 1.3 4.8-1.3 1-8.5H7.4l.3-2.5Z"/></svg>
+              </span>
+            </div>
+            <div class="fe-card-title">CSS</div>
+            <div class="fe-card-full-name">Cascading Style Sheets</div>
+            <p class="fe-card-desc">Modern Flexbox alignment, 2D CSS Grid architecture, viewport responsiveness, keyframe animations, and cyber styling.</p>
+            <div class="fe-card-footer">
+              <span class="fe-card-topics">Flexbox · Grid · Animations</span>
+              <span class="fe-card-action">Select CSS Track →</span>
+            </div>
+          </div>
+
+          <!-- Option Card 3: JS -->
+          <div class="fe-option-card fe-card-js ${frontendSubcat === 'js' ? 'is-selected' : ''}" data-fe-cat="js" role="button" tabindex="0">
+            <div class="fe-card-top">
+              <span class="fe-card-tag tag-js">ES6+</span>
+              <span class="fe-card-icon">
+                <svg viewBox="0 0 24 24"><path d="M3 3h18v18H3V3Zm10.5 13.5v-7h2v5c0 .9.6 1.2 1.4 1.2.6 0 1.1-.2 1.4-.4v1.8c-.5.3-1.2.5-2 .5-2 0-2.8-1.1-2.8-2.8v1.7Zm-6.2.1 1.7-1c.6.9 1.3 1.4 2.2 1.4.9 0 1.5-.5 1.5-1.2 0-.8-.7-1.1-1.8-1.6-1.5-.6-2.5-1.4-2.5-2.7 0-1.6 1.3-2.7 3.2-2.7 1.4 0 2.4.5 3.1 1.5l-1.6 1c-.5-.7-1-1-1.6-1-.7 0-1.1.4-1.1.9 0 .6.5.9 1.5 1.3 1.6.7 2.8 1.4 2.8 3 0 1.7-1.4 2.8-3.5 2.8-1.8 0-3-1-3.9-2.7Z"/></svg>
+              </span>
+            </div>
+            <div class="fe-card-title">JS</div>
+            <div class="fe-card-full-name">JavaScript &amp; Web APIs</div>
+            <p class="fe-card-desc">Dynamic DOM manipulation, reactive event listeners, asynchronous fetch requests, REST API parsing, and interactive logic.</p>
+            <div class="fe-card-footer">
+              <span class="fe-card-topics">DOM Events · Async · APIs</span>
+              <span class="fe-card-action">Select JS Track →</span>
+            </div>
+          </div>
+        </div>
+
+        ${frontendSubcat && frontendSubcat !== "cards" ? `
+          <div class="fe-sub-section">
+            <div class="fe-sub-header">
+              <h4 class="fe-sub-title">${frontendSubcat.toUpperCase()} Trials &amp; Challenges</h4>
+              <span class="diff-tag">${CHALLENGES.filter(c => c.cat === "frontend" && c.subcat === frontendSubcat).length} Practical Trials</span>
+            </div>
+            <div class="challenge-grid fe-sub-grid">
+              ${renderFrontendSubChallenges(frontendSubcat)}
+            </div>
+          </div>
+        ` : ""}
+      </div>
+    `;
+
+    // Wire clicks on option cards
+    el.challengeGrid.querySelectorAll(".fe-option-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const cat = card.dataset.feCat;
+        frontendSubcat = (frontendSubcat === cat) ? "cards" : cat;
+        playClick();
+        renderFrontendOptionsView();
+      });
+    });
+
+    const backBtn = el.challengeGrid.querySelector("#feBackToCardsBtn");
+    if (backBtn) {
+      backBtn.addEventListener("click", () => {
+        frontendSubcat = "cards";
+        playClick();
+        renderFrontendOptionsView();
+      });
+    }
+  }
+
   function renderChallenges() {
+    if (labCategory === "frontend") {
+      renderFrontendOptionsView();
+      return;
+    }
     const items = CHALLENGES.filter((c) => c.cat === labCategory);
     if (!items.length) {
       el.challengeGrid.innerHTML = `<p class="empty-note">No trials in this track yet.</p>`;
@@ -2399,10 +3009,12 @@ const ACHIEVEMENT_GROUPS = [
         }
       } else if (currentRankFilter !== "ALL") {
         const rankIconMap = {
-          "Bronze": "/assets/bronze_rank_icon.png",
-          "Silver": "/assets/silver_rank_icon.png",
-          "Gold": "/assets/gold_rank_icon.png",
+          "Sovereign": "/assets/sovereign_rank_icon.png",
+          "Diamond": "/assets/diamond_rank_icon.png",
           "Platinum": "/assets/platinum_rank_icon.png",
+          "Gold": "/assets/gold_rank_icon.png",
+          "Silver": "/assets/silver_rank_icon.png",
+          "Bronze": "/assets/bronze_rank_icon.png",
         };
         const rankIconSrc = rankIconMap[currentRankFilter] || "/assets/silver_rank_icon.png";
         const rankClass = currentRankFilter.toLowerCase();
@@ -3795,7 +4407,7 @@ const ACHIEVEMENT_GROUPS = [
   }
  
   function labLabel(cat) {
-    return { coding: "Coding · Python", networking: "Networking", sysadmin: "System & Sysadmin" }[cat] || cat;
+    return { coding: "Coding · Python", networking: "Networking", sysadmin: "Sysadmin", frontend: "Frontend Dev" }[cat] || cat;
   }
  
   function showResult(pass, c) {
@@ -5638,16 +6250,6 @@ const ACHIEVEMENT_GROUPS = [
     if (barRight) barRight.textContent = `${pct.toFixed(1)}%`;
     const barFill = $("#hpBarFill");
     if (barFill) barFill.style.width = `${pct}%`;
-
-    // Clearance Details (Secure Read-Only)
-    const detailId = $("#hpDetailId");
-    if (detailId) detailId.textContent = activeHunter.id || userId;
-    const detailDbStatus = $("#hpDetailDbStatus");
-    if (detailDbStatus) detailDbStatus.textContent = dbProfile ? "Verified in public.profiles" : "Synced via Leaderboard Cache";
-    const detailClearance = $("#hpDetailClearance");
-    if (detailClearance) detailClearance.textContent = `Rank ${rankInfo.rank} • ${rankTitle} Clearance`;
-    const detailUpdated = $("#hpDetailUpdated");
-    if (detailUpdated) detailUpdated.textContent = activeHunter.updated_at ? new Date(activeHunter.updated_at).toLocaleString() : "Real-time Synced";
 
     openModal("modalLeaderboardProfile");
     playClick();
