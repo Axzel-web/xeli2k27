@@ -848,11 +848,13 @@ button{ font-family:inherit; }
   gap: 8px;
 }
 
-.lc-score-num {
+.lc-score-num,
+#lcHunterRating {
   font-family: 'Rajdhani', 'JetBrains Mono', sans-serif;
   font-size: 32px;
   font-weight: 700;
-  color: #000080;
+  color: #00d2ff;
+  text-shadow: 0 0 16px rgba(0, 210, 255, 0.45);
   line-height: 1;
 }
 
