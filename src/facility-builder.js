@@ -10,7 +10,7 @@ let lastNocUpdate = 0;
 let packetTrafficOffset = 0;
 
 // ----------------------------------------------------------------------------
-// PROCEDURAL TEXTURE GENERATORS (PBR / Canvas)
+// PROCEDURAL PBR TEXTURE GENERATORS
 // ----------------------------------------------------------------------------
 
 export function createRaisedFloorTexture() {
@@ -19,48 +19,64 @@ export function createRaisedFloorTexture() {
   canvas.height = 512;
   const ctx = canvas.getContext("2d");
 
-  // Dark anti-static floor tile base (60cm x 60cm server tiles)
-  ctx.fillStyle = "#111722";
+  // Base dark industrial anti-static tile color (60cm x 60cm server tiles)
+  ctx.fillStyle = "#121927";
   ctx.fillRect(0, 0, 512, 512);
 
-  // Subtle metallic stipple noise
-  for (let i = 0; i < 3000; i++) {
+  // Micro-stippled surface noise (anti-static vinyl composite)
+  for (let i = 0; i < 4000; i++) {
     const x = Math.random() * 512;
     const y = Math.random() * 512;
-    const brightness = Math.floor(Math.random() * 18);
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.01 + brightness / 255})`;
-    ctx.fillRect(x, y, 2, 2);
+    const alpha = 0.015 + Math.random() * 0.04;
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.fillRect(x, y, 1.5, 1.5);
   }
 
-  // Tile Seams & Bevels (4x4 grid in 512px)
+  // 4x4 Grid of 128px tiles with subtle tonal shifts between adjacent tiles
   const tileSize = 128;
-  for (let x = 0; x < 512; x += tileSize) {
-    for (let y = 0; y < 512; y += tileSize) {
-      // Outer border seam
+  for (let tx = 0; tx < 512; tx += tileSize) {
+    for (let ty = 0; ty < 512; ty += tileSize) {
+      const tileShift = ((tx / tileSize + ty / tileSize) % 2 === 0 ? 3 : -3);
+      if (tileShift > 0) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.02)";
+        ctx.fillRect(tx, ty, tileSize, tileSize);
+      }
+
+      // Outer tile perimeter seam (beveled edge)
       ctx.strokeStyle = "#080c14";
       ctx.lineWidth = 3;
-      ctx.strokeRect(x, y, tileSize, tileSize);
+      ctx.strokeRect(tx, ty, tileSize, tileSize);
 
-      // Inner subtle highlight edge
+      // Inner subtle metallic highlight bevel
       ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
       ctx.lineWidth = 1;
-      ctx.strokeRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+      ctx.strokeRect(tx + 2, ty + 2, tileSize - 4, tileSize - 4);
 
-      // Corner screw anchor indentations
-      ctx.fillStyle = "#0a0f18";
-      ctx.beginPath();
-      ctx.arc(x + 10, y + 10, 2.5, 0, Math.PI * 2);
-      ctx.arc(x + tileSize - 10, y + 10, 2.5, 0, Math.PI * 2);
-      ctx.arc(x + 10, y + tileSize - 10, 2.5, 0, Math.PI * 2);
-      ctx.arc(x + tileSize - 10, y + tileSize - 10, 2.5, 0, Math.PI * 2);
-      ctx.fill();
+      // Corner screw anchor indentations (anti-static pedestal screw anchors)
+      const corners = [
+        [tx + 10, ty + 10],
+        [tx + tileSize - 10, ty + 10],
+        [tx + 10, ty + tileSize - 10],
+        [tx + tileSize - 10, ty + tileSize - 10]
+      ];
+      corners.forEach(([cx, cy]) => {
+        ctx.fillStyle = "#080d16";
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.arc(cx, cy, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
     }
   }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(12, 12);
+  texture.repeat.set(10, 10);
   return texture;
 }
 
@@ -70,10 +86,10 @@ export function createPerforatedVentTexture() {
   canvas.height = 128;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#0c121c";
+  ctx.fillStyle = "#0e1522";
   ctx.fillRect(0, 0, 128, 128);
 
-  ctx.fillStyle = "#04070c";
+  ctx.fillStyle = "#04070d";
   for (let x = 4; x < 128; x += 8) {
     for (let y = 4; y < 128; y += 8) {
       ctx.beginPath();
@@ -89,18 +105,18 @@ export function createPerforatedVentTexture() {
   return texture;
 }
 
-export function createServerFaceplateTexture(type = "switch") {
+export function createServerFaceplateTexture(type = "switch", label = "") {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 128;
   const ctx = canvas.getContext("2d");
 
   // Dark brushed aluminum chassis
-  ctx.fillStyle = type === "router" ? "#141c2c" : (type === "storage" ? "#0f1622" : "#121927");
+  ctx.fillStyle = type === "router" ? "#141c2c" : (type === "storage" ? "#0f1622" : (type === "firewall" ? "#1e1b2e" : "#121927"));
   ctx.fillRect(0, 0, 512, 128);
 
-  // Brushed hairline finish
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+  // Brushed metal hairline streaks
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.035)";
   for (let i = 0; i < 128; i += 3) {
     ctx.beginPath();
     ctx.moveTo(0, i);
@@ -108,16 +124,28 @@ export function createServerFaceplateTexture(type = "switch") {
     ctx.stroke();
   }
 
+  // Rack Unit Mounting Ears on left and right
+  ctx.fillStyle = "#1e293b";
+  ctx.fillRect(0, 0, 16, 128);
+  ctx.fillRect(496, 0, 16, 128);
+
+  // Screw holes on rack ears
+  ctx.fillStyle = "#090d16";
+  [24, 104].forEach((sy) => {
+    ctx.beginPath(); ctx.arc(8, sy, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(504, sy, 4, 0, Math.PI * 2); ctx.fill();
+  });
+
   if (type === "switch") {
-    // Cisco 48-port Catalyst Switch Layout
+    // Cisco Catalyst 9300 48P Enterprise Switch
     ctx.fillStyle = "#00d2ff";
     ctx.font = "bold 13px 'JetBrains Mono', monospace";
-    ctx.fillText("CISCO CATALYST 9300 48P-PoE+", 18, 22);
+    ctx.fillText(label || "CISCO CATALYST 9300 48P-PoE+", 24, 22);
 
     // RJ-45 Port Grid (2 rows of 24 ports)
     for (let row = 0; row < 2; row++) {
       for (let p = 0; p < 24; p++) {
-        const px = 20 + p * 15;
+        const px = 24 + p * 15;
         const py = 45 + row * 28;
         // Port socket
         ctx.fillStyle = "#05080e";
@@ -127,34 +155,35 @@ export function createServerFaceplateTexture(type = "switch") {
         // Gold contact pins
         ctx.fillStyle = "#eab308";
         ctx.fillRect(px + 2, py + 11, 7, 3);
-        // Link LED
-        ctx.fillStyle = p % 3 === 0 ? "#10b981" : (p % 5 === 0 ? "#f59e0b" : "#00d2ff");
+        // Link/Act LED
+        ctx.fillStyle = p % 3 === 0 ? "#10b981" : (p % 7 === 0 ? "#f59e0b" : "#00d2ff");
         ctx.fillRect(px + 3, py - 6, 5, 3);
       }
     }
 
-    // SFP+ 10G Uplink cages on right
+    // 4x SFP+ 10G/25G Uplink Cages on right
     for (let s = 0; s < 4; s++) {
+      const sx = 400 + s * 22;
       ctx.fillStyle = "#1a2538";
-      ctx.fillRect(405 + s * 24, 48, 18, 32);
+      ctx.fillRect(sx, 48, 18, 32);
       ctx.strokeStyle = "#38bdf8";
-      ctx.strokeRect(405 + s * 24, 48, 18, 32);
+      ctx.strokeRect(sx, 48, 18, 32);
       ctx.fillStyle = "#10b981";
-      ctx.fillRect(411 + s * 24, 38, 6, 4);
+      ctx.fillRect(sx + 6, 38, 6, 4);
     }
   } else if (type === "storage") {
-    // 2U Storage Blade Server with 12x 3.5" Drive Caddies
+    // 2U Storage Blade Server with 12x 3.5" SAS Hot-Swap Drive Caddies
     ctx.fillStyle = "#94a3b8";
     ctx.font = "bold 13px 'JetBrains Mono', monospace";
-    ctx.fillText("ENTERPRISE BLADE SERVER // SAS-RAID 10", 18, 22);
+    ctx.fillText(label || "ENTERPRISE BLADE SERVER // SAS-RAID 10", 24, 22);
 
     for (let c = 0; c < 12; c++) {
-      const cx = 20 + c * 40;
+      const cx = 24 + c * 39;
       ctx.fillStyle = "#162032";
       ctx.fillRect(cx, 38, 34, 72);
       ctx.strokeStyle = "#2b3b55";
       ctx.strokeRect(cx, 38, 34, 72);
-      // Drive handle
+      // Drive release handle
       ctx.fillStyle = "#0b101a";
       ctx.fillRect(cx + 4, 92, 26, 12);
       // Disk activity LED
@@ -172,11 +201,11 @@ export function createServerFaceplateTexture(type = "switch") {
 
     ctx.fillStyle = "#f87171";
     ctx.font = "bold 13px 'JetBrains Mono', monospace";
-    ctx.fillText("ENTERPRISE NGFW-500E // INTRUSION PREVENTION", 18, 24);
+    ctx.fillText(label || "ENTERPRISE NGFW-500E // INTRUSION PREVENTION", 24, 24);
 
     // RJ-45 & SFP+ Security Ports
     for (let p = 0; p < 16; p++) {
-      const px = 20 + p * 19;
+      const px = 24 + p * 19;
       ctx.fillStyle = "#090d16";
       ctx.fillRect(px, 50, 14, 20);
       ctx.strokeStyle = "#475569";
@@ -185,7 +214,6 @@ export function createServerFaceplateTexture(type = "switch") {
       ctx.fillRect(px + 4, 38, 6, 4);
     }
 
-    // Status indicators
     ctx.fillStyle = "#10b981";
     ctx.font = "bold 10px monospace";
     ctx.fillText("HA: CLUSTER SYNC [ACTIVE]", 340, 48);
@@ -200,11 +228,11 @@ export function createServerFaceplateTexture(type = "switch") {
 
     ctx.fillStyle = "#38bdf8";
     ctx.font = "bold 13px 'JetBrains Mono', monospace";
-    ctx.fillText("OPTICAL DISTRIBUTION FRAME // 48-STRAND LC/UPC", 18, 22);
+    ctx.fillText(label || "OPTICAL DISTRIBUTION FRAME // 48-STRAND LC/UPC", 24, 22);
 
-    // Dual LC Duplex Adapter Couplers (Blue for Singlemode, Aqua for OM4)
+    // Dual LC Duplex Adapter Couplers
     for (let f = 0; f < 12; f++) {
-      const fx = 20 + f * 40;
+      const fx = 24 + f * 38;
       ctx.fillStyle = "#0284c7"; // LC Blue Coupler
       ctx.fillRect(fx, 46, 32, 42);
       ctx.strokeStyle = "#38bdf8";
@@ -220,15 +248,47 @@ export function createServerFaceplateTexture(type = "switch") {
       ctx.arc(fx + 23, 63, 2, 0, Math.PI * 2);
       ctx.fill();
     }
+  } else if (type === "patch") {
+    // 48-Port Cat6 Patch Panel with Horizontal Cable Organizer Bar
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, 0, 512, 128);
+
+    ctx.fillStyle = "#cbd5e1";
+    ctx.font = "bold 12px 'JetBrains Mono', monospace";
+    ctx.fillText(label || "CAT6 GIGABIT PATCH PANEL // RACK DISTRIBUTION", 24, 22);
+
+    // 24 Keystone RJ45 jacks
+    for (let k = 0; k < 24; k++) {
+      const kx = 24 + k * 19;
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(kx, 42, 14, 20);
+      ctx.strokeStyle = "#334155";
+      ctx.strokeRect(kx, 42, 14, 20);
+
+      // Port number
+      ctx.fillStyle = "#64748b";
+      ctx.font = "8px monospace";
+      ctx.fillText(`${k + 1}`, kx + 2, 36);
+    }
+
+    // Horizontal Cable Management Ring Bar
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(24, 82, 464, 24);
+    ctx.strokeStyle = "#475569";
+    ctx.strokeRect(24, 82, 464, 24);
+    for (let r = 0; r < 5; r++) {
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(50 + r * 90, 86, 28, 16);
+    }
   } else {
     // Cisco ISR Core Router
     ctx.fillStyle = "#00d2ff";
     ctx.font = "bold 13px 'JetBrains Mono', monospace";
-    ctx.fillText("CISCO 4451-X ISR // ROUTING ENGINE", 18, 22);
+    ctx.fillText(label || "CISCO 4451-X ISR // ROUTING ENGINE", 24, 22);
 
     // Modular NIM slots
     for (let m = 0; m < 3; m++) {
-      const mx = 20 + m * 120;
+      const mx = 24 + m * 120;
       ctx.fillStyle = "#0a0f18";
       ctx.fillRect(mx, 40, 110, 68);
       ctx.strokeStyle = "#25344d";
@@ -250,7 +310,7 @@ export function createServerFaceplateTexture(type = "switch") {
 }
 
 // ----------------------------------------------------------------------------
-// NOC VIDEO WALL TEXTURE (Interactive High-Res Multi-Display)
+// NOC VIDEO WALL TEXTURE (Interactive High-Res 6-Panel Multi-Display)
 // ----------------------------------------------------------------------------
 
 export function createNocWallCanvasTexture() {
@@ -269,7 +329,7 @@ function renderNocDashboard(t) {
   const w = 1024;
   const h = 512;
 
-  // Obsidian glass base
+  // Obsidian glass base with subtle bezel grid
   ctx.fillStyle = "#070c16";
   ctx.fillRect(0, 0, w, h);
 
@@ -296,7 +356,7 @@ function renderNocDashboard(t) {
   ];
 
   ctx.lineWidth = 2;
-  ctx.strokeStyle = "rgba(0, 210, 255, 0.4)";
+  ctx.strokeStyle = "rgba(0, 210, 255, 0.45)";
   nodes.forEach((n1, i) => {
     nodes.forEach((n2, j) => {
       if (i < j) {
@@ -304,6 +364,15 @@ function renderNocDashboard(t) {
         ctx.moveTo(n1.x, n1.y);
         ctx.lineTo(n2.x, n2.y);
         ctx.stroke();
+
+        // Animated traveling data packet along link
+        const pct = (t * 0.4 + i * 0.3) % 1.0;
+        const px = n1.x + (n2.x - n1.x) * pct;
+        const py = n1.y + (n2.y - n1.y) * pct;
+        ctx.fillStyle = "#10b981";
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fill();
       }
     });
   });
@@ -427,54 +496,52 @@ function renderNocDashboard(t) {
 // ----------------------------------------------------------------------------
 
 export function setupRealisticLighting(scene) {
-  // 1. Soft Ambient Slate Illumination
-  const ambient = new THREE.AmbientLight(0x1a263c, 1.4);
+  // 1. Soft Ambient Slate Illumination (Clean modern facility base)
+  const ambient = new THREE.AmbientLight(0x283852, 2.2);
   scene.add(ambient);
 
-  // 2. Soft Key Overhead Light from High Ceiling
-  const keySun = new THREE.DirectionalLight(0xeef6ff, 1.2);
-  keySun.position.set(12, 28, 12);
+  // 2. High Overhead Key Sun (Directional Key Light casting soft shadows)
+  const keySun = new THREE.DirectionalLight(0xf8fafc, 1.8);
+  keySun.position.set(12, 32, 12);
   keySun.castShadow = true;
   keySun.shadow.mapSize.width = 2048;
   keySun.shadow.mapSize.height = 2048;
   keySun.shadow.camera.near = 1;
-  keySun.shadow.camera.far = 60;
+  keySun.shadow.camera.far = 70;
   keySun.shadow.camera.left = -26;
   keySun.shadow.camera.right = 26;
   keySun.shadow.camera.top = 26;
   keySun.shadow.camera.bottom = -26;
-  keySun.shadow.bias = -0.0005;
+  keySun.shadow.bias = -0.0003;
   scene.add(keySun);
 
-  // 3. Recessed Ceiling LED Downlights (Warm/Cool Commercial Office Troffers)
+  // 3. Fill directional light from opposite angle for soft contact shadows
+  const fillSun = new THREE.DirectionalLight(0x94a3b8, 0.8);
+  fillSun.position.set(-16, 24, -16);
+  scene.add(fillSun);
+
+  // 4. Commercial Ceiling Recessed LED Troffers (Warm/Cool Commercial Office Panels)
   const troffers = [
-    { x: -12, z: -10, color: 0xf0f7ff, power: 1.8 },
-    { x: -12, z: 8, color: 0xf0f7ff, power: 1.8 },
-    { x: 12, z: -10, color: 0x00d2ff, power: 2.2 }, // Soft cyan NOC bounce
-    { x: 12, z: 12, color: 0xfef08a, power: 2.0 },  // Arena spotlight
-    { x: 0, z: 0, color: 0xe2e8f0, power: 1.5 }
+    { x: -12, z: -11, color: 0xffffff, power: 2.4 }, // Network Lab
+    { x: -12, z: -2, color: 0xffffff, power: 2.2 },  // Troubleshooting Lab
+    { x: -12, z: 6, color: 0x38bdf8, power: 2.4 },   // Data Center Cold Aisle
+    { x: 12, z: -11, color: 0x00d2ff, power: 2.6 },  // NOC Console & Screens
+    { x: 12, z: 12, color: 0xfef08a, power: 2.6 },   // Arena spotlight
+    { x: -1, z: 12, color: 0x38bdf8, power: 2.2 },   // Training Pods Arc
+    { x: 0, z: -4, color: 0xf8fafc, power: 2.0 },    // Central Concourse North
+    { x: 0, z: 4, color: 0xf8fafc, power: 2.0 }      // Central Concourse South
   ];
 
   troffers.forEach((tr) => {
-    const pl = new THREE.PointLight(tr.color, tr.power, 22, 1.6);
+    const pl = new THREE.PointLight(tr.color, tr.power, 26, 1.5);
     pl.position.set(tr.x, 4.3, tr.z);
     scene.add(pl);
   });
 
-  // 4. NOC Screen Glow Bounce (casts subtle cyan onto nearby console and floor)
-  const nocScreenLight = new THREE.PointLight(0x00d2ff, 2.4, 16, 1.8);
+  // 5. NOC Video Wall Screen Bounce Light
+  const nocScreenLight = new THREE.PointLight(0x00d2ff, 2.8, 18, 1.6);
   nocScreenLight.position.set(12, 2.4, -9.5);
   scene.add(nocScreenLight);
-
-  // 5. Data Center Cold Aisle Cool Blue Illumination
-  const coldAisleLight = new THREE.PointLight(0x38bdf8, 1.8, 14, 2.0);
-  coldAisleLight.position.set(-12, 2.2, 6);
-  scene.add(coldAisleLight);
-
-  // 6. Troubleshooting Lab Diagnostic Task Light
-  const troubleshootLight = new THREE.PointLight(0xf0f7ff, 1.6, 12, 1.8);
-  troubleshootLight.position.set(-12, 3.0, -2);
-  scene.add(troubleshootLight);
 }
 
 // ----------------------------------------------------------------------------
@@ -520,26 +587,32 @@ export function buildRealisticFacility(scene, registerInteractive, openEquipment
   // 3. Architectural Perimeter Walls & Glass Partitions
   buildArchitecturalWalls(scene);
 
-  // 4. Area 1: Network Engineering Workbench & Cisco Equipment
+  // 4. Structural Columns & Facility Signage
+  buildStructuralColumns(scene);
+
+  // 5. Area 1: Network Engineering Workbench & Cisco Equipment
   buildNetworkLabArea(scene, -12, -11, registerInteractive, openEquipmentModal);
 
-  // 5. Area 2: Data Center Cold Aisle (42U Server Racks)
+  // 6. Area 2: Data Center Cold Aisle (42U Server Racks)
   buildDataCenterRacks(scene, -12, 6, registerInteractive, openEquipmentModal);
 
-  // 6. Area 3: NOC Command Center (Curved Console, Video Wall, Monitors)
+  // 7. Area 3: NOC Command Center (Curved Console, Video Wall, Monitors)
   buildNocOperationsCenter(scene, 12, -11, registerInteractive, openEquipmentModal);
 
-  // 7. Area 4: Troubleshooting Lab (NGFW Firewall, Fiber Distribution ODF, OTDR)
+  // 8. Area 4: Troubleshooting Lab (NGFW Firewall, Fiber Distribution ODF, OTDR)
   buildTroubleshootingLab(scene, -12, -2, registerInteractive, openEquipmentModal);
 
-  // 8. Area 5: Network Challenge Arena (Elevated Holographic Platform)
+  // 9. Area 5: Network Challenge Arena (Elevated Platform & Duel Stations)
   buildNetworkChallengeArena(scene, 12, 12, registerInteractive, startMatchmaking);
 
-  // 9. Area 6: Training Pods Arc (5 Interactive Kiosks)
+  // 10. Area 6: Training Pods Arc (5 Interactive Kiosks)
   buildTrainingPodsArc(scene, -1, 12, registerInteractive, openTrainingPod);
 
-  // 10. Overhead Cable Ladder Baskets
+  // 11. Overhead Yellow FiberRunner Cable Ladder Baskets
   buildOverheadCableTrays(scene);
+
+  // 12. Safety & Facility Equipment (Fire Suppression, Extinguishers, Security Cameras)
+  buildSafetyEquipment(scene);
 }
 
 function buildRealisticCeiling(scene) {
@@ -554,7 +627,7 @@ function buildRealisticCeiling(scene) {
   ceiling.position.y = 4.6;
   scene.add(ceiling);
 
-  // Structural Steel I-Beams
+  // Structural Steel I-Beams across facility
   const beamMat = new THREE.MeshStandardMaterial({ color: 0x1a2334, metalness: 0.85, roughness: 0.3 });
   for (let z = -18; z <= 18; z += 12) {
     const beam = new THREE.Mesh(new THREE.BoxGeometry(48, 0.35, 0.45), beamMat);
@@ -566,7 +639,7 @@ function buildRealisticCeiling(scene) {
   const trofferMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
   const trofferFrameMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9 });
   const trofferCoords = [
-    [-12, -10], [-12, 8], [12, -10], [12, 12], [0, -4], [0, 8]
+    [-12, -11], [-12, -2], [-12, 6], [12, -11], [12, 12], [-1, 12], [0, -4], [0, 4]
   ];
 
   trofferCoords.forEach(([tx, tz]) => {
@@ -585,12 +658,12 @@ function buildRealisticCeiling(scene) {
   const ductGeo = new THREE.CylinderGeometry(0.45, 0.45, 48, 16);
   const duct1 = new THREE.Mesh(ductGeo, ductMat);
   duct1.rotation.z = Math.PI / 2;
-  duct1.position.set(0, 4.0, -4);
+  duct1.position.set(0, 4.0, -5);
   scene.add(duct1);
 
   const duct2 = new THREE.Mesh(ductGeo, ductMat);
   duct2.rotation.z = Math.PI / 2;
-  duct2.position.set(0, 4.0, 14);
+  duct2.position.set(0, 4.0, 15);
   scene.add(duct2);
 }
 
@@ -710,6 +783,62 @@ function buildArchitecturalWalls(scene) {
   scene.add(doorGroup);
 }
 
+function buildStructuralColumns(scene) {
+  const colMat = new THREE.MeshStandardMaterial({ color: 0x141b2a, metalness: 0.7, roughness: 0.4 });
+  const conduitMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9 });
+
+  const colCoords = [
+    [-6, -4], [6, -4], [-6, 8], [6, 8]
+  ];
+
+  colCoords.forEach(([cx, cz]) => {
+    const col = new THREE.Mesh(new THREE.BoxGeometry(0.8, 4.6, 0.8), colMat);
+    col.position.set(cx, 2.3, cz);
+    col.castShadow = true;
+    col.receiveShadow = true;
+    scene.add(col);
+
+    // Vertical metal conduit running up the column
+    const conduit = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 4.6, 8), conduitMat);
+    conduit.position.set(cx + 0.44, 2.3, cz);
+    scene.add(conduit);
+  });
+
+  // Wall-Mounted Professional Facility Signage Plaques
+  createWallSign(scene, -12, 3.4, -23.6, "NETWORK OPERATIONS LAB // CISCO R&S", 0x00d2ff);
+  createWallSign(scene, 12, 3.4, -23.6, "NETWORK OPERATIONS CENTER // COMMAND", 0x38bdf8);
+  createWallSign(scene, -23.6, 3.4, 6, "DATA CENTER // COLD AISLE CONTAINMENT", 0x38bdf8, Math.PI / 2);
+  createWallSign(scene, 23.6, 3.4, 12, "NETWORK CHALLENGE ARENA", 0xfacc15, -Math.PI / 2);
+}
+
+function createWallSign(scene, x, y, z, text, accentColor = 0x00d2ff, rotY = 0) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 96;
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#090e18";
+  ctx.fillRect(0, 0, 512, 96);
+  ctx.strokeStyle = "#1e293b";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, 512, 96);
+
+  ctx.fillStyle = "#00d2ff";
+  ctx.fillRect(0, 0, 8, 96);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 18px 'Rajdhani', 'JetBrains Mono', sans-serif";
+  ctx.fillText(text, 24, 55);
+
+  const sign = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.4, 0.65),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas) })
+  );
+  sign.position.set(x, y, z);
+  sign.rotation.y = rotY;
+  scene.add(sign);
+}
+
 function buildNetworkLabArea(scene, cx, cz, registerInteractive, openEquipmentModal) {
   // Heavy-duty Technician Lab Workbench
   const benchMat = new THREE.MeshStandardMaterial({ color: 0x162032, metalness: 0.7, roughness: 0.3 });
@@ -784,16 +913,18 @@ function buildNetworkLabArea(scene, cx, cz, registerInteractive, openEquipmentMo
 function buildDataCenterRacks(scene, cx, cz, registerInteractive, openEquipmentModal) {
   // Two Cold-Aisle Parallel Rows of 42U Enterprise Server Racks
   const rows = [
-    { zOffset: -2.8 },
-    { zOffset: 2.8 }
+    { zOffset: -2.8, types: ["switch", "storage", "patch", "router"] },
+    { zOffset: 2.8, types: ["storage", "glass", "switch", "open-patch"] }
   ];
 
   rows.forEach((row, rowIdx) => {
     for (let c = 0; c < 4; c++) {
       const rx = cx - 4.5 + c * 2.8;
       const rz = cz + row.zOffset;
+      const rackType = row.types[c];
+      const rackId = `RACK 0${rowIdx + 1}-${String.fromCharCode(65 + c)}`;
 
-      const rack = createEnterpriseRack42U(rowIdx === 0 ? "switch" : "storage");
+      const rack = createEnterpriseRack42U(rackType, rackId);
       rack.position.set(rx, 0, rz);
       if (rowIdx === 1) rack.rotation.y = Math.PI; // Face the cold aisle
       scene.add(rack);
@@ -912,7 +1043,7 @@ function buildTroubleshootingLab(scene, cx, cz, registerInteractive, openEquipme
 }
 
 function buildNocOperationsCenter(scene, cx, cz, registerInteractive, openEquipmentModal) {
-  // Massive 9m x 3.6m Wall-Mounted NOC Video Wall
+  // Massive 9.6m x 3.8m Wall-Mounted NOC Video Wall
   const wallGeo = new THREE.PlaneGeometry(9.6, 3.8);
   const wallMat = new THREE.MeshBasicMaterial({ map: createNocWallCanvasTexture() });
   const videoWall = new THREE.Mesh(wallGeo, wallMat);
@@ -941,6 +1072,16 @@ function buildNocOperationsCenter(scene, cx, cz, registerInteractive, openEquipm
     mon.position.set(cx + m * 1.8, 0.75, cz - 4.2);
     mon.rotation.y = m * -0.15;
     scene.add(mon);
+
+    // Mechanical Keyboard and Mouse on Desk
+    const kbMat = new THREE.MeshStandardMaterial({ color: 0x090d16, metalness: 0.8 });
+    const kb = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.02, 0.16), kbMat);
+    kb.position.set(cx + m * 1.8, 0.76, cz - 3.7);
+    scene.add(kb);
+
+    const mouse = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.025, 0.11), kbMat);
+    mouse.position.set(cx + m * 1.8 + 0.3, 0.76, cz - 3.7);
+    scene.add(mouse);
   }
 
   registerInteractive({
@@ -956,7 +1097,7 @@ function buildNocOperationsCenter(scene, cx, cz, registerInteractive, openEquipm
 function buildNetworkChallengeArena(scene, cx, cz, registerInteractive, startMatchmaking) {
   // Elevated Circular Titanium & Tempered Glass Arena Platform
   const arenaBase = new THREE.Mesh(
-    new THREE.CylinderGeometry(7.2, 7.8, 0.45, 32),
+    new THREE.CylinderGeometry(7.4, 7.9, 0.45, 32),
     new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.25 })
   );
   arenaBase.position.set(cx, 0.225, cz);
@@ -965,7 +1106,7 @@ function buildNetworkChallengeArena(scene, cx, cz, registerInteractive, startMat
 
   // Tempered Safety Glass Floor with subtle gold boundary ring
   const ring = new THREE.Mesh(
-    new THREE.RingGeometry(6.6, 7.1, 48),
+    new THREE.RingGeometry(6.6, 7.2, 48),
     new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide })
   );
   ring.rotation.x = -Math.PI / 2;
@@ -989,15 +1130,20 @@ function buildNetworkChallengeArena(scene, cx, cz, registerInteractive, startMat
     scene.add(tip);
   });
 
-  // Dual Dueling Engineer Battle Terminals
-  const p1Terminal = createBattleTerminal("P1 // LOCAL", 0x00d2ff);
-  p1Terminal.position.set(cx - 3.2, 0.45, cz);
-  scene.add(p1Terminal);
+  // Dual Dueling Engineer Battle Stations (P1 vs P2 facing each other)
+  const p1Station = createDuelBattleStation("P1 // LOCAL", 0x00d2ff);
+  p1Station.position.set(cx - 3.4, 0.45, cz);
+  scene.add(p1Station);
 
-  const p2Terminal = createBattleTerminal("P2 // CHALLENGER", 0xf43f5e);
-  p2Terminal.position.set(cx + 3.2, 0.45, cz);
-  p2Terminal.rotation.y = Math.PI;
-  scene.add(p2Terminal);
+  const p2Station = createDuelBattleStation("P2 // CHALLENGER", 0xf43f5e);
+  p2Station.position.set(cx + 3.4, 0.45, cz);
+  p2Station.rotation.y = Math.PI;
+  scene.add(p2Station);
+
+  // Large Overhead Dual-Sided Duel Scoreboard Screen
+  const duelBoard = createOverheadDuelScoreboard();
+  duelBoard.position.set(cx, 3.4, cz);
+  scene.add(duelBoard);
 
   // Suspended Holographic Arena Portal
   registerInteractive({
@@ -1008,6 +1154,121 @@ function buildNetworkChallengeArena(scene, cx, cz, registerInteractive, startMat
     radius: 4.8,
     onInteract: () => startMatchmaking()
   });
+}
+
+function createDuelBattleStation(label, color = 0x00d2ff) {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x141f32, metalness: 0.85, roughness: 0.3 });
+
+  // Console Desk
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.85, 1.2), mat);
+  desk.position.y = 0.425;
+  group.add(desk);
+
+  // Dueling Terminal Dual Monitors
+  const monMat = new THREE.MeshStandardMaterial({ color: 0x090d16, metalness: 0.9 });
+  const mon1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.48, 0.04), monMat);
+  mon1.position.set(-0.45, 1.15, 0.1);
+  mon1.rotation.y = 0.15;
+  group.add(mon1);
+
+  const screen1 = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.76, 0.44),
+    new THREE.MeshBasicMaterial({ color })
+  );
+  screen1.position.set(-0.45, 1.15, 0.125);
+  screen1.rotation.y = 0.15;
+  group.add(screen1);
+
+  const mon2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.48, 0.04), monMat);
+  mon2.position.set(0.45, 1.15, 0.1);
+  mon2.rotation.y = -0.15;
+  group.add(mon2);
+
+  const screen2 = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.76, 0.44),
+    new THREE.MeshBasicMaterial({ color: 0x10b981 })
+  );
+  screen2.position.set(0.45, 1.15, 0.125);
+  screen2.rotation.y = -0.15;
+  group.add(screen2);
+
+  // Compact Cisco Router on Desk
+  const miniRouter = createRealisticCiscoBox("router", label);
+  miniRouter.scale.set(0.65, 0.65, 0.65);
+  miniRouter.position.set(0, 0.95, -0.2);
+  group.add(miniRouter);
+
+  // Keyboard & Mouse
+  const kbMat = new THREE.MeshStandardMaterial({ color: 0x030712, metalness: 0.9 });
+  const kb = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.18), kbMat);
+  kb.position.set(0, 0.86, 0.35);
+  group.add(kb);
+
+  return group;
+}
+
+function createOverheadDuelScoreboard() {
+  const group = new THREE.Group();
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#070c18";
+  ctx.fillRect(0, 0, 512, 256);
+  ctx.strokeStyle = "#facc15";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(0, 0, 512, 256);
+
+  ctx.fillStyle = "#facc15";
+  ctx.font = "bold 20px 'Rajdhani', sans-serif";
+  ctx.fillText("⚔ NETWORK DUEL // HEAD-TO-HEAD ARENA", 20, 36);
+
+  ctx.fillStyle = "#00d2ff";
+  ctx.font = "bold 16px 'JetBrains Mono', monospace";
+  ctx.fillText("YOU [HUNTER]   vs   OPPONENT [ENGINEER]", 20, 72);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "12px monospace";
+  const rounds = [
+    "ROUND 1: SUBNETTING ALLOCATION (VLSM / CIDR)",
+    "ROUND 2: VLAN TRUNKING & 802.1Q ENCAPSULATION",
+    "ROUND 3: OSPF & BGP ROUTING PROTOCOLS",
+    "ROUND 4: EXTENDED ACCESS CONTROL LISTS (ACL)",
+    "ROUND 5: ENTERPRISE TOPOLOGY TROUBLESHOOTING"
+  ];
+  rounds.forEach((rd, idx) => {
+    ctx.fillStyle = idx % 2 === 0 ? "#e2e8f0" : "#38bdf8";
+    ctx.fillText(`• ${rd}`, 24, 110 + idx * 26);
+  });
+
+  const tex = new THREE.CanvasTexture(canvas);
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9 });
+  const boardFrame = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.7, 0.2), frameMat);
+  group.add(boardFrame);
+
+  // Front display
+  const fScreen = new THREE.Mesh(new THREE.PlaneGeometry(5.0, 2.5), new THREE.MeshBasicMaterial({ map: tex }));
+  fScreen.position.z = 0.105;
+  group.add(fScreen);
+
+  // Back display
+  const bScreen = new THREE.Mesh(new THREE.PlaneGeometry(5.0, 2.5), new THREE.MeshBasicMaterial({ map: tex }));
+  bScreen.rotation.y = Math.PI;
+  bScreen.position.z = -0.105;
+  group.add(bScreen);
+
+  // Ceiling hanging steel cables
+  const cableMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.95 });
+  for (let c = -2.2; c <= 2.2; c += 4.4) {
+    const hanger = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.4), cableMat);
+    hanger.position.set(c, 1.8, 0);
+    group.add(hanger);
+  }
+
+  return group;
 }
 
 function buildTrainingPodsArc(scene, cx, cz, registerInteractive, openTrainingPod) {
@@ -1039,71 +1300,175 @@ function buildTrainingPodsArc(scene, cx, cz, registerInteractive, openTrainingPo
 }
 
 function buildOverheadCableTrays(scene) {
-  const ladderMat = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.6, roughness: 0.4 }); // Yellow FiberRunner
-  const tray1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 36), ladderMat);
+  const ladderMat = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.65, roughness: 0.35 }); // Yellow FiberRunner
+  const tray1 = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.15, 36), ladderMat);
   tray1.position.set(-12, 3.8, 4);
   scene.add(tray1);
 
-  const tray2 = new THREE.Mesh(new THREE.BoxGeometry(24, 0.15, 0.4), ladderMat);
+  const tray2 = new THREE.Mesh(new THREE.BoxGeometry(26, 0.15, 0.45), ladderMat);
   tray2.position.set(0, 3.8, -10);
   scene.add(tray2);
+}
+
+function buildSafetyEquipment(scene) {
+  // Fire Extinguishers on perimeter walls (Type C electrical fire rated)
+  const extMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.6, roughness: 0.3 });
+  const hoseMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.8 });
+
+  [
+    [-23.6, 1.4, -10],
+    [-23.6, 1.4, 10],
+    [23.6, 1.4, -4],
+    [23.6, 1.4, 10]
+  ].forEach(([ex, ey, ez]) => {
+    const extGroup = new THREE.Group();
+    extGroup.position.set(ex, ey, ez);
+
+    const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.65, 16), extMat);
+    extGroup.add(bottle);
+
+    const hose = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4), hoseMat);
+    hose.position.set(0.09, 0.1, 0);
+    extGroup.add(hose);
+
+    scene.add(extGroup);
+  });
+
+  // Ceiling 360-Degree Dome Security Cameras
+  const camMat = new THREE.MeshStandardMaterial({ color: 0x090d16, metalness: 0.9 });
+  const lensMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+  [
+    [-18, 4.4, -18],
+    [18, 4.4, -18],
+    [-18, 4.4, 18],
+    [18, 4.4, 18]
+  ].forEach(([cx, cy, cz]) => {
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), camMat);
+    dome.rotation.x = Math.PI;
+    dome.position.set(cx, cy, cz);
+    scene.add(dome);
+
+    const recLED = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.03), lensMat);
+    recLED.position.set(cx, cy - 0.16, cz + 0.08);
+    scene.add(recLED);
+  });
 }
 
 // ----------------------------------------------------------------------------
 // HIGH-FIDELITY COMPONENT MESH BUILDERS
 // ----------------------------------------------------------------------------
 
-function createEnterpriseRack42U(rackContent = "switch") {
+function createEnterpriseRack42U(rackType = "switch", rackId = "RACK 01-A") {
   const group = new THREE.Group();
 
-  // 42U Server Rack Dimensions: 0.8m wide, 1.0m deep, 2.15m tall
-  const frameMat = new THREE.MeshStandardMaterial({ color: 0x0a0f18, metalness: 0.85, roughness: 0.35 });
+  // 42U Server Rack Dimensions: 0.84m wide, 1.05m deep, 2.18m tall
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x090e18, metalness: 0.9, roughness: 0.28 });
   const postMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.95 });
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.9 });
 
-  // Main Enclosure Body
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.82, 2.15, 1.02), frameMat);
-  body.position.y = 1.075;
+  // Main Heavy-Gauge Welded Frame
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.84, 2.18, 1.05), frameMat);
+  body.position.y = 1.09;
   body.castShadow = true;
   group.add(body);
 
-  // Front Honeycomb Perforated Door
-  const doorGeo = new THREE.PlaneGeometry(0.74, 2.05);
-  const doorMat = new THREE.MeshStandardMaterial({
-    map: createPerforatedVentTexture(),
-    transparent: true,
-    opacity: 0.55,
-    metalness: 0.9,
-    roughness: 0.2
-  });
-  const door = new THREE.Mesh(doorGeo, doorMat);
-  door.position.set(0, 1.075, 0.515);
-  group.add(door);
+  // Vertical Rack Rails (Silkscreened U-Rails on left and right)
+  for (let r = -1; r <= 1; r += 2) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.05, 0.04), railMat);
+    rail.position.set(r * 0.38, 1.09, 0.51);
+    group.add(rail);
+  }
 
-  // Stack of 8 Rack Units inside
-  const faceTexture = createServerFaceplateTexture(rackContent);
-  const uGeo = new THREE.PlaneGeometry(0.72, 0.2);
+  // Top ID Plate with silkscreened Rack Identifier
+  const idCanvas = document.createElement("canvas");
+  idCanvas.width = 256;
+  idCanvas.height = 64;
+  const idCtx = idCanvas.getContext("2d");
+  idCtx.fillStyle = "#020617";
+  idCtx.fillRect(0, 0, 256, 64);
+  idCtx.fillStyle = "#38bdf8";
+  idCtx.font = "bold 20px 'JetBrains Mono', monospace";
+  idCtx.fillText(rackId, 24, 40);
+
+  const idPlate = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.68, 0.12),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(idCanvas) })
+  );
+  idPlate.position.set(0, 2.12, 0.528);
+  group.add(idPlate);
+
+  // Door variants
+  if (rackType === "glass") {
+    // Tinted Tempered Safety Glass Door
+    const glassDoor = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.76, 2.02),
+      new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.35,
+        metalness: 0.95,
+        roughness: 0.05
+      })
+    );
+    glassDoor.position.set(0, 1.07, 0.53);
+    group.add(glassDoor);
+  } else if (rackType !== "open-patch") {
+    // Honeycomb Perforated Steel Front Door
+    const doorGeo = new THREE.PlaneGeometry(0.76, 2.02);
+    const doorMat = new THREE.MeshStandardMaterial({
+      map: createPerforatedVentTexture(),
+      transparent: true,
+      opacity: 0.58,
+      metalness: 0.9,
+      roughness: 0.25
+    });
+    const door = new THREE.Mesh(doorGeo, doorMat);
+    door.position.set(0, 1.07, 0.53);
+    group.add(door);
+
+    // Door Recessed Handle
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.22, 0.04), postMat);
+    handle.position.set(0.33, 1.1, 0.54);
+    group.add(handle);
+  }
+
+  // 8 Rack Units mounted inside
+  const faceTexture = createServerFaceplateTexture(rackType === "glass" ? "storage" : (rackType === "open-patch" ? "patch" : rackType));
+  const uGeo = new THREE.PlaneGeometry(0.74, 0.21);
   const uMat = new THREE.MeshBasicMaterial({ map: faceTexture });
 
   for (let u = 0; u < 8; u++) {
     const face = new THREE.Mesh(uGeo, uMat);
-    face.position.set(0, 0.32 + u * 0.23, 0.505);
+    const faceY = 0.32 + u * 0.23;
+    face.position.set(0, faceY, 0.505);
     group.add(face);
 
-    // Blinking Micro LED on face
+    // Blinking Micro Status LED
     const ledMesh = new THREE.Mesh(
       new THREE.BoxGeometry(0.015, 0.015, 0.01),
       new THREE.MeshBasicMaterial({ color: u % 2 === 0 ? 0x10b981 : 0x00d2ff })
     );
-    ledMesh.position.set(0.28, 0.32 + u * 0.23, 0.512);
+    ledMesh.position.set(0.31, faceY, 0.515);
     group.add(ledMesh);
     blinkingLEDs.push(ledMesh);
+  }
+
+  // Natural Cat6 Patch Cord Bundles inside the rack
+  if (rackType === "switch" || rackType === "open-patch") {
+    const c1 = createCurvedCableMesh(new THREE.Vector3(-0.25, 0.55, 0.51), new THREE.Vector3(-0.05, 0.78, 0.51), 0x00d2ff);
+    group.add(c1);
+    const c2 = createCurvedCableMesh(new THREE.Vector3(0.05, 0.55, 0.51), new THREE.Vector3(0.25, 0.78, 0.51), 0xeab308);
+    group.add(c2);
+    const c3 = createCurvedCableMesh(new THREE.Vector3(-0.15, 1.01, 0.51), new THREE.Vector3(0.12, 1.24, 0.51), 0x38bdf8);
+    group.add(c3);
   }
 
   // Top Exhaust Fan Grilles
   for (let f = -1; f <= 1; f++) {
     const fanGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.04, 12);
     const fan = new THREE.Mesh(fanGeo, postMat);
-    fan.position.set(0, 2.16, f * 0.26);
+    fan.position.set(0, 2.19, f * 0.26);
     group.add(fan);
     spinningFans.push(fan);
   }
@@ -1117,13 +1482,13 @@ function createRealisticCiscoBox(type = "router", label = "") {
   const height = 0.24;
   const depth = 0.9;
 
-  const chassisMat = new THREE.MeshStandardMaterial({ color: 0x172236, metalness: 0.8, roughness: 0.3 });
+  const chassisMat = new THREE.MeshStandardMaterial({ color: 0x172236, metalness: 0.85, roughness: 0.28 });
   const chassis = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), chassisMat);
   chassis.castShadow = true;
   group.add(chassis);
 
   // Front Faceplate
-  const faceMat = new THREE.MeshBasicMaterial({ map: createServerFaceplateTexture(type) });
+  const faceMat = new THREE.MeshBasicMaterial({ map: createServerFaceplateTexture(type, label) });
   const face = new THREE.Mesh(new THREE.PlaneGeometry(width * 0.96, height * 0.92), faceMat);
   face.position.set(0, 0, depth / 2 + 0.002);
   group.add(face);
@@ -1135,30 +1500,46 @@ function createCurvedCableMesh(start, end, color = 0x00d2ff) {
   const mid = new THREE.Vector3()
     .addVectors(start, end)
     .multiplyScalar(0.5)
-    .add(new THREE.Vector3(0, 0.25, 0.15));
+    .add(new THREE.Vector3(0, 0.18, 0.12));
 
   const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-  const geo = new THREE.TubeGeometry(curve, 16, 0.018, 8, false);
-  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.3 });
+  const geo = new THREE.TubeGeometry(curve, 16, 0.016, 8, false);
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.25 });
   return new THREE.Mesh(geo, mat);
 }
 
 function createFieldLaptop() {
   const group = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.7 });
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.03, 0.38), bodyMat);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.75, roughness: 0.3 });
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.03, 0.38), bodyMat);
   group.add(base);
 
   // Screen Lid angled 110 degrees
-  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.36, 0.02), bodyMat);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.36, 0.02), bodyMat);
   lid.position.set(0, 0.18, -0.18);
   lid.rotation.x = 0.2;
   group.add(lid);
 
-  // Terminal Screen
+  // Terminal Screen showing Cisco IOS CLI
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 160;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#020617";
+  ctx.fillRect(0, 0, 256, 160);
+  ctx.fillStyle = "#38bdf8";
+  ctx.font = "bold 9px monospace";
+  ctx.fillText("R1# show ip ospf neighbor", 10, 22);
+  ctx.fillStyle = "#10b981";
+  ctx.fillText("Neighbor ID: 10.254.1.2  FULL/DR", 10, 42);
+  ctx.fillText("Interface: GigabitEthernet0/0/0", 10, 58);
+  ctx.fillStyle = "#facc15";
+  ctx.fillText("Ping 10.254.1.2: 5/5 (100% OK)", 10, 84);
+
+  const screenTex = new THREE.CanvasTexture(canvas);
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.48, 0.31),
-    new THREE.MeshBasicMaterial({ color: 0x0f172a })
+    new THREE.PlaneGeometry(0.5, 0.32),
+    new THREE.MeshBasicMaterial({ map: screenTex })
   );
   screen.position.set(0, 0.18, -0.168);
   screen.rotation.x = 0.2;
@@ -1169,18 +1550,45 @@ function createFieldLaptop() {
 
 function createCurvedMonitor34() {
   const group = new THREE.Group();
-  const standMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9 });
+  const standMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.95 });
   const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.45), standMat);
   stand.position.y = 0.225;
   group.add(stand);
 
   // 34" Ultrawide Curved Panel
-  const screenMat = new THREE.MeshBasicMaterial({ color: 0x090e18 });
   const panel = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.48, 0.05), standMat);
   panel.position.set(0, 0.45, 0);
   group.add(panel);
 
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 0.44), screenMat);
+  // Screen with active NOC dashboard
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 192;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#030712";
+  ctx.fillRect(0, 0, 512, 192);
+
+  ctx.fillStyle = "#00d2ff";
+  ctx.font = "bold 13px 'JetBrains Mono', monospace";
+  ctx.fillText("CORE ROUTER TELEMETRY // REAL-TIME RTT", 16, 26);
+
+  ctx.fillStyle = "#10b981";
+  ctx.font = "11px monospace";
+  ctx.fillText("BGP PEER 10.0.1.1: ESTABLISHED  ·  PREFIXES: 941k", 16, 56);
+  ctx.fillText("PACKET LOSS: 0.00%  ·  JITTER: 0.24ms", 16, 80);
+
+  ctx.strokeStyle = "#38bdf8";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let x = 16; x < 496; x += 12) {
+    const y = 140 + Math.sin(x * 0.1) * 16;
+    if (x === 16) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  const screenTex = new THREE.CanvasTexture(canvas);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 0.44), new THREE.MeshBasicMaterial({ map: screenTex }));
   screen.position.set(0, 0.45, 0.026);
   group.add(screen);
 
@@ -1190,40 +1598,39 @@ function createCurvedMonitor34() {
 function createErgonomicMeshChair() {
   const group = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.7 });
+  const meshMat = new THREE.MeshStandardMaterial({ color: 0x1f293d, metalness: 0.4, roughness: 0.6 });
+
   // Seat cushion
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.6), mat);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.6), meshMat);
   seat.position.y = 0.52;
   group.add(seat);
 
-  // Backrest
-  const back = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.72, 0.06), mat);
+  // Ergonomic Curved Backrest
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.72, 0.06), meshMat);
   back.position.set(0, 0.95, -0.28);
   back.rotation.x = -0.08;
   group.add(back);
+
+  // Armrests
+  for (let a = -1; a <= 1; a += 2) {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.26, 0.32), mat);
+    arm.position.set(a * 0.35, 0.72, -0.05);
+    group.add(arm);
+  }
 
   // Base stem
   const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.48), mat);
   stem.position.y = 0.26;
   group.add(stem);
 
-  return group;
-}
-
-function createBattleTerminal(label, color = 0x00d2ff) {
-  const group = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: 0x141f32, metalness: 0.8 });
-  const stand = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.05, 0.55), mat);
-  stand.position.y = 0.525;
-  group.add(stand);
-
-  // Angled Touch Screen
-  const screen = new THREE.Mesh(
-    new THREE.BoxGeometry(0.85, 0.52, 0.04),
-    new THREE.MeshBasicMaterial({ color })
-  );
-  screen.position.set(0, 1.15, 0.08);
-  screen.rotation.x = -0.38;
-  group.add(screen);
+  // 5-Star Caster Base
+  for (let star = 0; star < 5; star++) {
+    const ang = (star * Math.PI * 2) / 5;
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.35), mat);
+    leg.position.set(Math.sin(ang) * 0.18, 0.04, Math.cos(ang) * 0.18);
+    leg.rotation.y = ang;
+    group.add(leg);
+  }
 
   return group;
 }
@@ -1349,7 +1756,7 @@ function createOtdrDisplay() {
 // ----------------------------------------------------------------------------
 
 export function updateFacilityAnimations(delta) {
-  // 1. Spinning server fans
+  // 1. Spinning server exhaust fans
   spinningFans.forEach((fan) => {
     fan.rotation.y += 0.15;
   });

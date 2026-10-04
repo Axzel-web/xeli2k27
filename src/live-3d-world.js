@@ -284,10 +284,10 @@ export function init3DLiveWorld(container, callbacks = {}) {
   const width = container.clientWidth || window.innerWidth;
   const height = container.clientHeight || (window.innerHeight - 70);
 
-  // 1. Scene setup
+  // 1. Scene setup (Modern high-tech facility atmosphere)
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0f1d);
-  scene.fog = new THREE.FogExp2(0x0a0f1d, 0.018);
+  scene.background = new THREE.Color(0x0e1526);
+  scene.fog = new THREE.FogExp2(0x0e1526, 0.012);
 
   // 2. Camera setup
   camera = new THREE.PerspectiveCamera(58, width / height, 0.1, 500);
@@ -304,7 +304,7 @@ export function init3DLiveWorld(container, callbacks = {}) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.3;
+  renderer.toneMappingExposure = 1.4;
 
   // 4. Realistic Lighting setup
   setupRealisticLighting(scene);
@@ -787,9 +787,29 @@ function updateCameraFollow() {
   );
 
   // Compute camera offset from spherical angles (yaw & pitch)
-  const offsetX = cameraDistance * Math.sin(cameraYaw) * Math.cos(cameraPitch);
-  const offsetY = cameraDistance * Math.sin(cameraPitch);
-  const offsetZ = cameraDistance * Math.cos(cameraYaw) * Math.cos(cameraPitch);
+  let actualDist = cameraDistance;
+
+  // Camera Wall Collision Prevention:
+  // If camera position would penetrate facility walls (±22.8m in X/Z), smoothly dolly forward
+  const normX = Math.sin(cameraYaw) * Math.cos(cameraPitch);
+  const normZ = Math.cos(cameraYaw) * Math.cos(cameraPitch);
+
+  const testX = targetLook.x + actualDist * normX;
+  const testZ = targetLook.z + actualDist * normZ;
+
+  const wallLimit = 22.6;
+  if (Math.abs(testX) > wallLimit) {
+    const maxDistX = Math.abs((Math.sign(normX) * wallLimit - targetLook.x) / (normX || 0.0001));
+    if (maxDistX > 0.8) actualDist = Math.min(actualDist, maxDistX);
+  }
+  if (Math.abs(testZ) > wallLimit) {
+    const maxDistZ = Math.abs((Math.sign(normZ) * wallLimit - targetLook.z) / (normZ || 0.0001));
+    if (maxDistZ > 0.8) actualDist = Math.min(actualDist, maxDistZ);
+  }
+
+  const offsetX = actualDist * normX;
+  const offsetY = actualDist * Math.sin(cameraPitch);
+  const offsetZ = actualDist * normZ;
 
   const desiredPosition = new THREE.Vector3(
     targetLook.x + offsetX,
@@ -797,7 +817,7 @@ function updateCameraFollow() {
     targetLook.z + offsetZ
   );
 
-  camera.position.lerp(desiredPosition, 0.15);
+  camera.position.lerp(desiredPosition, 0.18);
   camera.lookAt(targetLook);
 }
 
