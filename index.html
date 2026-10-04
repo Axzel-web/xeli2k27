@@ -13,6 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=VT323&family=Tahoma&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
 <link rel="stylesheet" href="/src/xeli.css">
 </head>
 <body>
@@ -201,8 +203,9 @@
               </g>
             </svg>
           </div>
-          <div class="rank-badge-wrap">
-            <div class="rank-badge" id="rankBadgeBig" role="button" tabindex="0" title="Hunter Rank · Click to trigger Awakening Resonance">
+          <div class="rank-badge-wrap" id="rankBadgeWrap">
+            <div class="rank-badge-halo" id="rankBadgeHalo" aria-hidden="true"></div>
+            <div class="rank-badge" id="rankBadgeBig" role="button" tabindex="0" title="Hunter Rank · Click to trigger Milestone Glow &amp; Awakening">
               <span id="rankLetterBig">E</span>
             </div>
             <div class="rank-awakening-fx" id="rankAwakeningFx" aria-hidden="true"></div>
@@ -392,93 +395,79 @@
         </div>
       </div>
 
-      <div class="panel calendar-panel">
-        <div class="panel-head">
-          <h2><svg viewBox="0 0 24 24" class="panel-icon"><path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7ZM5 9h14v11H5V9Z"/></svg>Progress Calendar</h2>
-          <span class="calendar-caption" id="calendarCaption">0 EXP earned in the last year</span>
+      <!-- ===================== GITHUB-STYLE PROGRESS CALENDAR ===================== -->
+      <div class="panel calendar-panel gh-calendar-panel">
+        <div class="panel-head gh-panel-head">
+          <h2><svg viewBox="0 0 16 16" class="panel-icon gh-icon" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Progress Calendar</h2>
+          <span class="calendar-caption" id="calendarCaption">267 contributions in the last year</span>
         </div>
 
-        <!-- LeetCode Heatmap Stats Header Bar -->
-        <div class="lc-cal-stats-strip">
-          <div class="lc-cal-main-stat">
-            <span class="lc-cal-val" id="lcCalTotalSubs">0</span>
-            <span class="lc-cal-lbl">submissions in the past year</span>
-          </div>
-          <div class="lc-cal-streak-group">
-            <div class="lc-streak-chip">
-              <span class="lc-streak-lbl">Active Days:</span>
-              <span class="lc-streak-val" id="lcCalActiveDays">0</span>
-            </div>
-            <div class="lc-streak-chip">
-              <span class="lc-streak-lbl">Max Streak:</span>
-              <span class="lc-streak-val lc-streak-highlight" id="lcCalMaxStreak">0</span>
-            </div>
-            <div class="lc-streak-chip">
-              <span class="lc-streak-lbl">Current Streak:</span>
-              <span class="lc-streak-val lc-streak-fire" id="lcCalCurrentStreak">0</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Progress Calendar Navigation & Month Quick Jump Toolbar -->
-        <div class="cal-nav-toolbar">
-          <div class="cal-nav-quick-scroll-wrap">
-            <div class="cal-nav-quick-months" id="calNavQuickMonths"></div>
-          </div>
-          <div class="cal-view-switch-group">
-            <button class="cal-view-btn is-active" id="calViewHeatmapBtn" type="button" title="52-Week Year Heatmap">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M3 3h4v4H3zm6 0h4v4H9zm6 0h4v4h-4zm-12 6h4v4H3zm6 0h4v4H9zm6 0h4v4h-4zm-12 6h4v4H3zm6 0h4v4H9zm6 0h4v4h-4z"/></svg>
-              <span>Heatmap</span>
-            </button>
-            <button class="cal-view-btn" id="calViewMonthBtn" type="button" title="Full Month Matrix (Day in a Box)">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              <span>Month Grid</span>
-            </button>
-          </div>
-          <div class="cal-nav-actions">
-            <button class="cal-nav-btn" id="calNavPrevBtn" type="button" title="Scroll to earlier months" aria-label="Previous Month">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            </button>
-            <button class="cal-nav-btn cal-nav-btn-today" id="calNavTodayBtn" type="button" title="Jump to Current Month">
-              <span class="cal-today-dot"></span>
-              <span>Today</span>
-            </button>
-            <button class="cal-nav-btn" id="calNavNextBtn" type="button" title="Scroll to later months" aria-label="Next Month">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="calendar-scroll" id="calendarScroll">
-          <div class="calendar-wrap">
-            <div class="calendar-body">
-              <div class="calendar-daylabels" aria-hidden="true">
-                <span class="cal-daylabel-header-pad"></span>
-                <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
+        <div class="gh-cal-layout">
+          <!-- Main Left Column: Calendar Box + Activity Section -->
+          <div class="gh-cal-main">
+            <!-- Header bar above the box -->
+            <div class="gh-cal-header-bar">
+              <span class="gh-cal-summary-title" id="ghCalSummaryTitle">267 contributions in the last year</span>
+              <div class="gh-cal-settings-dropdown">
+                <button type="button" class="gh-cal-settings-btn" id="ghCalSettingsBtn">
+                  <span>Contribution settings</span>
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="m4.427 7.427 3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427Z"/></svg>
+                </button>
+                <div class="gh-cal-settings-menu" id="ghCalSettingsMenu" style="display: none;">
+                  <label class="gh-setting-item">
+                    <input type="checkbox" id="ghSettingPrivateActivity" checked />
+                    <span>Include private quest &amp; trial EXP</span>
+                  </label>
+                  <label class="gh-setting-item">
+                    <input type="checkbox" id="ghSettingActivityOverview" checked />
+                    <span>Show activity overview</span>
+                  </label>
+                </div>
               </div>
-              <div class="calendar-months-flow" id="calendarMonthsFlow"></div>
-              <!-- Hidden fallback containers for script compatibility -->
-              <div class="calendar-grid" id="calendarGrid" style="display:none;"></div>
-              <div class="calendar-months" id="calendarMonths" style="display:none;"></div>
+            </div>
+
+            <!-- Authentic GitHub Graph Card Box -->
+            <div class="gh-graph-box">
+              <div class="gh-graph-scroll-wrap" id="calendarScroll">
+                <div class="gh-graph-canvas-wrap" id="calendarMonthsFlow">
+                  <!-- Dynamically rendered: Months header + 7 rows x 52/53 columns SVG/DOM + Day labels -->
+                </div>
+              </div>
+
+              <!-- Box Footer -->
+              <div class="gh-graph-footer">
+                <button type="button" class="gh-help-link" id="ghHelpLink">Learn how we count contributions</button>
+                <div class="gh-legend">
+                  <span>Less</span>
+                  <span class="gh-legend-cell level-0"></span>
+                  <span class="gh-legend-cell level-1"></span>
+                  <span class="gh-legend-cell level-2"></span>
+                  <span class="gh-legend-cell level-3"></span>
+                  <span class="gh-legend-cell level-4"></span>
+                  <span>More</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- GitHub Contribution Activity Section -->
+            <div class="gh-activity-section" id="ghActivitySection">
+              <h3 class="gh-activity-title">Contribution activity</h3>
+              <div class="gh-activity-timeline" id="ghActivityTimeline">
+                <!-- Dynamically populated from state.activity, state.dailyExp, quests, and solved challenges -->
+              </div>
+              <button type="button" class="gh-activity-more-btn" id="ghActivityMoreBtn">Show more activity</button>
             </div>
           </div>
-        </div>
 
-        <!-- Dedicated Single Month Grid View (Every Day In A Box) -->
-        <div class="calendar-month-detail-panel" id="calendarMonthDetail" style="display:none;"></div>
+          <!-- Right Column: GitHub Year Selector Navigation -->
+          <div class="gh-cal-years" id="ghCalYears">
+            <button type="button" class="gh-year-btn is-active" data-year="2026">2026</button>
+            <button type="button" class="gh-year-btn" data-year="2025">2025</button>
+          </div>
+        </div>
 
         <!-- Floating Interactive Day Tooltip -->
         <div class="cal-floating-tooltip" id="calFloatingTooltip" style="display:none;"></div>
-
-        <div class="calendar-legend">
-          <span>Less</span>
-          <span class="cal-cell" data-level="0"></span>
-          <span class="cal-cell" data-level="1"></span>
-          <span class="cal-cell" data-level="2"></span>
-          <span class="cal-cell" data-level="3"></span>
-          <span class="cal-cell" data-level="4"></span>
-          <span>More</span>
-        </div>
       </div>
     </section>
 
@@ -1345,8 +1334,12 @@ CREATE TABLE IF NOT EXISTS public.unlocked_achievements (
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
 <script type="module" src="/src/xeli.js"></script>
 </body>
 </html>

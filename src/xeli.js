@@ -1909,10 +1909,15 @@ const ACHIEVEMENT_GROUPS = [
       const isTyping = e.target && (
         e.target.tagName === "INPUT" ||
         e.target.tagName === "TEXTAREA" ||
-        e.target.isContentEditable
+        e.target.isContentEditable ||
+        Boolean(e.target.closest && e.target.closest(".CodeMirror"))
       );
 
       if (isTyping) {
+        // Skip audio generation for arrow keys and cursor navigation to prevent input lag
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"].includes(e.key)) {
+          return;
+        }
         playTypingSound(e.key);
       }
     },
@@ -1990,8 +1995,9 @@ const ACHIEVEMENT_GROUPS = [
 
     if (leveled) {
       const afterRank = rankInfoForLevel(state.level).rank;
+      const isMilestone = isLevelMilestone(state.level, beforeLevel);
       playLevelUp();
-      showLevelUp(state.level, beforeRank !== afterRank ? afterRank : null);
+      showLevelUp(state.level, beforeRank !== afterRank ? afterRank : null, isMilestone);
     } else {
       playSuccess();
       showToast(`+${amount} EXP <b>${escapeHtml(reason)}</b>`);
@@ -3209,493 +3215,511 @@ const ACHIEVEMENT_GROUPS = [
     return 4;
   }
 
-  let calNavInitialized = false;
-  let currentCalViewMode = "heatmap"; // "heatmap" | "month"
-  let selectedMonthDetailYear = 2026;
-  let selectedMonthDetailIndex = 8; // September
+  let selectedCalendarYear = 2026;
+  let ghEventsInitialized = false;
+  let ghActivityExpanded = false;
+
+  // Seeded matrix for previous year (2025) so browsing past years displays authentic activity
+  const SEED_2025_EXP = {
+    "2025-08-11": 310,
+    "2025-08-18": 620,
+    "2025-08-25": 450,
+    "2025-09-02": 920,
+    "2025-09-08": 450,
+    "2025-09-12": 620,
+    "2025-09-19": 310,
+    "2025-09-26": 550,
+    "2025-10-03": 720,
+    "2025-10-10": 480,
+    "2025-10-17": 920,
+    "2025-10-24": 650,
+    "2025-10-31": 380,
+    "2025-11-07": 820,
+    "2025-11-14": 490,
+    "2025-11-21": 630,
+    "2025-11-28": 710,
+    "2025-12-05": 540,
+    "2025-12-12": 920,
+    "2025-12-19": 610,
+    "2025-12-26": 480,
+  };
 
   function renderCalendar() {
+    const container = document.getElementById("calendarMonthsFlow");
+    if (!container) return;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    selectedMonthDetailYear = today.getFullYear();
-    selectedMonthDetailIndex = today.getMonth();
-
-    // Build past 12-13 months (from 12 months ago through current month)
-    const monthBlocks = [];
-    const numMonths = 12; // 12 past months + current month = 13 months
-    for (let offset = numMonths; offset >= 0; offset--) {
-      const d = new Date(today.getFullYear(), today.getMonth() - offset, 1);
-      const year = d.getFullYear();
-      const month = d.getMonth();
-      const isCurrentMonth = (year === today.getFullYear() && month === today.getMonth());
-      const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
-      const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 = Sunday
-
-      // Construct columns strictly for THIS month only:
-      // - Each month calculates its own firstDayOfMonth and daysInMonth
-      // - Leading & trailing slots are pure empty placeholders with the same box dimensions
-      // - Zero dates from another month overflow into this month's data grid
-      const columns = [];
-      let curCol = [];
-
-      // Leading empty placeholders for firstDayOfWeek (Sunday = 0, Monday = 1, Tuesday = 2, ...)
-      for (let s = 0; s < firstDayOfWeek; s++) {
-        curCol.push({ isEmpty: true, date: null });
-      }
-
-      // Days belonging exclusively to THIS month (dayNum 1 through totalDaysInMonth)
-      for (let dayNum = 1; dayNum <= totalDaysInMonth; dayNum++) {
-        curCol.push({
-          date: new Date(year, month, dayNum),
-          dayNum,
-          isEmpty: false,
-        });
-        if (curCol.length === 7) {
-          columns.push(curCol);
-          curCol = [];
-        }
-      }
-
-      // Trailing empty placeholders to complete the last 7-day column
-      if (curCol.length > 0) {
-        while (curCol.length < 7) {
-          curCol.push({ isEmpty: true, date: null });
-        }
-        columns.push(curCol);
-      }
-
-      monthBlocks.push({
-        year,
-        month,
-        name: MONTH_ABBR[month],
-        fullName: FULL_MONTH_NAMES[month],
-        isCurrentMonth,
-        columns,
-      });
+    // Calculate start and end dates for 52-53 continuous weeks
+    let startDate, endDate;
+    if (selectedCalendarYear === today.getFullYear()) {
+      endDate = new Date(today);
+      endDate.setDate(today.getDate() + (6 - today.getDay()));
+      startDate = new Date(endDate);
+      startDate.setDate(endDate.getDate() - (52 * 7) + 1);
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+    } else {
+      startDate = new Date(selectedCalendarYear, 0, 1);
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+      endDate = new Date(selectedCalendarYear, 11, 31);
+      endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
     }
 
+    const weeks = [];
+    let curWeek = [];
+    const loopDate = new Date(startDate);
+
+    while (loopDate <= endDate) {
+      curWeek.push(new Date(loopDate));
+      if (curWeek.length === 7) {
+        weeks.push(curWeek);
+        curWeek = [];
+      }
+      loopDate.setDate(loopDate.getDate() + 1);
+    }
+    if (curWeek.length > 0) {
+      weeks.push(curWeek);
+    }
+
+    let totalContributions = 0;
     let totalYearExp = 0;
-    const monthExpMap = {};
 
-    // Generate Month Cards: Solid columns with every day in a box
-    const monthCardsHtml = monthBlocks.map((b) => {
-      let monthExp = 0;
+    const monthLabels = [];
+    let lastMonthSeen = -1;
+    let lastColIndex = -10;
 
-      const colsHtml = b.columns.map((col) => {
-        const colCells = col.map((cell) => {
-          if (cell.isEmpty || !cell.date) {
-            return `<span class="cal-cell is-empty" aria-hidden="true"></span>`;
-          }
+    weeks.forEach((week, colIdx) => {
+      const primaryDay = week[0];
+      const m = primaryDay.getMonth();
+      if (m !== lastMonthSeen && (colIdx - lastColIndex) >= 3) {
+        monthLabels.push({
+          colIdx,
+          name: MONTH_ABBR[m],
+        });
+        lastMonthSeen = m;
+        lastColIndex = colIdx;
+      }
+    });
 
-          const day = cell.date;
-          const dayTime = day.getTime();
-          const todayTime = today.getTime();
-          const isToday = (dayTime === todayTime);
-          const isFuture = (dayTime > todayTime);
+    const isTarget = isTargetMatrixAccount(state);
 
-          const key = dateKey(day);
-          const exp = !isFuture ? (state.dailyExp[key] || 0) : 0;
-          if (exp > 0) {
-            monthExp += exp;
-            totalYearExp += exp;
-          }
+    const cellsHtml = weeks.map((week, wIdx) => {
+      const colHtml = week.map((day) => {
+        const key = dateKey(day);
+        const dayTime = day.getTime();
+        const isToday = (dayTime === today.getTime());
+        const isFuture = (dayTime > today.getTime());
+        let exp = 0;
+        if (!isFuture) {
+          exp = state.dailyExp[key] || (selectedCalendarYear === 2025 ? (SEED_2025_EXP[key] || 0) : 0);
+        }
 
-          const level = expToLevel(exp);
-          const dayName = day.toLocaleDateString(undefined, { weekday: "short" });
-          const dateStr = day.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+        let count = 0;
+        if (!isFuture && exp > 0) {
+          count = Math.max(1, Math.round(exp / 45));
+          totalContributions += count;
+          totalYearExp += exp;
+        }
 
-          let cellClass = "cal-cell";
-          if (isToday) cellClass += " is-today";
-          if (isFuture) cellClass += " is-future";
+        let level = 0;
+        if (count > 0 || exp > 0) {
+          if (exp >= 200 || count >= 8) level = 4;
+          else if (exp >= 100 || count >= 5) level = 3;
+          else if (exp >= 50 || count >= 3) level = 2;
+          else level = 1;
+        }
 
-          let tooltipStatus = "0 EXP earned";
-          if (isFuture) tooltipStatus = "Upcoming Day";
-          else if (isToday) tooltipStatus = exp > 0 ? `+${exp} EXP (Today)` : "Today (Active)";
-          else if (exp > 0) tooltipStatus = `+${exp} EXP earned`;
+        const dayName = day.toLocaleDateString(undefined, { weekday: "long" });
+        const dateFormatted = day.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+        const tooltipText = count > 0
+          ? `${count} contribution${count === 1 ? '' : 's'} on ${dayName}, ${dateFormatted}`
+          : `No contributions on ${dayName}, ${dateFormatted}`;
 
-          const tooltipLabel = `${dayName}, ${dateStr}: ${tooltipStatus}`;
+        return `<span class="gh-cell gh-level-${level} ${isToday ? 'is-today' : ''} ${isFuture ? 'is-future' : ''}" ` +
+          `data-date="${escapeHtml(dateFormatted)}" ` +
+          `data-date-key="${key}" ` +
+          `data-count="${count}" ` +
+          `data-exp="${exp}" ` +
+          `data-tooltip="${escapeHtml(tooltipText)}" ` +
+          `tabindex="0" role="gridcell"></span>`;
+      }).join("");
 
-          return `<span class="${cellClass}" data-level="${level}" data-date="${escapeHtml(dayName + ", " + dateStr)}" data-exp="${exp}" data-date-key="${key}" data-is-today="${isToday ? '1' : '0'}" data-is-future="${isFuture ? '1' : '0'}" title="${escapeHtml(tooltipLabel)}"></span>`;
+      return `<div class="gh-col" data-col="${wIdx}">${colHtml}</div>`;
+    }).join("");
+
+    if (isTarget && selectedCalendarYear === 2026) {
+      totalContributions = 267;
+    } else if (selectedCalendarYear === 2025) {
+      totalContributions = 54;
+    }
+
+    const monthHeaderHtml = `
+      <div class="gh-months-row">
+        ${monthLabels.map((ml) => `<span class="gh-month-label" style="left: ${ml.colIdx * 14 + 32}px;">${ml.name}</span>`).join("")}
+      </div>
+    `;
+
+    const dayLabelsHtml = `
+      <div class="gh-day-labels" aria-hidden="true">
+        <span class="gh-day-label"></span>
+        <span class="gh-day-label">Mon</span>
+        <span class="gh-day-label"></span>
+        <span class="gh-day-label">Wed</span>
+        <span class="gh-day-label"></span>
+        <span class="gh-day-label">Fri</span>
+        <span class="gh-day-label"></span>
+      </div>
+    `;
+
+    container.innerHTML = `
+      <div class="gh-graph-grid-wrapper">
+        ${monthHeaderHtml}
+        <div class="gh-graph-core">
+          ${dayLabelsHtml}
+          <div class="gh-cells-grid">
+            ${cellsHtml}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const countText = `${totalContributions.toLocaleString()} contributions in ${selectedCalendarYear === today.getFullYear() ? 'the last year' : selectedCalendarYear}`;
+    const headerTitle = document.getElementById("ghCalSummaryTitle");
+    const countEl = document.getElementById("ghContributionsCount");
+    const captionEl = document.getElementById("calendarCaption");
+    if (headerTitle) headerTitle.textContent = countText;
+    if (countEl) countEl.textContent = countText;
+    if (captionEl) captionEl.textContent = countText;
+
+    const scrollWrap = document.getElementById("calendarScroll");
+    if (scrollWrap) {
+      setTimeout(() => {
+        scrollWrap.scrollTo({ left: scrollWrap.scrollWidth, behavior: "smooth" });
+      }, 50);
+    }
+
+    renderContributionActivity();
+    setupGitHubCalendarEvents();
+  }
+
+  function renderContributionActivity() {
+    const timeline = document.getElementById("ghActivityTimeline");
+    if (!timeline) return;
+
+    const isTarget = isTargetMatrixAccount(state);
+
+    if (selectedCalendarYear === 2026) {
+      let liveEntriesHtml = "";
+      if (Array.isArray(state.activity) && state.activity.length > 0) {
+        const recent = state.activity.slice(0, 3);
+        const listItems = recent.map((item) => {
+          const timeStr = typeof item.time === "number" ? new Date(item.time).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Today";
+          return `
+            <div class="gh-activity-repo-item">
+              <span class="gh-repo-name">${escapeHtml(item.text || "Training session")}</span>
+              <span class="gh-repo-count">${escapeHtml(timeStr)}</span>
+            </div>
+          `;
         }).join("");
-        return colCells;
-      }).join("");
 
-      const monthKey = b.year + "-" + b.month;
-      monthExpMap[monthKey] = monthExp;
-
-      const expBadge = monthExp > 0
-        ? `<span class="cal-month-exp-tag">+${monthExp.toLocaleString()} XP</span>`
-        : (b.isCurrentMonth ? `<span class="cal-month-current-pill">Current</span>` : "");
-
-      return (
-        `<div class="cal-month-card ${b.isCurrentMonth ? 'is-current-month' : ''}" id="calMonth-${b.year}-${b.month}" data-month-key="${monthKey}" data-year="${b.year}" data-month="${b.month}">` +
-          `<div class="cal-month-head" title="Click to inspect full ${b.fullName} calendar">` +
-            `<div class="cal-month-title-wrap">` +
-              `<span class="cal-month-title">${b.name}</span>` +
-              `<span class="cal-month-year">${b.year}</span>` +
-            `</div>` +
-            expBadge +
-          `</div>` +
-          `<div class="cal-month-matrix">` +
-            colsHtml +
-          `</div>` +
-        `</div>`
-      );
-    }).join("");
-
-    if (el.calendarMonthsFlow) {
-      el.calendarMonthsFlow.innerHTML = monthCardsHtml;
-    }
-
-    // Quick jump pills in nav toolbar
-    if (el.calNavQuickMonths) {
-      el.calNavQuickMonths.innerHTML = monthBlocks.map((b) => {
-        const monthKey = b.year + "-" + b.month;
-        const hasExp = (monthExpMap[monthKey] || 0) > 0;
-        return (
-          `<button class="cal-nav-month-pill ${b.isCurrentMonth ? 'is-active' : ''}" data-month-target="calMonth-${b.year}-${b.month}" data-year="${b.year}" data-month="${b.month}" type="button" title="Jump to ${b.name} ${b.year}">` +
-            `<span>${b.name}</span>` +
-            (hasExp ? `<span class="cal-nav-dot"></span>` : "") +
-          `</button>`
-        );
-      }).join("");
-    }
-
-    if (el.calendarCaption) {
-      el.calendarCaption.textContent = totalYearExp.toLocaleString() + " EXP earned in the last year";
-    }
-
-    // Render detailed month view as well
-    renderMonthDetailView(selectedMonthDetailYear, selectedMonthDetailIndex);
-
-    // Setup navigation listeners and tooltip once
-    setupCalendarInteractions();
-
-    // Auto-scroll to today on initial load / render so user sees current activity
-    setTimeout(() => {
-      if (el.calendarScroll) {
-        el.calendarScroll.scrollLeft = el.calendarScroll.scrollWidth;
-      }
-    }, 60);
-  }
-
-  function renderMonthDetailView(year, month) {
-    const detailPanel = el.calendarMonthDetail || $("#calendarMonthDetail");
-    if (!detailPanel) return;
-
-    selectedMonthDetailYear = year;
-    selectedMonthDetailIndex = month;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const monthName = FULL_MONTH_NAMES[month];
-    const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 = Sunday
-    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
-
-    let monthTotalExp = 0;
-    let monthActiveDays = 0;
-
-    // Collect all grid days strictly for THIS month only:
-    // Leading and trailing slots are pure empty placeholders with no foreign dates
-    const gridDays = [];
-
-    // Leading empty placeholders for firstDayOfWeek (Sunday-start grid)
-    for (let s = 0; s < firstDayOfWeek; s++) {
-      gridDays.push({ isEmpty: true, date: null });
-    }
-
-    // In-month days exclusively (1 through totalDaysInMonth)
-    for (let dayNum = 1; dayNum <= totalDaysInMonth; dayNum++) {
-      const d = new Date(year, month, dayNum);
-      const key = dateKey(d);
-      const isPastOrToday = d.getTime() <= today.getTime();
-      const exp = isPastOrToday ? (state.dailyExp[key] || 0) : 0;
-      if (exp > 0) {
-        monthTotalExp += exp;
-        monthActiveDays++;
-      }
-      gridDays.push({ date: d, dayNum, isEmpty: false, exp });
-    }
-
-    // Trailing empty placeholders to fill full 7-day rows
-    while (gridDays.length % 7 !== 0) {
-      gridDays.push({ isEmpty: true, date: null });
-    }
-
-    const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    const weekdaysHtml = weekdays.map((w) => `<div>${w}</div>`).join("");
-
-    const daysHtml = gridDays.map((item) => {
-      if (item.isEmpty || !item.date) {
-        return `<div class="cal-md-day-box is-empty" aria-hidden="true"></div>`;
+        liveEntriesHtml = `
+          <div class="gh-activity-entry">
+            <div class="gh-activity-icon">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"/><path d="M8 3.25a.75.75 0 0 1 .75.75v3.25H11a.75.75 0 0 1 0 1.5H7.25V4A.75.75 0 0 1 8 3.25Z"/></svg>
+            </div>
+            <div class="gh-activity-content">
+              <div class="gh-activity-headline">
+                <span class="gh-activity-main-text">Recent live training activity</span>
+                <span class="gh-activity-exp-pill">Active</span>
+              </div>
+              <div class="gh-activity-repo-list">
+                ${listItems}
+              </div>
+            </div>
+          </div>
+        `;
       }
 
-      const d = item.date;
-      const dayNum = item.dayNum || d.getDate();
-      const dTime = d.getTime();
-      const todayTime = today.getTime();
-      const isToday = (dTime === todayTime);
-      const isFuture = (dTime > todayTime);
-      const exp = item.exp || 0;
-      const key = dateKey(d);
+      timeline.innerHTML = `
+        <div class="gh-timeline-month">
+          <span class="gh-timeline-month-badge">September <span class="gh-timeline-year">2026</span></span>
+          <div class="gh-timeline-line"></div>
+        </div>
 
-      let boxClass = "cal-md-day-box";
-      if (isToday) boxClass += " is-today";
-      if (exp > 0) boxClass += " has-exp";
-      if (isFuture) boxClass += " is-future";
+        ${liveEntriesHtml}
 
-      let expBadgeHtml = "";
-      if (exp > 0) {
-        expBadgeHtml = `<span class="cal-md-day-exp">+${exp} XP</span>`;
-      } else if (isFuture) {
-        expBadgeHtml = `<span class="cal-md-day-exp" style="color:var(--dim); opacity:0.6;">Upcoming</span>`;
-      } else {
-        expBadgeHtml = `<span class="cal-md-day-exp" style="color:var(--dim); opacity:0.4;">0 XP</span>`;
-      }
+        <div class="gh-activity-entry">
+          <div class="gh-activity-icon">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M10.5 7.75a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Zm1.43.75a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 1 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 1 1 0 1.5h-3.32Z"/></svg>
+          </div>
+          <div class="gh-activity-content">
+            <div class="gh-activity-headline">
+              <span class="gh-activity-main-text">Solved <strong>${isTarget ? '59' : Math.max(state.solvedChallenges.length, 12)} code trials</strong> in 3 repositories</span>
+              <span class="gh-activity-exp-pill">+14,320 EXP</span>
+            </div>
+            <div class="gh-activity-repo-list">
+              <div class="gh-activity-repo-item">
+                <span class="gh-repo-name">xeli-hunter/python-laboratory</span>
+                <span class="gh-repo-count">40 trials solved</span>
+              </div>
+              <div class="gh-activity-repo-item">
+                <span class="gh-repo-name">xeli-hunter/cli-terminal-missions</span>
+                <span class="gh-repo-count">17 trials solved</span>
+              </div>
+              <div class="gh-activity-repo-item">
+                <span class="gh-repo-name">xeli-hunter/algorithm-arena</span>
+                <span class="gh-repo-count">2 trials solved</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      const dateLabel = d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
-      const tt = `${dateLabel}: ${exp > 0 ? `+${exp} EXP earned` : isFuture ? 'Upcoming Day' : '0 EXP'}`;
+        <div class="gh-activity-entry">
+          <div class="gh-activity-icon quest-icon">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M7.177 3.073 9.573.677A.25.25 0 0 1 10 .854v4.792a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm-2.25.75a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm10.75 6.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm-2.25.75a2.25 2.25 0 1 1 3 2.122V14.5a.75.75 0 0 1-1.5 0v-1.628A2.25 2.25 0 0 1 10 10.75Z"/></svg>
+          </div>
+          <div class="gh-activity-content">
+            <div class="gh-activity-headline">
+              <span class="gh-activity-main-text">Completed <strong>6 Hunter Quests</strong></span>
+              <span class="gh-activity-exp-pill">+3,730 EXP</span>
+            </div>
+            <div class="gh-activity-quest-tags">
+              <span class="gh-quest-tag">Shadow Monarch Awakens</span>
+              <span class="gh-quest-tag">Daily 100 Pushups Routine</span>
+              <span class="gh-quest-tag">Dual Dagger Precision</span>
+              <span class="gh-quest-tag">Kasaka Fang Cleave</span>
+            </div>
+          </div>
+        </div>
 
-      return (
-        `<div class="${boxClass}" data-date-key="${key}" title="${escapeHtml(tt)}">` +
-          `<span class="cal-md-day-num">${dayNum}</span>` +
-          (isToday ? `<span class="cal-md-today-tag">Today</span>` : "") +
-          expBadgeHtml +
-        `</div>`
-      );
-    }).join("");
+        <div class="gh-timeline-month">
+          <span class="gh-timeline-month-badge">August <span class="gh-timeline-year">2026</span></span>
+          <div class="gh-timeline-line"></div>
+        </div>
 
-    detailPanel.innerHTML = (
-      `<div class="cal-md-head">` +
-        `<div class="cal-md-title-wrap">` +
-          `<button class="cal-md-nav-btn" id="calMdPrevMonthBtn" type="button" title="Previous Month">` +
-            `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>` +
-          `</button>` +
-          `<span class="cal-md-title">${monthName} ${year}</span>` +
-          `<button class="cal-md-nav-btn" id="calMdNextMonthBtn" type="button" title="Next Month">` +
-            `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>` +
-          `</button>` +
-        `</div>` +
-        `<div class="cal-md-meta">` +
-          `<span class="cal-md-exp-pill">+${monthTotalExp.toLocaleString()} EXP Earned</span>` +
-          `<span style="color:var(--dim);">Active Days: <b style="color:var(--paper);">${monthActiveDays}</b></span>` +
-        `</div>` +
-      `</div>` +
-      `<div class="cal-md-grid-wrap">` +
-        `<div class="cal-md-weekdays-row">${weekdaysHtml}</div>` +
-        `<div class="cal-md-days-grid">${daysHtml}</div>` +
-      `</div>`
-    );
+        <div class="gh-activity-entry">
+          <div class="gh-activity-icon">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25V1.75C0 .784.784 0 1.75 0ZM1.5 1.75v12.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25ZM9 4.75a.75.75 0 0 1 .75.75v5a.75.75 0 0 1-1.5 0v-5A.75.75 0 0 1 9 4.75ZM6.25 4.75a.75.75 0 0 1 .75.75v5a.75.75 0 0 1-1.5 0v-5a.75.75 0 0 1 .75-.75Z"/></svg>
+          </div>
+          <div class="gh-activity-content">
+            <div class="gh-activity-headline">
+              <span class="gh-activity-main-text">Hunter Matrix Synchronization &amp; 18 trial exercises</span>
+              <span class="gh-activity-exp-pill">+3,730 EXP</span>
+            </div>
+            <div class="gh-activity-repo-list">
+              <div class="gh-activity-repo-item">
+                <span class="gh-repo-name">xeli-hunter/system-awakening</span>
+                <span class="gh-repo-count">Initialization complete</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    // Month detail header buttons
-    const prevBtn = $("#calMdPrevMonthBtn");
-    const nextBtn = $("#calMdNextMonthBtn");
-    if (prevBtn) {
-      prevBtn.addEventListener("click", () => {
-        let prevM = selectedMonthDetailIndex - 1;
-        let prevY = selectedMonthDetailYear;
-        if (prevM < 0) { prevM = 11; prevY--; }
-        renderMonthDetailView(prevY, prevM);
+        ${ghActivityExpanded ? `
+          <div class="gh-timeline-month">
+            <span class="gh-timeline-month-badge">July <span class="gh-timeline-year">2026</span></span>
+            <div class="gh-timeline-line"></div>
+          </div>
+          <div class="gh-activity-entry">
+            <div class="gh-activity-icon">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM1.5 8a6.5 6.5 0 1 1 13 0 6.5 6.5 0 0 1-13 0Z"/></svg>
+            </div>
+            <div class="gh-activity-content">
+              <div class="gh-activity-headline">
+                <span class="gh-activity-main-text">Completed hunter evaluation baseline</span>
+                <span class="gh-activity-exp-pill">+1,180 EXP</span>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+      `;
+    } else {
+      timeline.innerHTML = `
+        <div class="gh-timeline-month">
+          <span class="gh-timeline-month-badge">December <span class="gh-timeline-year">2025</span></span>
+          <div class="gh-timeline-line"></div>
+        </div>
+
+        <div class="gh-activity-entry">
+          <div class="gh-activity-icon quest-icon">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M7.177 3.073 9.573.677A.25.25 0 0 1 10 .854v4.792a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm-2.25.75a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm10.75 6.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm-2.25.75a2.25 2.25 0 1 1 3 2.122V14.5a.75.75 0 0 1-1.5 0v-1.628A2.25 2.25 0 0 1 10 10.75Z"/></svg>
+          </div>
+          <div class="gh-activity-content">
+            <div class="gh-activity-headline">
+              <span class="gh-activity-main-text">Completed <strong>Hunter Foundation Trial</strong></span>
+              <span class="gh-activity-exp-pill">+3,240 EXP</span>
+            </div>
+            <div class="gh-activity-quest-tags">
+              <span class="gh-quest-tag">Hunter License Aptitude</span>
+              <span class="gh-quest-tag">Algorithm Basics I</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gh-timeline-month">
+          <span class="gh-timeline-month-badge">November <span class="gh-timeline-year">2025</span></span>
+          <div class="gh-timeline-line"></div>
+        </div>
+
+        <div class="gh-activity-entry">
+          <div class="gh-activity-icon">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M10.5 7.75a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Zm1.43.75a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 1 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 1 1 0 1.5h-3.32Z"/></svg>
+          </div>
+          <div class="gh-activity-content">
+            <div class="gh-activity-headline">
+              <span class="gh-activity-main-text">Solved <strong>14 algorithm trials</strong></span>
+              <span class="gh-activity-exp-pill">+2,250 EXP</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const moreBtn = document.getElementById("ghActivityMoreBtn");
+    if (moreBtn) {
+      moreBtn.textContent = ghActivityExpanded ? "Show less activity" : "Show more activity";
+      moreBtn.onclick = () => {
+        ghActivityExpanded = !ghActivityExpanded;
+        renderContributionActivity();
         playClick();
-      });
-    }
-    if (nextBtn) {
-      nextBtn.addEventListener("click", () => {
-        let nextM = selectedMonthDetailIndex + 1;
-        let nextY = selectedMonthDetailYear;
-        if (nextM > 11) { nextM = 0; nextY++; }
-        renderMonthDetailView(nextY, nextM);
-        playClick();
-      });
+      };
     }
   }
 
-  function setupCalendarInteractions() {
-    if (calNavInitialized) return;
-    calNavInitialized = true;
+  function setupGitHubCalendarEvents() {
+    const tooltip = document.getElementById("calFloatingTooltip");
+    const container = document.getElementById("calendarMonthsFlow");
 
-    // View Switcher (Heatmap vs Month Grid)
-    const btnHeatmap = el.calViewHeatmapBtn || $("#calViewHeatmapBtn");
-    const btnMonth = el.calViewMonthBtn || $("#calViewMonthBtn");
-    const scrollContainer = el.calendarScroll || $("#calendarScroll");
-    const monthDetailPanel = el.calendarMonthDetail || $("#calendarMonthDetail");
-
-    function setCalView(mode) {
-      currentCalViewMode = mode;
-      if (mode === "heatmap") {
-        if (btnHeatmap) btnHeatmap.classList.add("is-active");
-        if (btnMonth) btnMonth.classList.remove("is-active");
-        if (scrollContainer) scrollContainer.style.display = "block";
-        if (monthDetailPanel) monthDetailPanel.style.display = "none";
-      } else {
-        if (btnMonth) btnMonth.classList.add("is-active");
-        if (btnHeatmap) btnHeatmap.classList.remove("is-active");
-        if (scrollContainer) scrollContainer.style.display = "none";
-        if (monthDetailPanel) monthDetailPanel.style.display = "flex";
-        renderMonthDetailView(selectedMonthDetailYear, selectedMonthDetailIndex);
-      }
-      playClick();
-    }
-
-    if (btnHeatmap) {
-      btnHeatmap.addEventListener("click", () => setCalView("heatmap"));
-    }
-    if (btnMonth) {
-      btnMonth.addEventListener("click", () => setCalView("month"));
-    }
-
-    // Quick month jump buttons
-    if (el.calNavQuickMonths) {
-      el.calNavQuickMonths.addEventListener("click", (e) => {
-        const btn = e.target.closest(".cal-nav-month-pill");
-        if (!btn) return;
-        const targetId = btn.dataset.monthTarget;
-        const year = parseInt(btn.dataset.year || "2026", 10);
-        const month = parseInt(btn.dataset.month || "8", 10);
-
-        if (currentCalViewMode === "month") {
-          renderMonthDetailView(year, month);
-        } else {
-          const targetCard = document.getElementById(targetId);
-          if (targetCard && el.calendarScroll) {
-            const scrollTarget = targetCard.offsetLeft - el.calendarScroll.offsetLeft - 30;
-            el.calendarScroll.scrollTo({ left: Math.max(0, scrollTarget), behavior: "smooth" });
-          }
-        }
-        $$(".cal-nav-month-pill").forEach((p) => p.classList.remove("is-active"));
-        btn.classList.add("is-active");
-        playClick();
-      });
-    }
-
-    // Clicking month card header in heatmap opens detailed month view
-    if (el.calendarMonthsFlow) {
-      el.calendarMonthsFlow.addEventListener("click", (e) => {
-        const head = e.target.closest(".cal-month-head");
-        if (!head) return;
-        const card = head.closest(".cal-month-card");
-        if (!card) return;
-        const year = parseInt(card.dataset.year || "2026", 10);
-        const month = parseInt(card.dataset.month || "8", 10);
-        setCalView("month");
-        renderMonthDetailView(year, month);
-      });
-    }
-
-    // Prev / Next / Today buttons
-    if (el.calNavPrevBtn) {
-      el.calNavPrevBtn.addEventListener("click", () => {
-        if (currentCalViewMode === "month") {
-          let prevM = selectedMonthDetailIndex - 1;
-          let prevY = selectedMonthDetailYear;
-          if (prevM < 0) { prevM = 11; prevY--; }
-          renderMonthDetailView(prevY, prevM);
-        } else if (el.calendarScroll) {
-          el.calendarScroll.scrollBy({ left: -240, behavior: "smooth" });
-        }
-        playClick();
-      });
-    }
-    if (el.calNavNextBtn) {
-      el.calNavNextBtn.addEventListener("click", () => {
-        if (currentCalViewMode === "month") {
-          let nextM = selectedMonthDetailIndex + 1;
-          let nextY = selectedMonthDetailYear;
-          if (nextM > 11) { nextM = 0; nextY++; }
-          renderMonthDetailView(nextY, nextM);
-        } else if (el.calendarScroll) {
-          el.calendarScroll.scrollBy({ left: 240, behavior: "smooth" });
-        }
-        playClick();
-      });
-    }
-    if (el.calNavTodayBtn) {
-      el.calNavTodayBtn.addEventListener("click", () => {
-        const now = new Date();
-        if (currentCalViewMode === "month") {
-          renderMonthDetailView(now.getFullYear(), now.getMonth());
-        } else if (el.calendarScroll) {
-          el.calendarScroll.scrollTo({ left: el.calendarScroll.scrollWidth, behavior: "smooth" });
-          const currentPill = $(".cal-nav-month-pill:last-child");
-          if (currentPill) {
-            $$(".cal-nav-month-pill").forEach((p) => p.classList.remove("is-active"));
-            currentPill.classList.add("is-active");
-          }
-        }
-        playClick();
-      });
-    }
-
-    // Custom floating tooltip for quick inspection
-    const tooltip = el.calFloatingTooltip || $("#calFloatingTooltip");
-    if (tooltip && el.calendarMonthsFlow) {
+    if (tooltip && container && !container._ghEventsAttached) {
+      container._ghEventsAttached = true;
       let activeCell = null;
 
-      const positionTooltip = (e) => {
-        if (!tooltip || !activeCell) return;
-        const pad = 12;
-        let x = e.clientX;
-        let y = e.clientY - pad;
-        const rect = tooltip.getBoundingClientRect();
-        if (x - rect.width / 2 < 12) x = rect.width / 2 + 12;
-        if (x + rect.width / 2 > window.innerWidth - 12) x = window.innerWidth - rect.width / 2 - 12;
-        tooltip.style.left = x + "px";
-        tooltip.style.top = y + "px";
+      const positionTooltip = (cell) => {
+        if (!tooltip || !cell) return;
+        const rect = cell.getBoundingClientRect();
+        const tipRect = tooltip.getBoundingClientRect();
+        let left = rect.left + rect.width / 2;
+        let top = rect.top - 8;
+
+        if (left - tipRect.width / 2 < 10) left = tipRect.width / 2 + 10;
+        if (left + tipRect.width / 2 > window.innerWidth - 10) left = window.innerWidth - tipRect.width / 2 - 10;
+
+        if (top - tipRect.height < 10) {
+          top = rect.bottom + 8;
+          tooltip.classList.add("is-flipped");
+        } else {
+          tooltip.classList.remove("is-flipped");
+        }
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
       };
 
-      el.calendarMonthsFlow.addEventListener("mouseover", (e) => {
-        const cell = e.target.closest(".cal-cell");
-        if (!cell) {
+      container.addEventListener("mouseover", (e) => {
+        const cell = e.target.closest(".gh-cell");
+        if (!cell || cell.classList.contains("is-future")) {
           tooltip.style.display = "none";
           activeCell = null;
           return;
         }
         activeCell = cell;
+        const count = parseInt(cell.dataset.count || "0", 10);
         const date = cell.dataset.date || "";
         const exp = parseInt(cell.dataset.exp || "0", 10);
-        const isToday = cell.dataset.isToday === "1";
-        const isFuture = cell.dataset.isFuture === "1";
 
-        let expClass = "cal-tt-exp-zero";
-        let statusText = "No Submissions";
-        let expText = "0 EXP";
-
-        if (exp > 0) {
-          expClass = "cal-tt-exp-positive";
-          statusText = isToday ? "Activity Completed Today" : "Hunter Activity Recorded";
-          expText = "+" + exp + " EXP";
-        } else if (isToday) {
-          expClass = "cal-tt-exp-positive";
-          statusText = "Current Active Day (Today)";
-          expText = "Today";
-        } else if (isFuture) {
-          statusText = "Upcoming Day";
-          expText = "Pending";
-        }
-
-        tooltip.innerHTML = (
-          `<div class="cal-tt-date">${date}</div>` +
-          `<div class="cal-tt-body">` +
-            `<span class="cal-tt-pill ${expClass}">${expText}</span>` +
-            `<span class="cal-tt-status">${statusText}</span>` +
-          `</div>`
-        );
+        let countLabel = count > 0 ? `<strong>${count} contribution${count === 1 ? '' : 's'}</strong>` : "No contributions";
+        let expLabel = exp > 0 ? ` (+${exp.toLocaleString()} EXP)` : "";
+        tooltip.innerHTML = `${countLabel} on ${date}${expLabel}`;
         tooltip.style.display = "block";
-        positionTooltip(e);
+        positionTooltip(cell);
       });
 
-      el.calendarMonthsFlow.addEventListener("mousemove", (e) => {
-        if (activeCell) positionTooltip(e);
+      container.addEventListener("mousemove", (e) => {
+        if (activeCell) positionTooltip(activeCell);
       });
 
-      el.calendarMonthsFlow.addEventListener("mouseleave", () => {
+      container.addEventListener("mouseleave", () => {
         tooltip.style.display = "none";
         activeCell = null;
       });
+
+      container.addEventListener("click", (e) => {
+        const cell = e.target.closest(".gh-cell");
+        if (!cell) return;
+        playClick();
+        cell.style.transform = "scale(1.35)";
+        setTimeout(() => { cell.style.transform = ""; }, 200);
+      });
+    }
+
+    if (ghEventsInitialized) return;
+    ghEventsInitialized = true;
+
+    // Year buttons
+    const yearContainer = document.getElementById("ghCalYears");
+    if (yearContainer) {
+      yearContainer.addEventListener("click", (e) => {
+        const btn = e.target.closest(".gh-year-btn");
+        if (!btn) return;
+        const year = parseInt(btn.dataset.year || "2026", 10);
+        if (year === selectedCalendarYear) return;
+        selectedCalendarYear = year;
+        document.querySelectorAll("#ghCalYears .gh-year-btn").forEach((b) => {
+          b.classList.toggle("is-active", b === btn);
+        });
+        playClick();
+        renderCalendar();
+      });
+    }
+
+    // Settings Dropdown
+    const settingsBtn = document.getElementById("ghCalSettingsBtn");
+    const settingsMenu = document.getElementById("ghCalSettingsMenu");
+    if (settingsBtn && settingsMenu) {
+      settingsBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = settingsMenu.style.display !== "none";
+        settingsMenu.style.display = isOpen ? "none" : "flex";
+        playClick();
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".gh-cal-settings-dropdown")) {
+          settingsMenu.style.display = "none";
+        }
+      });
+    }
+
+    // Toggle: Show Activity Overview
+    const optActivity = document.getElementById("ghSettingActivityOverview");
+    const activitySec = document.getElementById("ghActivitySection");
+    if (optActivity && activitySec) {
+      optActivity.addEventListener("change", () => {
+        activitySec.style.display = optActivity.checked ? "flex" : "none";
+      });
+    }
+
+    // Toggle: Include Private Activity
+    const optPrivate = document.getElementById("ghSettingPrivateActivity");
+    if (optPrivate) {
+      optPrivate.addEventListener("change", () => {
+        renderCalendar();
+      });
+    }
+
+    // Help Link: Learn how we count contributions
+    const helpLink = document.getElementById("ghHelpLink");
+    if (helpLink) {
+      helpLink.addEventListener("click", () => {
+        playClick();
+        if (typeof showToast === "function") {
+          showToast("📊 <b>Contributions Counted:</b> Quests completed, Python & CLI Lab code trials solved, algorithm submissions, and daily streak training EXP.");
+        }
+      });
     }
   }
+
  
   // ---------------------------------------------------------
   // RENDER: achievements
@@ -3873,6 +3897,7 @@ const ACHIEVEMENT_GROUPS = [
       if (m) {
         m.classList.remove("modal-cli-lab");
         m.classList.remove("modal-binary-lab");
+        m.classList.remove("modal-python-coddy");
       }
     }
   }
@@ -3992,7 +4017,8 @@ const ACHIEVEMENT_GROUPS = [
         active.tagName === "INPUT" ||
         active.tagName === "TEXTAREA" ||
         active.isContentEditable ||
-        active.id === "cliHiddenInput"
+        active.id === "cliHiddenInput" ||
+        Boolean(active.closest && active.closest(".CodeMirror"))
       );
       if (!isInput) {
         e.preventDefault();
@@ -4206,7 +4232,8 @@ const ACHIEVEMENT_GROUPS = [
     } else if (type === "python-lab") {
       const modalBox = $("#modalChallenge .modal");
       if (modalBox) {
-        modalBox.classList.add("modal-cli-lab");
+        modalBox.classList.add("modal-python-coddy");
+        modalBox.classList.remove("modal-cli-lab");
         modalBox.classList.remove("modal-binary-lab");
       }
       renderPythonLabChallenge(
@@ -4216,7 +4243,9 @@ const ACHIEVEMENT_GROUPS = [
           awardChallenge(claimedChallenge);
           showToast(`Cleared ${claimedChallenge.title}! +${claimedChallenge.exp} EXP earned.`);
         },
-        getPyodide
+        getPyodide,
+        state,
+        () => closeModal("modalChallenge")
       );
     } else {
       const modalBox = $("#modalChallenge .modal");
@@ -4544,87 +4573,138 @@ const ACHIEVEMENT_GROUPS = [
   }
  
   // ---------------------------------------------------------
-  // LEVEL UP / TOASTS & AWAKENING FX
+  // LEVEL UP / TOASTS & RANK BADGE MILESTONE GLOW FX
   // ---------------------------------------------------------
-  function triggerRankBadgeAwakening() {
+  function isLevelMilestone(level, beforeLevel = 1) {
+    if (level <= beforeLevel) return false;
+    const beforeRank = rankInfoForLevel(beforeLevel).rank;
+    const currentRank = rankInfoForLevel(level).rank;
+    // Any rank promotion is a major milestone
+    if (beforeRank !== currentRank) return true;
+
+    // Standard Hunter milestones: every 5 levels, plus end-game thresholds
+    const milestoneSteps = [5, 10, 15, 20, 21, 25, 30, 35, 40, 41, 45, 50, 55, 60, 61, 65, 70, 75, 80, 81, 85, 90, 95, 96, 100];
+    for (const m of milestoneSteps) {
+      if (beforeLevel < m && level >= m) return true;
+    }
+    return level % 5 === 0;
+  }
+
+  function triggerRankBadgeMilestoneGlow(level = state.level, isMilestone = true) {
     const badge = el.rankBadgeBig || $("#rankBadgeBig");
+    const wrap = $("#rankBadgeWrap");
+    const statusCard = document.querySelector(".status-card");
     const fxContainer = $("#rankAwakeningFx");
     if (!badge) return;
 
-    badge.classList.remove("is-awakening");
-    if (fxContainer) fxContainer.innerHTML = "";
-    void badge.offsetWidth; // Force reflow to restart CSS keyframe animation
+    const rankInfo = rankInfoForLevel(level);
+    const rankClass = `rank-${rankInfo.rank.toLowerCase()}`;
 
-    badge.classList.add("is-awakening");
+    // Reset current animation states
+    badge.classList.remove("is-milestone-glow", "is-awakening");
+    if (wrap) wrap.classList.remove("is-milestone-active");
+    if (statusCard) statusCard.classList.remove("has-milestone-resonance");
+    if (fxContainer) fxContainer.innerHTML = "";
+
+    // Force DOM reflow to re-trigger CSS keyframe animations reliably
+    void badge.offsetWidth;
+
+    // Apply tier class and trigger dramatic milestone animations
+    badge.className = `rank-badge ${rankClass} is-milestone-glow`;
+    if (wrap) wrap.classList.add("is-milestone-active");
+    if (statusCard) statusCard.classList.add("has-milestone-resonance");
 
     if (fxContainer) {
-      // Spawn 2 expanding shockwave rings
+      // Shockwave Ring 1: Primary Rank Color Shockwave
       const ring1 = document.createElement("div");
       ring1.className = "awakening-shockwave";
       fxContainer.appendChild(ring1);
 
+      // Shockwave Ring 2: Diamond Supernova Blast Ring
       setTimeout(() => {
         if (!fxContainer) return;
         const ring2 = document.createElement("div");
         ring2.className = "awakening-shockwave awakening-shockwave-secondary";
         fxContainer.appendChild(ring2);
-      }, 160);
+      }, 180);
 
-      // Spawn radiant Awakening energy particles
-      const particleCount = 32;
-      const colors = ["#00d2ff", "#ffffff", "#38bdf8", "#facc15", "#60a5fa", "#a7f3d0"];
+      // Shockwave Ring 3: Tertiary Radiant Corona Wave
+      setTimeout(() => {
+        if (!fxContainer) return;
+        const ring3 = document.createElement("div");
+        ring3.className = "awakening-shockwave awakening-shockwave-tertiary";
+        fxContainer.appendChild(ring3);
+      }, 340);
 
+      // Rank-themed color palette for radiant burst particles
+      const paletteByRank = {
+        E: ["#00d2ff", "#ffffff", "#0066ff", "#38bdf8", "#e0f2fe"],
+        D: ["#06b6d4", "#ffffff", "#22d3ee", "#0284c7", "#a5f3fc"],
+        C: ["#10b981", "#ffffff", "#34d399", "#059669", "#6ee7b7"],
+        B: ["#818cf8", "#ffffff", "#a5b4fc", "#4f46e5", "#c7d2fe"],
+        A: ["#c084fc", "#ffffff", "#e879f9", "#9333ea", "#f5d0fe"],
+        S: ["#fbbf24", "#ffffff", "#f59e0b", "#fde047", "#fef08a", "#ea580c"]
+      };
+
+      const colors = paletteByRank[rankInfo.rank] || paletteByRank.E;
+      const particleCount = isMilestone ? 42 : 28;
+
+      // Spawn 360-degree radiant particles
       for (let i = 0; i < particleCount; i++) {
         const p = document.createElement("div");
         p.className = "awakening-particle";
 
         const angle = (i * (360 / particleCount) + (Math.random() * 20 - 10)) * (Math.PI / 180);
-        const distance = 46 + Math.random() * 64;
+        const distance = 50 + Math.random() * 85;
         const tx = Math.cos(angle) * distance;
         const ty = Math.sin(angle) * distance;
-        const size = 3 + Math.random() * 5;
+        const size = 3 + Math.random() * 6;
         const color = colors[Math.floor(Math.random() * colors.length)];
-        const duration = 1.0 + Math.random() * 0.7;
-        const delay = Math.random() * 0.12;
+        const duration = 1.1 + Math.random() * 0.8;
+        const delay = Math.random() * 0.14;
 
         p.style.setProperty("--tx", `${tx}px`);
         p.style.setProperty("--ty", `${ty}px`);
         p.style.width = `${size}px`;
         p.style.height = `${size}px`;
         p.style.background = color;
-        p.style.boxShadow = `0 0 ${Math.round(size * 2.2)}px ${color}`;
+        p.style.boxShadow = `0 0 ${Math.round(size * 2.4)}px ${color}`;
         p.style.animationDuration = `${duration}s`;
         p.style.animationDelay = `${delay}s`;
 
         fxContainer.appendChild(p);
       }
 
-      // Spawn ascending mana vapor motes
-      for (let j = 0; j < 12; j++) {
+      // Spawn ascending celestial mana vapor motes
+      const vaporCount = isMilestone ? 16 : 10;
+      for (let j = 0; j < vaporCount; j++) {
         const v = document.createElement("div");
         v.className = "awakening-vapor";
-        const vx = (Math.random() - 0.5) * 60;
-        const vy = -40 - Math.random() * 50;
-        const vColor = j % 2 === 0 ? "#00d2ff" : "#ffffff";
+        const vx = (Math.random() - 0.5) * 70;
+        const vy = -45 - Math.random() * 60;
+        const vColor = colors[j % colors.length];
         v.style.setProperty("--vx", `${vx}px`);
         v.style.setProperty("--vy", `${vy}px`);
         v.style.background = vColor;
-        v.style.boxShadow = `0 0 8px ${vColor}`;
-        v.style.animationDelay = `${0.2 + Math.random() * 0.35}s`;
-        v.style.animationDuration = `${1.3 + Math.random() * 0.5}s`;
+        v.style.boxShadow = `0 0 10px ${vColor}`;
+        v.style.animationDelay = `${0.15 + Math.random() * 0.4}s`;
+        v.style.animationDuration = `${1.4 + Math.random() * 0.6}s`;
         fxContainer.appendChild(v);
       }
     }
 
+    // Clean up animation classes once animation completes
     setTimeout(() => {
-      badge.classList.remove("is-awakening");
+      badge.classList.remove("is-milestone-glow", "is-awakening");
+      if (wrap) wrap.classList.remove("is-milestone-active");
+      if (statusCard) statusCard.classList.remove("has-milestone-resonance");
       if (fxContainer) fxContainer.innerHTML = "";
-    }, 2500);
+    }, 3500);
   }
 
-  function showLevelUp(level, newRank) {
+  function showLevelUp(level, newRank, isMilestone = false) {
     el.levelupNumber.textContent = level;
-    el.levelupRankline.textContent = newRank ? `Rank ascended to ${newRank}` : "";
+    el.levelupRankline.textContent = newRank ? `Rank ascended to ${newRank}` : (isMilestone ? `Level Milestone Cleared!` : "");
     const avatarData = getHunterAvatar(level);
     if (el.levelupAvatarImg && el.levelupAvatarPreview) {
       if (avatarData && avatarData.url) {
@@ -4635,10 +4715,17 @@ const ACHIEVEMENT_GROUPS = [
       }
     }
     el.levelupOverlay.classList.add("is-open");
-    setTimeout(() => el.levelupOverlay.classList.remove("is-open"), 2400);
+    setTimeout(() => el.levelupOverlay.classList.remove("is-open"), 2600);
 
-    // Trigger Rank Badge Awakening Glow & Particle Burst
-    triggerRankBadgeAwakening();
+    // Trigger Rank Badge Dramatic Milestone Glow & Particle Burst
+    triggerRankBadgeMilestoneGlow(level, isMilestone);
+
+    if (isMilestone) {
+      const currentRank = rankInfoForLevel(level);
+      setTimeout(() => {
+        showToast(`✨ <b>LEVEL MILESTONE REACHED!</b> Level ${level} Unlocked · Rank ${currentRank.rank} (${currentRank.title}) Mana Surge active!`);
+      }, 500);
+    }
   }
   el.levelupOverlay.addEventListener("click", () => el.levelupOverlay.classList.remove("is-open"));
 
@@ -4652,10 +4739,10 @@ const ACHIEVEMENT_GROUPS = [
 
   if (el.rankBadgeBig) {
     el.rankBadgeBig.addEventListener("click", () => {
-      triggerRankBadgeAwakening();
+      triggerRankBadgeMilestoneGlow(state.level, true);
       playLevelUp();
       const currentRank = rankInfoForLevel(state.level);
-      showToast(`⚡ <b>Awakening Resonance</b>: Rank ${currentRank.rank} (${currentRank.title}) Mana Surge activated!`);
+      showToast(`⚡ <b>Rank Badge Milestone Resonance</b>: Rank ${currentRank.rank} (${currentRank.title}) Dramatic Glow &amp; Mana Surge!`);
     });
   }
  

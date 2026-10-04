@@ -2974,611 +2974,679 @@ button{ font-family:inherit; }
 .backup-file-icon{ width:16px; height:16px; fill:var(--dim); flex-shrink:0; }
  
 /* ============================================================
-   PROGRESS CALENDAR — Month Matrix & Activity Heatmap
+   PROGRESS CALENDAR — AUTHENTIC GITHUB-STYLE CONTRIBUTION GRAPH
    ============================================================ */
 .calendar-panel {
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 .calendar-caption {
   font-size: 11.5px;
-  color: var(--dim);
-  font-family: 'JetBrains Mono', monospace;
+  color: #7d8590;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
 }
 
-/* Nav Toolbar */
-.cal-nav-toolbar {
+.gh-calendar-panel {
+  background: #0d1117 !important;
+  border: 1px solid #30363d !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+  padding: 20px 24px !important;
+  position: relative;
+  overflow: visible !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+}
+
+.gh-panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin: 12px 0 10px 0;
-  padding: 6px 10px;
-  background: rgba(13, 21, 35, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-m);
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
 }
-.cal-nav-quick-scroll-wrap {
+.gh-panel-head h2 {
   display: flex;
   align-items: center;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e6edf3;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.gh-icon {
+  width: 18px;
+  height: 18px;
+  color: #7d8590;
+}
+.gh-panel-head .calendar-caption {
+  font-size: 12px;
+  color: #7d8590;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  font-weight: 400;
+}
+
+/* 2-Column GitHub Layout: Main calendar on left, year tabs on right */
+.gh-cal-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.gh-cal-main {
   flex: 1;
   min-width: 0;
-}
-.cal-nav-quick-scroll-wrap::-webkit-scrollbar {
-  display: none;
-}
-.cal-nav-quick-months {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.cal-nav-month-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  border-radius: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 23, 42, 0.6);
-  color: var(--dim);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-.cal-nav-month-pill:hover {
-  border-color: rgba(0, 210, 255, 0.5);
-  color: #fff;
-  background: rgba(0, 210, 255, 0.1);
-}
-.cal-nav-month-pill.is-active {
-  background: rgba(0, 210, 255, 0.2);
-  border-color: #00d2ff;
-  color: #38bdf8;
-  font-weight: 700;
-}
-.cal-nav-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #34d399;
-  box-shadow: 0 0 4px #34d399;
-  display: inline-block;
-}
-.cal-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.cal-nav-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 4px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  color: var(--mist);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  min-height: 26px;
-}
-.cal-nav-btn:hover {
-  border-color: rgba(255, 255, 255, 0.25);
-  color: #fff;
-  background: linear-gradient(180deg, #27354f 0%, #131c33 100%);
-}
-.cal-nav-btn-today {
-  background: linear-gradient(180deg, rgba(2, 132, 199, 0.2) 0%, rgba(3, 105, 161, 0.2) 100%);
-  border-color: rgba(56, 189, 248, 0.4);
-  color: #38bdf8;
-}
-.cal-nav-btn-today:hover {
-  background: linear-gradient(180deg, rgba(2, 132, 199, 0.35) 0%, rgba(3, 105, 161, 0.35) 100%);
-  border-color: #38bdf8;
-  color: #fff;
-}
-.cal-today-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #38bdf8;
-  box-shadow: 0 0 6px #38bdf8;
-  display: inline-block;
-}
-
-/* Calendar Scroll & Body */
-.calendar-scroll {
-  overflow-x: auto;
-  padding-bottom: 8px;
-  scroll-behavior: smooth;
-}
-.calendar-scroll::-webkit-scrollbar {
-  height: 6px;
-}
-.calendar-scroll::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 3px;
-}
-.calendar-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-}
-.calendar-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 210, 255, 0.4);
-}
-.calendar-wrap {
-  display: inline-flex;
-  flex-direction: column;
-  min-width: 100%;
-}
-.calendar-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  position: relative;
-}
-.calendar-daylabels {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  font-size: 9px;
-  color: var(--dim);
-  font-family: 'JetBrains Mono', monospace;
-  width: 24px;
-  flex-shrink: 0;
-  user-select: none;
-}
-.cal-daylabel-header-pad {
-  height: 22px;
-  width: 100%;
-  display: block;
-}
-.calendar-daylabels span:not(.cal-daylabel-header-pad) {
-  height: 12px;
-  line-height: 12px;
-  display: flex;
-  align-items: center;
+  gap: 20px;
 }
 
-/* View Switcher */
-.cal-view-switch-group {
-  display: inline-flex;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 2px;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.cal-view-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
-  color: var(--dim);
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  line-height: 1.2;
-}
-.cal-view-btn:hover {
-  color: var(--paper);
-  background: rgba(255, 255, 255, 0.05);
-}
-.cal-view-btn.is-active {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.15);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
-}
-
-/* Month Flow & Spaced Month Groups (No Borders) */
-.calendar-months-flow {
-  display: flex;
-  flex-direction: row;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 4px 2px 8px 2px;
-}
-.cal-month-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  flex-shrink: 0;
-  position: relative;
-}
-.cal-month-card:hover {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-.cal-month-card.is-current-month {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-.cal-month-card.is-current-month .cal-month-title {
-  color: #38bdf8;
-}
-.cal-month-head {
+/* Header bar above the graph box */
+.gh-cal-header-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  height: 16px;
-  user-select: none;
-  cursor: pointer;
-}
-.cal-month-head:hover .cal-month-title {
-  color: #38bdf8;
-  text-decoration: underline;
-}
-.cal-month-title-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-.cal-month-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: #f1f5f9;
-  font-family: 'JetBrains Mono', monospace;
-  letter-spacing: 0.3px;
-}
-.cal-month-year {
-  font-size: 9px;
-  color: var(--dim);
-  font-family: 'JetBrains Mono', monospace;
-}
-.cal-month-exp-tag {
-  font-size: 9px;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  border-radius: 4px;
-  padding: 1px 4px;
-  line-height: 1;
-}
-.cal-month-current-pill {
-  font-size: 8px;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  border-radius: 3px;
-  padding: 1px 3px;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-/* Month Cell Matrix: Consistent Solid Geometry Across All Days & Months */
-.cal-month-matrix {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 12px;
-  grid-template-rows: repeat(7, 12px);
-  gap: 3px;
-  width: fit-content;
-}
-.cal-cell {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-  background: #141c2c;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
-  box-sizing: border-box;
-  position: relative;
-  display: block;
-}
-.cal-cell:hover {
-  transform: scale(1.35);
-  z-index: 10;
-  border-color: #ffffff !important;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-}
-
-/* Consistent Solid Geometry: Every day is a visible, solid box */
-.cal-cell.is-future {
-  visibility: visible !important;
-  background: #141c2c;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  cursor: pointer;
-}
-.cal-cell.is-other-month {
-  visibility: visible !important;
-  background: #0f1624;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-}
-.cal-cell.is-empty {
-  visibility: visible !important;
-  background: #0f1624;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  pointer-events: none;
-  cursor: default;
-}
-.cal-cell.is-empty:hover {
-  transform: none;
-  box-shadow: none;
-  border-color: rgba(255, 255, 255, 0.03) !important;
-}
-.cal-cell.is-today {
-  outline: 1.5px solid #00d2ff;
-  outline-offset: 1px;
-  box-shadow: 0 0 10px rgba(0, 210, 255, 0.7);
-  z-index: 4;
-}
-.cal-cell[data-level="0"] {
-  background: #141c2c;
-  border-color: rgba(255, 255, 255, 0.08);
-}
-.cal-cell[data-level="1"] {
-  background: #0e4429;
-  border-color: rgba(0, 255, 128, 0.2);
-}
-.cal-cell[data-level="2"] {
-  background: #006d32;
-  border-color: rgba(0, 255, 128, 0.3);
-}
-.cal-cell[data-level="3"] {
-  background: #26a641;
-  border-color: rgba(0, 255, 128, 0.4);
-}
-.cal-cell[data-level="4"] {
-  background: #39d353;
-  border-color: rgba(0, 255, 128, 0.5);
-  box-shadow: 0 0 8px rgba(57, 211, 83, 0.45);
-}
-
-/* Dedicated Month Grid View: Every Day in a Box */
-.calendar-month-detail-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
-  background: rgba(11, 19, 36, 0.65);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  border-radius: var(--radius-s);
-  margin-top: 8px;
-}
-.cal-md-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-bottom: 0px;
   flex-wrap: wrap;
   gap: 10px;
 }
-.cal-md-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.cal-md-title {
-  font-family: 'JetBrains Mono', monospace;
+.gh-cal-summary-title {
   font-size: 16px;
-  font-weight: 700;
-  color: #f1f5f9;
+  font-weight: 500;
+  color: #e6edf3;
+  letter-spacing: -0.01em;
 }
-.cal-md-nav-btn {
+.gh-cal-settings-dropdown {
+  position: relative;
+}
+.gh-cal-settings-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: var(--ink-3);
-  color: var(--dim);
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #7d8590;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
+  font-family: inherit;
 }
-.cal-md-nav-btn:hover {
-  color: #fff;
-  border-color: #38bdf8;
+.gh-cal-settings-btn:hover {
+  color: #e6edf3;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #30363d;
 }
-.cal-md-meta {
+.gh-cal-settings-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
+  padding: 10px 14px;
+  z-index: 100;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gh-setting-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
+  color: #c9d1d9;
+  cursor: pointer;
+  user-select: none;
 }
-.cal-md-exp-pill {
-  padding: 3px 8px;
-  border-radius: 4px;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(52, 211, 153, 0.35);
-  color: #34d399;
-  font-weight: 700;
+.gh-setting-item input[type="checkbox"] {
+  accent-color: #1f6feb;
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
 }
-.cal-md-grid-wrap {
+
+/* ============================================================
+   AUTHENTIC GITHUB GRAPH CARD BOX (RECTANGLE CARD)
+   ============================================================ */
+.gh-graph-box {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 16px 20px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.gh-graph-scroll-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #30363d transparent;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+.gh-graph-scroll-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+.gh-graph-scroll-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.gh-graph-scroll-wrap::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+.gh-graph-scroll-wrap::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+.gh-graph-canvas-wrap {
+  display: inline-block;
+  min-width: 100%;
+}
+
+.gh-graph-grid-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  padding-top: 4px;
+}
+
+/* Month labels row along the top */
+.gh-months-row {
+  position: relative;
+  height: 18px;
+  margin-bottom: 4px;
+  user-select: none;
+}
+.gh-month-label {
+  position: absolute;
+  font-size: 10.5px;
+  line-height: 14px;
+  color: #7d8590;
+  font-family: inherit;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Core graph: day labels on left + 52 columns of cells */
+.gh-graph-core {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.gh-day-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 28px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.gh-day-label {
+  height: 11px;
+  line-height: 11px;
+  font-size: 9.5px;
+  color: #7d8590;
+  text-align: left;
+  font-family: inherit;
+}
+
+/* 52-53 continuous week columns */
+.gh-cells-grid {
+  display: flex;
+  gap: 3px;
+  align-items: flex-start;
+}
+.gh-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Authentic GitHub heatmap cell (11px x 11px with 2px radius) */
+.gh-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: transform 0.08s ease, outline 0.08s ease, filter 0.08s ease;
+  position: relative;
+}
+
+/* GitHub dark theme green gradient levels */
+.gh-level-0 {
+  background-color: #161b22;
+  outline: 1px solid rgba(255, 255, 255, 0.05);
+  outline-offset: -1px;
+}
+.gh-level-1 {
+  background-color: #0e4429;
+}
+.gh-level-2 {
+  background-color: #006d32;
+}
+.gh-level-3 {
+  background-color: #26a641;
+}
+.gh-level-4 {
+  background-color: #39d353;
+}
+
+/* Hover cell */
+.gh-cell:hover:not(.is-future),
+.gh-cell:focus:not(.is-future) {
+  outline: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+  outline-offset: -1px;
+  transform: scale(1.22);
+  z-index: 10;
+  filter: brightness(1.2);
+}
+
+/* Today highlight */
+.gh-cell.is-today {
+  outline: 1.5px solid #58a6ff !important;
+  outline-offset: -1px;
+  box-shadow: 0 0 6px rgba(88, 166, 255, 0.6);
+}
+
+/* Future placeholder */
+.gh-cell.is-future {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Footer below the heatmap */
+.gh-graph-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 10px;
+  font-size: 11.5px;
+  color: #7d8590;
+  border-top: 1px solid rgba(48, 54, 61, 0.6);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.gh-help-link {
+  color: #58a6ff;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.15s ease;
+}
+.gh-help-link:hover {
+  text-decoration: underline;
+  color: #79c0ff;
+}
+
+.gh-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #7d8590;
+  user-select: none;
+}
+.gh-legend span {
+  margin: 0 2px;
+}
+.gh-legend-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  display: inline-block;
+  box-sizing: border-box;
+}
+.gh-legend-cell.level-0 {
+  background-color: #161b22;
+  outline: 1px solid rgba(255, 255, 255, 0.05);
+}
+.gh-legend-cell.level-1 {
+  background-color: #0e4429;
+}
+.gh-legend-cell.level-2 {
+  background-color: #006d32;
+}
+.gh-legend-cell.level-3 {
+  background-color: #26a641;
+}
+.gh-legend-cell.level-4 {
+  background-color: #39d353;
+}
+
+/* ============================================================
+   RIGHT COLUMN: GITHUB YEAR SELECTOR BUTTONS
+   ============================================================ */
+.gh-cal-years {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 90px;
+  flex-shrink: 0;
 }
-.cal-md-weekdays-row {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  text-align: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--dim);
-  padding-bottom: 4px;
-}
-.cal-md-days-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-}
-.cal-md-day-box {
-  min-height: 48px;
-  background: #101827;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.gh-year-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
   border-radius: 6px;
-  padding: 5px 6px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #7d8590;
+  cursor: pointer;
   transition: all 0.15s ease;
-  position: relative;
-  user-select: none;
+  font-family: inherit;
 }
-.cal-md-day-box:hover {
-  border-color: #38bdf8;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  z-index: 2;
+.gh-year-btn:hover {
+  color: #e6edf3;
+  background: #21262d;
 }
-.cal-md-day-box.is-today {
-  border-color: #00d2ff;
-  box-shadow: 0 0 12px rgba(0, 210, 255, 0.4);
-  background: rgba(0, 210, 255, 0.08);
-}
-.cal-md-day-box.has-exp {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(52, 211, 153, 0.45);
-}
-.cal-md-day-box.is-other-month {
-  opacity: 0.35;
-  background: rgba(255, 255, 255, 0.02);
-  border-style: dotted;
-}
-.cal-md-day-box.is-empty {
-  opacity: 0.2;
-  background: rgba(255, 255, 255, 0.015);
-  border: 1px dashed rgba(255, 255, 255, 0.04);
-  pointer-events: none;
-  cursor: default;
-}
-.cal-md-day-box.is-empty:hover {
-  transform: none;
-  box-shadow: none;
-  border-color: rgba(255, 255, 255, 0.04);
-}
-.cal-md-day-box.is-future {
-  border-style: dashed;
-  opacity: 0.7;
-}
-.cal-md-day-num {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--dim);
-}
-.cal-md-day-box.is-today .cal-md-day-num {
-  color: #00d2ff;
-}
-.cal-md-day-box.has-exp .cal-md-day-num {
-  color: #34d399;
-}
-.cal-md-day-exp {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #34d399;
-  text-align: right;
-  line-height: 1;
-}
-.cal-md-today-tag {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 7.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: #00d2ff;
-  background: rgba(0, 210, 255, 0.15);
-  padding: 1px 3px;
-  border-radius: 2px;
+.gh-year-btn.is-active {
+  background: #1f6feb;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(31, 111, 235, 0.35);
 }
 
-/* Floating Tooltip */
+/* ============================================================
+   GITHUB CONTRIBUTION ACTIVITY SECTION
+   ============================================================ */
+.gh-activity-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 10px;
+}
+.gh-activity-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #e6edf3;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.gh-activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+
+/* Month divider on timeline */
+.gh-timeline-month {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 4px 0;
+}
+.gh-timeline-month-badge {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #7d8590;
+  white-space: nowrap;
+}
+.gh-timeline-year {
+  font-weight: 400;
+  color: #484f58;
+}
+.gh-timeline-line {
+  flex: 1;
+  height: 1px;
+  background: #21262d;
+}
+
+/* Activity Entry with vertical guide */
+.gh-activity-entry {
+  display: flex;
+  gap: 14px;
+  position: relative;
+  padding-left: 6px;
+}
+.gh-activity-entry::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  bottom: -16px;
+  left: 17px;
+  width: 2px;
+  background: #21262d;
+}
+.gh-activity-entry:last-child::before {
+  display: none;
+}
+
+.gh-activity-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #161b22;
+  border: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #58a6ff;
+  flex-shrink: 0;
+  z-index: 2;
+  margin-top: 2px;
+}
+.gh-activity-icon.quest-icon {
+  color: #3fb950;
+}
+
+.gh-activity-content {
+  flex: 1;
+  min-width: 0;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.gh-activity-headline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.gh-activity-main-text {
+  font-size: 13px;
+  color: #c9d1d9;
+}
+.gh-activity-main-text strong {
+  color: #e6edf3;
+  font-weight: 600;
+}
+.gh-activity-exp-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: #3fb950;
+  background: rgba(63, 185, 80, 0.15);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.gh-activity-repo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gh-activity-repo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: rgba(13, 17, 23, 0.6);
+  border-radius: 4px;
+}
+.gh-repo-name {
+  color: #58a6ff;
+  font-weight: 500;
+}
+.gh-repo-count {
+  color: #7d8590;
+  font-size: 11.5px;
+}
+
+.gh-activity-quest-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gh-quest-tag {
+  font-size: 11px;
+  color: #8b949e;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.gh-activity-more-btn {
+  width: 100%;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #58a6ff;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.gh-activity-more-btn:hover {
+  background: #30363d;
+  color: #79c0ff;
+  border-color: #8b949e;
+}
+
+/* ============================================================
+   AUTHENTIC GITHUB FLOATING TOOLTIP
+   ============================================================ */
 .cal-floating-tooltip {
   position: fixed;
   z-index: 99999;
   pointer-events: none;
-  background: #0b1324;
-  border: 1px solid #38bdf8;
+  background: #24292f;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  padding: 7px 11px;
   border-radius: 6px;
-  padding: 8px 11px;
-  font-family: 'JetBrains Mono', monospace;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), 0 0 12px rgba(56, 189, 248, 0.25);
-  transform: translate(-50%, -100%) translateY(-10px);
-  transition: opacity 0.12s ease;
+  font-size: 11.5px;
+  line-height: 1.35;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  transform: translate(-50%, -100%);
   white-space: nowrap;
+  transition: opacity 0.1s ease;
 }
-.cal-tt-date {
-  font-size: 11px;
-  font-weight: 700;
-  color: #f8fafc;
-  margin-bottom: 4px;
+.cal-floating-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #24292f transparent transparent transparent;
 }
-.cal-tt-body {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.cal-floating-tooltip.is-flipped::after {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent #24292f transparent;
 }
-.cal-tt-pill {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 4px;
-}
-.cal-tt-exp-positive {
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.2);
-  border: 1px solid rgba(52, 211, 153, 0.35);
-}
-.cal-tt-exp-zero {
-  color: var(--dim);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-.cal-tt-status {
-  font-size: 10px;
-  color: var(--mist);
+.cal-floating-tooltip strong {
+  font-weight: 600;
+  color: #ffffff;
 }
 
-.calendar-legend {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 12px;
-  font-size: 10.5px;
-  color: var(--dim);
+/* ============================================================
+   RESPONSIVE DESIGN (RECTANGLE CARD HTML CSS JS)
+   ============================================================ */
+@media (max-width: 900px) {
+  .gh-cal-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .gh-cal-years {
+    flex-direction: row;
+    width: 100%;
+    overflow-x: auto;
+    border-bottom: 1px solid #21262d;
+    padding-bottom: 8px;
+    gap: 6px;
+  }
+  .gh-year-btn {
+    width: auto;
+    padding: 5px 14px;
+    text-align: center;
+  }
+  .gh-calendar-panel {
+    padding: 16px 18px !important;
+  }
+  .gh-graph-box {
+    padding: 14px 14px;
+  }
 }
-.calendar-legend .cal-cell {
-  width: 10px;
-  height: 10px;
+
+@media (max-width: 600px) {
+  .gh-calendar-panel {
+    padding: 14px 12px !important;
+  }
+  .gh-graph-box {
+    padding: 12px 10px;
+    border-radius: 6px;
+  }
+  .gh-panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .gh-cal-header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .gh-cal-settings-menu {
+    right: auto;
+    left: 0;
+    min-width: 230px;
+  }
+  .gh-graph-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .gh-activity-headline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
- 
+
 /* ============================================================
    MOBILE RESPONSIVE DESIGN (< 880px & Phones)
    ============================================================ */
@@ -4520,28 +4588,99 @@ body, button, input, select, textarea {
   pointer-events: none;
 }
 
-/* Rank Badge with Uiverse Bevel & Electric Blue Glow */
+/* ============================================================
+   RANK BADGE SYSTEM — TACTILE OBSIDIAN WITH CHROMATIC GLOW
+   Dramatic Level Milestone & Awakening System
+   ============================================================ */
+
+/* Rank Badge with Uiverse Bevel & Dynamic Tier Glow */
 .rank-badge {
+  --rank-glow-color: #00d2ff;
+  --rank-glow-secondary: #0066ff;
+  --rank-glow-plasma: rgba(0, 210, 255, 0.65);
+  --rank-glow-accent: #e0f2fe;
+  --rank-border-color: #00d2ff;
+  --rank-letter-color: #00d2ff;
+
   width: 88px !important;
   height: 88px !important;
   border-radius: 24px !important;
-  border: 2px solid #00d2ff !important;
+  border: 2px solid var(--rank-border-color, #00d2ff) !important;
   display: grid !important;
   place-items: center !important;
   font-family: 'Rajdhani', sans-serif !important;
   font-size: 42px !important;
   font-weight: 700 !important;
   background: linear-gradient(145deg, #121a2d 0%, #060911 100%) !important;
-  color: #00d2ff !important;
-  text-shadow: 0 1px 0 #fff, 0 0 10px #0066ff, 0 0 22px #00d2ff !important;
-  box-shadow: 0 -1px 1px 0 rgba(0,0,0,.8), 0 1px 1px 0 rgba(255,255,255,.5), inset 3px 0 0 0 rgba(0,0,0,.3), inset -3px 0 0 0 rgba(0,0,0,.3), 0 0 20px rgba(0, 210, 255, 0.45) !important;
+  color: var(--rank-letter-color, #00d2ff) !important;
+  text-shadow: 0 1px 0 #fff, 0 0 10px var(--rank-glow-secondary, #0066ff), 0 0 22px var(--rank-glow-color, #00d2ff) !important;
+  box-shadow: 0 -1px 1px 0 rgba(0,0,0,.8), 0 1px 1px 0 rgba(255,255,255,.5), inset 3px 0 0 0 rgba(0,0,0,.3), inset -3px 0 0 0 rgba(0,0,0,.3), 0 0 20px var(--rank-glow-plasma, rgba(0, 210, 255, 0.45)) !important;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: visible;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+  user-select: none;
+}
+
+/* Rank Tier Specific Palettes */
+.rank-badge.rank-e {
+  --rank-glow-color: #00d2ff;
+  --rank-glow-secondary: #0066ff;
+  --rank-glow-plasma: rgba(0, 210, 255, 0.55);
+  --rank-glow-accent: #e0f2fe;
+  --rank-border-color: #00d2ff;
+  --rank-letter-color: #00d2ff;
+}
+
+.rank-badge.rank-d {
+  --rank-glow-color: #06b6d4;
+  --rank-glow-secondary: #0284c7;
+  --rank-glow-plasma: rgba(6, 182, 212, 0.65);
+  --rank-glow-accent: #a5f3fc;
+  --rank-border-color: #22d3ee;
+  --rank-letter-color: #22d3ee;
+}
+
+.rank-badge.rank-c {
+  --rank-glow-color: #10b981;
+  --rank-glow-secondary: #059669;
+  --rank-glow-plasma: rgba(16, 185, 129, 0.7);
+  --rank-glow-accent: #a7f3d0;
+  --rank-border-color: #34d399;
+  --rank-letter-color: #34d399;
+}
+
+.rank-badge.rank-b {
+  --rank-glow-color: #818cf8;
+  --rank-glow-secondary: #4f46e5;
+  --rank-glow-plasma: rgba(129, 140, 248, 0.75);
+  --rank-glow-accent: #c7d2fe;
+  --rank-border-color: #a5b4fc;
+  --rank-letter-color: #a5b4fc;
+}
+
+.rank-badge.rank-a {
+  --rank-glow-color: #c084fc;
+  --rank-glow-secondary: #9333ea;
+  --rank-glow-plasma: rgba(192, 132, 252, 0.85);
+  --rank-glow-accent: #f5d0fe;
+  --rank-border-color: #e879f9;
+  --rank-letter-color: #f0abfc;
+}
+
+.rank-badge.rank-s {
+  --rank-glow-color: #fbbf24;
+  --rank-glow-secondary: #ea580c;
+  --rank-glow-plasma: rgba(251, 191, 36, 0.9);
+  --rank-glow-accent: #ffffff;
+  --rank-border-color: #fde047;
+  --rank-letter-color: #fef08a;
+  animation: sPulse 2.8s ease-in-out infinite;
 }
 
 .rank-badge:hover {
-  transform: scale(1.04);
-  box-shadow: 0 0 30px rgba(0, 210, 255, 0.7), inset 0 0 15px rgba(0, 210, 255, 0.3) !important;
+  transform: scale(1.06);
+  box-shadow: 0 0 35px var(--rank-glow-color, #00d2ff), inset 0 0 20px rgba(255, 255, 255, 0.35) !important;
 }
 
 /* Rank Badge Wrapper & Particle Canvas */
@@ -4553,76 +4692,295 @@ body, button, input, select, textarea {
   height: 88px;
 }
 
-.rank-badge.is-awakening {
-  animation: rankAwakeningPulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  z-index: 5 !important;
+/* Background Solar Corona Halo behind the badge */
+.rank-badge-halo {
+  position: absolute;
+  inset: -38px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1;
+  background: radial-gradient(circle, var(--rank-glow-color, #00d2ff) 0%, var(--rank-glow-secondary, #0066ff) 45%, transparent 70%);
+  filter: blur(14px);
+  transform: scale(0.6);
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-.rank-badge.is-awakening #rankLetterBig {
-  animation: rankLetterAwakening 2.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+.rank-badge-wrap.is-milestone-active .rank-badge-halo {
+  opacity: 1;
+  animation: milestoneHaloSurge 3.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes rankAwakeningPulse {
+@keyframes milestoneHaloSurge {
   0% {
-    transform: scale(1);
-    box-shadow: 0 0 20px rgba(0, 210, 255, 0.45);
-    border-color: #00d2ff;
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
   }
   15% {
-    transform: scale(0.92);
-    box-shadow: 0 0 45px #00d2ff, 0 0 75px #0066ff, inset 0 0 25px rgba(0, 210, 255, 0.7);
-    border-color: #ffffff;
-    filter: brightness(1.6);
+    opacity: 0.95;
+    transform: scale(1.4) rotate(45deg);
   }
-  32% {
-    transform: scale(1.18);
-    box-shadow: 0 0 75px #00d2ff, 0 0 130px #0066ff, inset 0 0 40px #ffffff;
+  35% {
+    opacity: 1;
+    transform: scale(2.2) rotate(120deg);
+    filter: blur(20px);
+  }
+  65% {
+    opacity: 0.75;
+    transform: scale(1.7) rotate(220deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6) rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------
+   DRAMATIC LEVEL MILESTONE GLOW ANIMATIONS
+   ------------------------------------------------------------ */
+.rank-badge.is-milestone-glow,
+.rank-badge.is-awakening {
+  animation: rankMilestoneDramaticGlow 3.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  z-index: 8 !important;
+}
+
+.rank-badge.is-milestone-glow #rankLetterBig,
+.rank-badge.is-awakening #rankLetterBig {
+  animation: rankMilestoneLetterSurge 3.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+/* Shimmer Light Streak across badge surface */
+.rank-badge.is-milestone-glow::before,
+.rank-badge.is-awakening::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.92) 48%, var(--rank-glow-accent, #ffffff) 52%, transparent 75%);
+  pointer-events: none;
+  z-index: 2;
+  animation: milestoneShimmerSweep 3.4s ease-in-out forwards;
+}
+
+/* Core Plasma Detonation Flare */
+.rank-badge.is-milestone-glow::after,
+.rank-badge.is-awakening::after {
+  content: "";
+  position: absolute;
+  inset: -20px;
+  border-radius: inherit;
+  background: radial-gradient(circle, #ffffff 0%, var(--rank-glow-color, #00d2ff) 40%, var(--rank-glow-secondary, #0066ff) 65%, transparent 75%);
+  filter: blur(10px);
+  pointer-events: none;
+  z-index: -1;
+  animation: milestoneCoreFlare 3.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes rankMilestoneDramaticGlow {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 20px var(--rank-glow-plasma, rgba(0, 210, 255, 0.45));
+    border-color: var(--rank-border-color, #00d2ff);
+    filter: brightness(1);
+  }
+  10% {
+    /* Anticipation squeeze: Energy drawing into the core */
+    transform: scale(0.88);
+    box-shadow: 0 0 40px var(--rank-glow-color, #00d2ff), inset 0 0 30px #ffffff;
     border-color: #ffffff;
-    filter: brightness(2.2);
+    filter: brightness(1.5);
+  }
+  22% {
+    /* Supernova explosion: Maximum scale, blinding chromatic glow */
+    transform: scale(1.30) rotate(-2deg);
+    box-shadow: 
+      0 0 0 3px #ffffff,
+      0 0 40px #ffffff,
+      0 0 80px var(--rank-glow-color, #00d2ff),
+      0 0 130px var(--rank-glow-secondary, #0066ff),
+      0 0 190px var(--rank-glow-plasma, rgba(0, 210, 255, 0.85)),
+      0 0 250px rgba(255, 255, 255, 0.65),
+      inset 0 0 40px #ffffff,
+      inset 0 0 70px var(--rank-glow-color, #00d2ff);
+    border-color: #ffffff;
+    filter: brightness(2.7) contrast(1.25);
+  }
+  34% {
+    /* Shockwave pulse reverberation */
+    transform: scale(1.22) rotate(1.5deg);
+    box-shadow: 
+      0 0 0 2px #ffffff,
+      0 0 60px var(--rank-glow-color, #00d2ff),
+      0 0 110px var(--rank-glow-secondary, #0066ff),
+      0 0 170px var(--rank-glow-plasma, rgba(0, 210, 255, 0.75)),
+      inset 0 0 30px #ffffff,
+      inset 0 0 55px var(--rank-glow-color, #00d2ff);
+    border-color: var(--rank-glow-accent, #ffffff);
+    filter: brightness(2.1);
   }
   50% {
-    transform: scale(1.08);
-    box-shadow: 0 0 60px rgba(0, 210, 255, 0.95), 0 0 95px rgba(0, 102, 255, 0.75);
-    filter: brightness(1.7);
+    /* Harmonic resonance bounce */
+    transform: scale(1.16) rotate(-0.5deg);
+    box-shadow: 
+      0 0 45px var(--rank-glow-color, #00d2ff),
+      0 0 90px var(--rank-glow-secondary, #0066ff),
+      0 0 140px rgba(0, 210, 255, 0.55),
+      inset 0 0 22px var(--rank-glow-accent, #ffffff);
+    border-color: #ffffff;
+    filter: brightness(1.75);
   }
-  75% {
-    transform: scale(1.02);
-    box-shadow: 0 0 40px rgba(0, 210, 255, 0.7);
-    filter: brightness(1.3);
+  70% {
+    /* Lingering radiant plasma breathing */
+    transform: scale(1.08);
+    box-shadow: 
+      0 0 38px var(--rank-glow-color, #00d2ff),
+      0 0 70px var(--rank-glow-secondary, #0066ff),
+      inset 0 0 18px var(--rank-glow-color, #00d2ff);
+    border-color: var(--rank-border-color, #00d2ff);
+    filter: brightness(1.35);
+  }
+  88% {
+    transform: scale(1.03);
+    box-shadow: 0 0 30px var(--rank-glow-color, #00d2ff);
+    filter: brightness(1.1);
   }
   100% {
     transform: scale(1);
-    box-shadow: 0 0 20px rgba(0, 210, 255, 0.45);
-    border-color: #00d2ff;
+    box-shadow: 0 0 22px var(--rank-glow-plasma, rgba(0, 210, 255, 0.5));
+    border-color: var(--rank-border-color, #00d2ff);
     filter: brightness(1);
   }
 }
 
-@keyframes rankLetterAwakening {
+@keyframes rankMilestoneLetterSurge {
   0% {
     transform: scale(1);
-    text-shadow: 0 1px 0 #fff, 0 0 10px #0066ff, 0 0 22px #00d2ff;
+    text-shadow: 0 1px 0 #fff, 0 0 10px var(--rank-glow-secondary, #0066ff), 0 0 22px var(--rank-glow-color, #00d2ff);
   }
-  30% {
-    transform: scale(1.28);
-    text-shadow: 0 0 30px #ffffff, 0 0 55px #00d2ff, 0 0 90px #38bdf8, 0 0 130px #ffffff;
+  12% {
+    transform: scale(0.92);
+    text-shadow: 0 0 20px #ffffff, 0 0 35px var(--rank-glow-color, #00d2ff);
     color: #ffffff;
   }
-  60% {
-    transform: scale(1.1);
-    text-shadow: 0 0 25px #00d2ff, 0 0 50px #0066ff;
+  24% {
+    transform: scale(1.38);
+    text-shadow: 
+      0 0 20px #ffffff,
+      0 0 45px #ffffff,
+      0 0 75px var(--rank-glow-color, #00d2ff),
+      0 0 120px var(--rank-glow-secondary, #0066ff),
+      0 0 170px #ffffff;
+    color: #ffffff;
+  }
+  45% {
+    transform: scale(1.22);
+    text-shadow: 0 0 30px #ffffff, 0 0 65px var(--rank-glow-color, #00d2ff), 0 0 100px var(--rank-glow-secondary, #0066ff);
+    color: #ffffff;
+  }
+  70% {
+    transform: scale(1.10);
+    text-shadow: 0 0 22px var(--rank-glow-color, #00d2ff), 0 0 48px var(--rank-glow-secondary, #0066ff);
+    color: var(--rank-letter-color, #00d2ff);
   }
   100% {
     transform: scale(1);
-    text-shadow: 0 1px 0 #fff, 0 0 10px #0066ff, 0 0 22px #00d2ff;
-    color: #00d2ff;
+    text-shadow: 0 1px 0 #fff, 0 0 10px var(--rank-glow-secondary, #0066ff), 0 0 22px var(--rank-glow-color, #00d2ff);
+    color: var(--rank-letter-color, #00d2ff);
   }
 }
 
-/* Awakening Particle Layer */
+@keyframes milestoneShimmerSweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-110%) rotate(25deg);
+  }
+  16% {
+    opacity: 1;
+  }
+  38% {
+    opacity: 1;
+    transform: translateX(110%) rotate(25deg);
+  }
+  42%, 100% {
+    opacity: 0;
+    transform: translateX(130%) rotate(25deg);
+  }
+}
+
+@keyframes milestoneCoreFlare {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  22% {
+    opacity: 0.98;
+    transform: scale(1.6);
+  }
+  42% {
+    opacity: 0.85;
+    transform: scale(1.9);
+  }
+  70% {
+    opacity: 0.45;
+    transform: scale(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+
+/* Status Card Milestone Resonance */
+.status-card.has-milestone-resonance {
+  animation: statusCardMilestoneSurge 3.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.status-card.has-milestone-resonance .status-glow {
+  animation: statusGlowMilestoneBurst 3.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes statusCardMilestoneSurge {
+  0% {
+    border-color: #1e2c45;
+  }
+  22% {
+    border-color: var(--rank-glow-color, #00d2ff);
+    box-shadow: 0 0 50px rgba(0, 210, 255, 0.4), inset 0 0 30px rgba(0, 210, 255, 0.25) !important;
+  }
+  60% {
+    border-color: var(--rank-glow-secondary, #0066ff);
+    box-shadow: 0 0 28px rgba(0, 210, 255, 0.22) !important;
+  }
+  100% {
+    border-color: #1e2c45;
+    box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, .8), 0px 1px 2px 0 rgba(255, 255, 255, .35), 0 16px 40px rgba(0, 0, 0, .7) !important;
+  }
+}
+
+@keyframes statusGlowMilestoneBurst {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  24% {
+    transform: scale(2.4);
+    opacity: 1;
+    filter: brightness(2.2);
+  }
+  50% {
+    transform: scale(1.85);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+}
+
+/* Awakening & Milestone Particle Layer */
 .rank-awakening-fx {
   position: absolute;
-  inset: -60px;
+  inset: -70px;
   pointer-events: none;
   overflow: visible;
   display: grid;
@@ -4635,18 +4993,25 @@ body, button, input, select, textarea {
   position: absolute;
   width: 90px;
   height: 90px;
-  border-radius: 26px;
-  border: 3px solid #00d2ff;
-  box-shadow: 0 0 25px #00d2ff, inset 0 0 15px #00d2ff;
-  animation: shockwaveBurst 1.25s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+  border-radius: 28px;
+  border: 3px solid var(--rank-glow-color, #00d2ff);
+  box-shadow: 0 0 30px var(--rank-glow-color, #00d2ff), inset 0 0 18px var(--rank-glow-color, #00d2ff);
+  animation: shockwaveBurst 1.35s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
   pointer-events: none;
 }
 
 .awakening-shockwave-secondary {
   border-color: #ffffff;
-  box-shadow: 0 0 30px #ffffff, inset 0 0 20px #00d2ff;
+  box-shadow: 0 0 35px #ffffff, 0 0 60px var(--rank-glow-color, #00d2ff), inset 0 0 22px var(--rank-glow-color, #00d2ff);
   border-radius: 50%;
-  animation: shockwaveBurst 1.35s cubic-bezier(0.15, 0.7, 0.35, 1) forwards;
+  animation: shockwaveBurst 1.45s cubic-bezier(0.15, 0.7, 0.35, 1) forwards;
+}
+
+.awakening-shockwave-tertiary {
+  border-color: var(--rank-glow-secondary, #0066ff);
+  box-shadow: 0 0 40px var(--rank-glow-secondary, #0066ff), inset 0 0 20px #ffffff;
+  border-radius: 36px;
+  animation: shockwaveBurst 1.65s cubic-bezier(0.15, 0.7, 0.35, 1) forwards;
 }
 
 @keyframes shockwaveBurst {
@@ -4654,11 +5019,11 @@ body, button, input, select, textarea {
     transform: scale(0.6);
     opacity: 1;
   }
-  70% {
-    opacity: 0.85;
+  65% {
+    opacity: 0.9;
   }
   100% {
-    transform: scale(2.7);
+    transform: scale(3.1);
     opacity: 0;
     border-width: 1px;
   }
@@ -7270,582 +7635,1389 @@ body, button, input, select, textarea {
   box-sizing: border-box !important;
 }
 
-/* Python Editor Window (Right Panel) */
-.py-editor-wrapper {
+/* ============================================================
+   AUTHENTIC CODDY.TECH PYTHON CHALLENGE LAB WORKSPACE
+   Full fidelity matching reference layout: top gamification bar,
+   dock icon strip, mission & objectives, Monaco/VS-code editor,
+   floating AI/Run buttons, and dual Output/Expected test panel.
+   ============================================================ */
+
+.modal.modal-python-coddy {
+  width: 98vw !important;
+  max-width: 1480px !important;
+  height: 94vh !important;
+  max-height: 960px !important;
+  min-height: 580px !important;
+  margin: auto !important;
+  border-radius: 16px !important;
+  border: 1px solid #1e2638 !important;
+  background: #0d111a !important;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
   display: flex !important;
   flex-direction: column !important;
-  background: #080d19 !important;
-  border: 1px solid #1e2c48 !important;
-  border-radius: 12px !important;
   overflow: hidden !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  padding: 0 !important;
+  animation: pyModalEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.py-window-header {
+@keyframes pyModalEnter {
+  from { opacity: 0; transform: scale(0.97) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal.modal-python-coddy > .modal-head {
   display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 8px 14px !important;
-  background: linear-gradient(90deg, #0d1629 0%, #15233c 100%) !important;
-  color: #f8fafc !important;
-  border-bottom: 1px solid #1e2c48 !important;
-  flex-wrap: wrap !important;
-  gap: 8px !important;
+  background: #111624 !important;
+  border-bottom: 1px solid #1c2538 !important;
+  padding: 10px 18px !important;
+  min-height: 48px !important;
 }
 
-.py-window-title {
+.modal.modal-python-coddy > .modal-body {
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: 1 1 0% !important;
+  height: 100% !important;
+  max-height: none !important;
+  overflow: hidden !important;
   display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  font-family: 'Rajdhani', sans-serif !important;
-  font-weight: 700 !important;
-  font-size: 14px !important;
-  color: #ffffff !important;
+  flex-direction: column !important;
+  background: transparent !important;
 }
 
-.py-engine-pill {
-  font-size: 10.5px !important;
-  background: rgba(56, 189, 248, 0.15) !important;
-  border: 1px solid rgba(56, 189, 248, 0.35) !important;
-  color: #38bdf8 !important;
-  padding: 2px 8px !important;
-  border-radius: 4px !important;
-  font-weight: 700 !important;
-  letter-spacing: .04em !important;
+#modalChallenge.is-fullscreen .modal.modal-python-coddy {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  min-height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
 }
 
-.py-toolbar {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  padding: 8px 12px !important;
-  background: #0c1322 !important;
-  border-bottom: 1px solid #1e2c48 !important;
-  flex-wrap: wrap !important;
+/* Master Container */
+.py-coddy-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  background: #0d111a;
+  color: #e6edf3;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  overflow: hidden;
 }
 
-.py-run-btn {
+/* Top Header Bar */
+.py-coddy-header {
+  height: 52px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  background: #111624;
+  border-bottom: 1px solid #1c2538;
+  user-select: none;
+  z-index: 10;
+}
+
+.py-coddy-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.py-coddy-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.py-coddy-close-btn:hover {
+  background: #1e293b;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.py-coddy-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+}
+
+.py-bc-module {
+  color: #8b949e;
+  font-weight: 500;
+}
+
+.py-bc-divider {
+  color: #484f58;
+}
+
+.py-bc-title {
+  color: #f0f6fc;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Right Gamification Bar: Streaks, Diamonds, Energy, Avatar */
+.py-coddy-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.py-stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  transition: transform 0.15s ease;
+}
+
+.py-stat-item:hover {
+  transform: translateY(-1px);
+}
+
+.py-stat-streak {
+  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  color: #fb923c;
+}
+
+.py-stat-diamonds {
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  color: #facc15;
+}
+
+.py-stat-energy {
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  color: #38bdf8;
+}
+
+.py-stat-val {
+  font-family: "JetBrains Mono", monospace;
+}
+
+.py-stat-icon {
+  font-size: 14px;
+}
+
+.py-coddy-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+  margin-left: 4px;
+}
+
+.py-coddy-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.py-avatar-fallback {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+/* Master Body Layout */
+.py-coddy-body {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Far Left Icon Dock */
+.py-dock-sidebar {
+  width: 48px;
+  min-width: 48px;
+  background: #0e121d;
+  border-right: 1px solid #1a2335;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 12px;
+  z-index: 5;
+}
+
+.py-dock-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #6e7681;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.py-dock-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6edf3;
+}
+
+.py-dock-btn.is-active {
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+}
+
+.py-dock-btn.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: #38bdf8;
+  border-radius: 0 3px 3px 0;
+}
+
+.py-dock-bottom {
+  margin-top: auto;
+}
+
+/* Left Column: Challenge Details & Mission Pane */
+.py-challenge-pane {
+  width: 440px;
+  min-width: 340px;
+  max-width: 520px;
+  background: #0f1420;
+  border-right: 1px solid #1c2538;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+  position: relative;
+}
+
+.py-challenge-header {
+  padding: 20px 22px 14px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.py-challenge-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.py-theory-toggle-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: #172033;
+  border: 1px solid #283754;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.py-theory-toggle-btn:hover {
+  background: #202d47;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+/* Integrated Concept Guide (clean inline details without side buttons) */
+.py-concepts-details {
+  margin: 12px 0 16px 0;
+  background: #111726;
+  border: 1px solid #1f2b42;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.py-concepts-summary {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #38bdf8;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(56, 189, 248, 0.06);
+  transition: background 0.15s ease;
+}
+
+.py-concepts-summary:hover {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.py-concepts-content {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.py-concept-item {
+  background: #0d121c;
+  border: 1px solid #1c263b;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.py-concept-name code {
+  color: #38bdf8;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.py-concept-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 6px 0;
+}
+
+@keyframes pyDrawerSlide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.py-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.py-drawer-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.py-drawer-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.py-drawer-close:hover {
+  color: #ffffff;
+}
+
+.py-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.py-drawer-card {
+  background: #0d121c;
+  border: 1px solid #1f2a40;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.py-drawer-card-title code {
+  color: #38bdf8;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.py-drawer-card-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 6px 0;
+}
+
+.py-snippet-box {
+  background: #080c14;
+  border: 1px solid #162033;
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+}
+
+.py-snippet-code code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #d1d5db;
+}
+
+/* Mission Card */
+.py-mission-card {
+  padding: 0 22px 22px 22px;
+  display: flex;
+  flex-direction: column;
+}
+
+.py-challenge-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.py-kicker-icon {
+  font-size: 14px;
+}
+
+.py-kicker-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.py-badge-pill {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.py-exp-pill {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.py-task-lead {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: #e2e8f0;
+  margin: 0 0 16px 0;
+}
+
+.py-task-lead code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #38bdf8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+}
+
+/* Callout Box */
+.py-callout-box {
+  background: #141a27;
+  border: 1px solid #222d42;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.py-callout-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.py-callout-text strong {
+  color: #f1f5f9;
+}
+
+.py-callout-text code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #38bdf8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+.py-callout-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.py-callout-code-item {
+  background: #0d121c;
+  border: 1px solid #1c2436;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.py-callout-code-item code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12.5px;
+  color: #f8fafc;
+}
+
+/* Live Objectives Checklist */
+.py-goals-card {
+  background: #111624;
+  border: 1px solid #1f293d;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.py-goals-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.py-goals-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.py-goals-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.py-goals-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.py-goal-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.py-goal-item.is-satisfied {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.py-goal-check {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+  color: #64748b;
+  border: 1px solid #334155;
+  margin-top: 1px;
+  transition: all 0.15s ease;
+}
+
+.py-goal-item.is-satisfied .py-goal-check {
+  color: #10b981;
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  font-weight: 700;
+}
+
+.py-goal-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.py-goal-text {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.4;
+}
+
+.py-goal-item.is-satisfied .py-goal-text {
+  color: #f1f5f9;
+}
+
+.py-goal-hint {
+  font-size: 11.5px;
+  color: #64748b;
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* Bottom Action Bar */
+.py-explain-bar {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  background: #0d121c;
+  border-top: 1px solid #1c2436;
+  padding: 14px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 5;
+}
+
+.py-explain-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #161e2e;
+  border: 1px solid #283754;
+  color: #cbd5e1;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.py-explain-btn:hover {
+  background: #1f2c45;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+.py-claim-btn {
+  background: #1e293b;
+  color: #64748b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: not-allowed;
+  transition: all 0.15s ease;
+}
+
+.py-claim-btn.is-ready,
+.py-claim-btn:not(:disabled) {
   background: linear-gradient(135deg, #059669, #10b981) !important;
   color: #ffffff !important;
   border: none !important;
-  border-radius: 8px !important;
-  box-shadow: 0 0 14px rgba(16, 185, 129, 0.4) !important;
-  font-weight: 700 !important;
-  font-size: 13px !important;
-  padding: 6px 16px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.45) !important;
   cursor: pointer !important;
-  font-family: 'Rajdhani', sans-serif !important;
-  letter-spacing: .04em !important;
-  transition: all 0.15s ease !important;
 }
 
-.py-run-btn:hover {
-  filter: brightness(1.1) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.6) !important;
+.py-claim-btn.is-ready:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
 }
 
-.py-run-btn:active {
-  transform: translateY(1px) !important;
+/* Right Column: Code Editor & Test Cases Pane */
+.py-ide-pane {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #0a0d14;
+  overflow: hidden;
 }
 
-.py-clear-btn, .py-reset-btn {
-  font-size: 12px !important;
-  padding: 6px 12px !important;
-  background: #1e293b !important;
-  color: #cbd5e1 !important;
-  border: 1px solid #334155 !important;
-  border-radius: 6px !important;
-  cursor: pointer !important;
-  font-family: 'Inter', sans-serif !important;
-  transition: all 0.15s ease !important;
+/* Editor Section */
+.py-editor-section {
+  flex: 1 1 58%;
+  display: flex;
+  flex-direction: column;
+  min-height: 240px;
+  position: relative;
+  border-bottom: 1px solid #1c2436;
+  overflow: hidden;
 }
 
-.py-clear-btn:hover, .py-reset-btn:hover {
-  background: #334155 !important;
-  color: #ffffff !important;
+.py-editor-topbar {
+  height: 38px;
+  min-height: 38px;
+  background: #111624;
+  border-bottom: 1px solid #1c2436;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  user-select: none;
 }
 
-.py-exec-status {
-  margin-left: auto !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  font-size: 11.5px !important;
-  font-family: 'Inter', sans-serif !important;
-  color: #94a3b8 !important;
-  white-space: nowrap !important;
+.py-lang-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #161d2d;
+  border-top: 2px solid #38bdf8;
+  color: #ffffff;
+  padding: 0 14px;
+  height: 38px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-right: 1px solid #1c2436;
 }
 
-.py-status-dot {
-  width: 8px !important;
-  height: 8px !important;
-  border-radius: 50% !important;
-  background: #64748b !important;
-  flex-shrink: 0 !important;
+.py-lang-icon {
+  font-size: 14px;
 }
 
-.py-exec-status.is-running .py-status-dot {
-  background: #f59e0b !important;
-  box-shadow: 0 0 8px #f59e0b !important;
-  animation: pyPulse 0.8s infinite alternate !important;
+.py-editor-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.py-exec-status.is-success .py-status-dot {
-  background: #10b981 !important;
-  box-shadow: 0 0 8px #10b981 !important;
+.py-tool-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s ease;
 }
 
-.py-exec-status.is-error .py-status-dot {
-  background: #ef4444 !important;
-  box-shadow: 0 0 8px #ef4444 !important;
+.py-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
-@keyframes pyPulse {
-  from { opacity: 0.4; }
-  to { opacity: 1; }
-}
-
-/* VS Code Container & Header */
-.py-vscode-container {
-  background: #181a1f !important;
-  border: 1px solid #282c34 !important;
-  border-radius: var(--radius-m) !important;
-  overflow: hidden !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
-}
-
-.py-vscode-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  background: #181a1f !important;
-  border-bottom: 1px solid #252830 !important;
-  padding: 0 12px 0 0 !important;
-  height: 38px !important;
-}
-
-.py-vscode-tabs {
-  display: flex !important;
-  align-items: center !important;
-  height: 100% !important;
-}
-
-.py-vscode-tab {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  height: 100% !important;
-  padding: 0 16px !important;
-  background: #1e1e1e !important;
-  border-top: 2px solid #007acc !important;
-  border-right: 1px solid #252830 !important;
-  color: #ffffff !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 12px !important;
-  user-select: none !important;
-}
-
-.py-tab-icon {
-  font-size: 14px !important;
-}
-
-.py-tab-modified {
-  color: #00d2ff !important;
-  font-size: 10px !important;
-}
-
-.py-tab-close {
-  background: transparent !important;
-  border: none !important;
-  color: #8c8c8c !important;
-  cursor: pointer !important;
-  padding: 0 2px !important;
-  font-size: 14px !important;
-  line-height: 1 !important;
-  border-radius: 3px !important;
-}
-.py-tab-close:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: #ffffff !important;
-}
-
-/* VS Code Breadcrumbs */
-.py-vscode-breadcrumbs {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  padding: 4px 14px !important;
-  background: #1e1e1e !important;
-  border-bottom: 1px solid #282a30 !important;
-  color: #858585 !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 11px !important;
-}
-.py-bc-sep {
-  color: #555555 !important;
-}
-.py-bc-item.is-file {
-  color: #d4d4d4 !important;
-}
-.py-bc-symbol {
-  color: #c586c0 !important;
-}
-
-/* Editor Body */
-.py-editor-body {
-  position: relative !important;
-  display: flex !important;
-  background: #1e1e1e !important;
-  min-height: 280px !important;
-  flex: 1 1 auto !important;
-  border-bottom: 1px solid #282a30 !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
+/* Editor Canvas */
+.py-editor-canvas {
+  flex: 1 1 0%;
+  position: relative;
+  display: flex;
+  background: #131722;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .py-gutter {
-  width: 48px !important;
-  padding: 12px 0 !important;
-  background: #1e1e1e !important;
-  color: #858585 !important;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
-  font-size: 13px !important;
-  line-height: 21px !important;
-  text-align: right !important;
-  user-select: none !important;
-  overflow: hidden !important;
-  white-space: pre !important;
-  border-right: 1px solid #2b2b2b !important;
-  flex-shrink: 0 !important;
+  width: 46px;
+  min-width: 46px;
+  padding: 14px 0;
+  background: #10141e;
+  border-right: 1px solid #1d2536;
+  color: #4b5563;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 13px;
+  line-height: 21px;
+  text-align: right;
+  user-select: none;
+  overflow: hidden;
+  white-space: pre;
 }
 
 .py-line-num {
-  padding-right: 12px !important;
-  line-height: 21px !important;
-  height: 21px !important;
-  color: #858585 !important;
-}
-.py-line-num.is-active-line {
-  color: #c6c6c6 !important;
-  font-weight: 700 !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  padding-right: 12px;
+  height: 21px;
+  line-height: 21px;
 }
 
 .py-code-stage {
-  position: relative !important;
-  flex: 1 !important;
-  min-width: 0 !important;
-  height: 100% !important;
-  min-height: 280px !important;
-  overflow: hidden !important;
-  background: #1e1e1e !important;
-}
-
-.py-active-line-bg {
-  position: absolute !important;
-  left: 0 !important;
-  right: 0 !important;
-  height: 21px !important;
-  background: rgba(255, 255, 255, 0.035) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-  pointer-events: none !important;
-  z-index: 0 !important;
-  display: none;
+  flex: 1 1 0%;
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .py-highlight-layer {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 12px 14px !important;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
-  font-size: 13px !important;
-  line-height: 21px !important;
-  letter-spacing: 0px !important;
-  tab-size: 4 !important;
-  -moz-tab-size: 4 !important;
-  white-space: pre !important;
-  word-break: normal !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
-  z-index: 1 !important;
-  box-sizing: border-box !important;
-  color: #d4d4d4 !important;
-  background: transparent !important;
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 14px 16px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 13px;
+  line-height: 21px;
+  tab-size: 4;
+  -moz-tab-size: 4;
+  white-space: pre;
+  word-break: normal;
+  overflow: hidden;
+  pointer-events: none;
+  color: #d4d4d4;
+  box-sizing: border-box;
 }
 
 .py-highlight-layer code {
-  font-family: inherit !important;
-  font-size: inherit !important;
-  line-height: inherit !important;
-  white-space: inherit !important;
-  display: block !important;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: inherit;
+  display: block;
 }
 
 .py-textarea {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 12px 14px !important;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
-  font-size: 13px !important;
-  line-height: 21px !important;
-  letter-spacing: 0px !important;
-  tab-size: 4 !important;
-  -moz-tab-size: 4 !important;
-  border: none !important;
-  outline: none !important;
-  resize: none !important;
-  white-space: pre !important;
-  overflow-wrap: normal !important;
-  overflow: auto !important;
-  z-index: 2 !important;
-  box-sizing: border-box !important;
-  background: transparent !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-  caret-color: #00d2ff !important;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 13px;
+  line-height: 21px;
+  tab-size: 4;
+  -moz-tab-size: 4;
+  border: none;
+  outline: none;
+  resize: none;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow: auto;
+  box-sizing: border-box;
+  background: #131722;
+  color: #f1f5f9 !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  caret-color: #38bdf8 !important;
+  z-index: 2;
 }
 
 .py-textarea::selection {
-  background: rgba(38, 79, 120, 0.75) !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
+  background: rgba(56, 189, 248, 0.3) !important;
 }
 
-/* VS Code Python Syntax Highlighting Tokens */
-.py-tok-comment {
-  color: #6a9955 !important;
-  font-style: italic !important;
-}
-.py-tok-string {
-  color: #ce9178 !important;
-}
-.py-tok-number {
-  color: #b5cea8 !important;
-}
-.py-tok-decl {
-  color: #569cd6 !important;
-  font-weight: 600 !important;
-}
-.py-tok-control {
-  color: #c586c0 !important;
-  font-weight: 600 !important;
-}
-.py-tok-constant {
-  color: #569cd6 !important;
-  font-weight: 600 !important;
-}
-.py-tok-builtin {
-  color: #dcdcaa !important;
-}
-.py-tok-logical {
-  color: #569cd6 !important;
-}
-.py-tok-func {
-  color: #dcdcaa !important;
-}
-.py-tok-var {
-  color: #9cdcfe !important;
-}
-.py-tok-op {
-  color: #d4d4d4 !important;
-}
-.py-tok-bracket {
-  color: #ffd700 !important;
+/* CodeMirror Full-Fidelity Editor */
+.py-editor-canvas .CodeMirror {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  inset: 0 !important;
+  font-family: "JetBrains Mono", "Fira Code", monospace !important;
+  font-size: 13.5px !important;
+  line-height: 22px !important;
+  background: #131722 !important;
+  color: #f8fafc !important;
+  border: none !important;
+  z-index: 3 !important;
 }
 
-/* VS Code Status Bar */
-.py-vscode-statusbar {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  height: 24px !important;
-  background: #007acc !important;
-  color: #ffffff !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 11px !important;
-  padding: 0 10px !important;
-  user-select: none !important;
-}
-.py-sb-left,
-.py-sb-right {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-}
-.py-sb-item {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  padding: 2px 4px !important;
-  cursor: default !important;
-}
-.py-sb-lang {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-radius: 2px !important;
-  padding: 1px 6px !important;
+.py-editor-canvas .CodeMirror-gutters {
+  background: #10141e !important;
+  border-right: 1px solid #1d2536 !important;
+  padding-right: 4px !important;
 }
 
-/* Console Output */
-.py-console-panel {
-  background: #060912 !important;
-  border-top: 1px solid #1e2c48 !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.py-console-head {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 6px 12px !important;
-  background: #0c1322 !important;
-  color: #94a3b8 !important;
-  font-family: 'Rajdhani', sans-serif !important;
+.py-editor-canvas .CodeMirror-linenumber {
+  color: #4b5563 !important;
   font-size: 12px !important;
-  font-weight: 700 !important;
-  letter-spacing: .04em !important;
-  border-bottom: 1px solid #1a253a !important;
-  flex-wrap: wrap !important;
-  gap: 6px !important;
+  padding: 0 8px 0 6px !important;
 }
 
-.py-console-meta {
-  color: #64748b !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 11px !important;
-  font-weight: normal !important;
+.py-editor-canvas .CodeMirror-cursor {
+  border-left: 2px solid #38bdf8 !important;
 }
 
-.py-console-body {
-  margin: 0 !important;
-  padding: 10px 14px !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 12px !important;
-  line-height: 1.5 !important;
-  color: #cbd5e1 !important;
-  max-height: 180px !important;
-  min-height: 110px !important;
-  overflow-y: auto !important;
-  overflow-x: auto !important;
-  white-space: pre-wrap !important;
-  overflow-wrap: break-word !important;
-  word-break: break-word !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
+.py-editor-canvas .CodeMirror-selected {
+  background: rgba(56, 189, 248, 0.28) !important;
 }
 
-.py-console-body.is-success {
-  color: #4ade80 !important;
+.py-editor-canvas .CodeMirror-scroll {
+  padding-bottom: 50px !important;
 }
 
-.py-console-body.is-error {
-  color: #f87171 !important;
+/* Highlighting Tokens */
+.py-tok-comment { color: #6a9955; font-style: italic; }
+.py-tok-string { color: #ce9178; }
+.py-tok-number { color: #b5cea8; }
+.py-tok-decl { color: #569cd6; font-weight: 600; }
+.py-tok-control { color: #c586c0; font-weight: 600; }
+.py-tok-constant { color: #569cd6; font-weight: 600; }
+.py-tok-builtin { color: #dcdcaa; }
+.py-tok-logical { color: #569cd6; }
+.py-tok-func { color: #dcdcaa; }
+.py-tok-var { color: #9cdcfe; }
+.py-tok-op { color: #d4d4d4; }
+.py-tok-bracket { color: #ffd700; }
+
+/* Floating Action Buttons (Ask AI & Run Code) */
+.py-floating-actions {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.py-ask-ai-btn {
+  background: rgba(22, 28, 42, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  transition: all 0.15s ease;
+}
+
+.py-ask-ai-btn:hover {
+  background: rgba(30, 39, 58, 0.95);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.py-run-btn {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.45);
+  transition: all 0.15s ease;
+}
+
+.py-run-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+}
+
+.py-run-btn:active {
+  transform: translateY(1px);
+}
+
+.py-run-btn.is-running {
+  background: #0284c7;
+  cursor: wait;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.45);
+}
+
+/* Bottom Test Cases / Console Panel */
+.py-testcases-panel {
+  flex: 0 0 42%;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  background: #0c1017;
+  overflow: hidden;
+}
+
+.py-tc-tabs {
+  height: 38px;
+  min-height: 38px;
+  background: #111624;
+  border-bottom: 1px solid #1c2436;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 20px;
+}
+
+.py-tc-tab {
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 9px 0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.py-tc-tab:hover {
+  color: #e6edf3;
+}
+
+.py-tc-tab.is-active {
+  color: #ffffff;
+  border-bottom: 2px solid #38bdf8;
+}
+
+.py-tc-status-text {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.py-tc-body {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 18px;
+  overflow-y: auto;
+  gap: 12px;
+}
+
+.py-tc-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+.py-tc-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.py-tc-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.py-tc-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7d8590;
+}
+
+.py-output-box,
+.py-expected-box {
+  background: #080b12;
+  border: 1px solid #1c2436;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e6edf3;
+  flex: 1 1 0%;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.py-output-box.is-error {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+/* iOS-style toggle slider */
+.py-toggle-wrap {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.py-toggle-wrap input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.py-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #334155;
+  transition: 0.2s;
+  border-radius: 18px;
+}
+
+.py-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #ffffff;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+.py-toggle-wrap input:checked + .py-toggle-slider {
+  background-color: #0284c7;
+}
+
+.py-toggle-wrap input:checked + .py-toggle-slider:before {
+  transform: translateX(14px);
+}
+
+/* Evaluation Banner */
+.py-eval-banner {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.py-eval-banner.is-passed {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.py-eval-banner.is-failed {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
 }
 
 /* Interactive Terminal Input Bar */
-.py-console-body-wrap {
-  display: flex !important;
-  flex-direction: column !important;
-  position: relative !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-}
-
-.py-terminal-input-bar {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  padding: 8px 12px !important;
-  background: #080e1b !important;
-  border-top: 1px solid #1e3a5f !important;
-  box-shadow: 0 -2px 10px rgba(0, 210, 255, 0.15) !important;
+.py-term-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: #131b2c;
+  border: 1px solid #2b3956;
+  border-radius: 6px;
 }
 
 .py-term-prompt-icon {
-  color: #00d2ff !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.05em !important;
+  color: #38bdf8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .py-term-prompt-text {
-  color: #38bdf8 !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 11.5px !important;
-  font-weight: 600 !important;
-  max-width: 180px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  color: #94a3b8;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11.5px;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .py-term-input-field {
-  flex: 1 1 auto !important;
-  background: #040711 !important;
-  border: 1px solid #00d2ff !important;
-  border-radius: 4px !important;
-  color: #f8fafc !important;
-  padding: 6px 10px !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 12.5px !important;
-  outline: none !important;
-  box-shadow: 0 0 10px rgba(0, 210, 255, 0.25), inset 0 0 6px rgba(0, 0, 0, 0.8) !important;
-  transition: border-color .15s ease, box-shadow .15s ease !important;
-}
-
-.py-term-input-field:focus {
-  border-color: #38bdf8 !important;
-  box-shadow: 0 0 16px rgba(0, 210, 255, 0.5), inset 0 0 8px rgba(0, 0, 0, 0.9) !important;
+  flex: 1 1 auto;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  outline: none;
 }
 
 .py-term-submit-btn {
-  padding: 5px 12px !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 11.5px !important;
-  font-weight: 700 !important;
-  background: #0284c7 !important;
-  border-color: #00d2ff !important;
-  color: #ffffff !important;
-  white-space: nowrap !important;
-  cursor: pointer !important;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .py-term-submit-btn:hover {
-  background: #0369a1 !important;
-  box-shadow: 0 0 12px rgba(0, 210, 255, 0.4) !important;
+  background: #1d4ed8;
 }
 
-.cli-claim-btn.is-ready {
-  background: linear-gradient(135deg, #059669, #10b981) !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.5) !important;
-  animation: claimPulse 1.2s infinite alternate !important;
+/* Solution View */
+.py-solution-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-@keyframes claimPulse {
-  from { transform: scale(1); filter: brightness(1); }
-  to { transform: scale(1.02); filter: brightness(1.15); }
+.py-solution-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #94a3b8;
 }
+
+.py-solution-code {
+  background: #080b12;
+  border: 1px solid #1c2436;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #e6edf3;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.py-copy-solution-btn {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.py-copy-solution-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+/* AI Modal Dialog */
+.py-ai-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.py-ai-modal-box {
+  background: #111726;
+  border: 1px solid #283754;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.py-ai-modal-head {
+  padding: 14px 18px;
+  background: #161e31;
+  border-bottom: 1px solid #23314a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.py-ai-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.py-ai-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.py-ai-modal-close:hover {
+  color: #ffffff;
+}
+
+.py-ai-modal-body {
+  padding: 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+
+.py-ai-modal-body p {
+  margin: 0 0 10px 0;
+}
+
+.py-ai-modal-body ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.py-ai-modal-body li {
+  margin-bottom: 6px;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 900px) {
+  .py-coddy-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .py-dock-sidebar {
+    display: none;
+  }
+  .py-challenge-pane {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #1c2538;
+  }
+  .py-ide-pane {
+    height: 600px;
+  }
+  .py-tc-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 /* ============================================================
    CHALLENGE LAB FULLSCREEN WORKSPACE SYSTEM

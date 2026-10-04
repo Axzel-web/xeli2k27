@@ -1,10 +1,12 @@
 // ============================================================================
-// Interactive Python Code Lab UI Component for XELI Leveling System
-// Provides side-by-side retro IDE with live Pyodide execution, live objectives,
-// and copyable concept references for Python Levels.
+// Interactive Python Code Lab UI Component
+// Clean, distraction-free Python challenge environment with zero top icon nav bar,
+// zero dock sidebar clutter, full CodeMirror integration for flawless arrow key navigation,
+// and multi-engine Python 3 execution (Skulpt, Pyodide, and Pure-JS AST runner).
 // ============================================================================
 
 import { playCliSound } from "./cli-lab-ui.js";
+import { runPython } from "./python-runner.js";
 
 function escapeHtml(str) {
   if (!str) return "";
@@ -18,7 +20,7 @@ function escapeHtml(str) {
 
 export function highlightPython(code) {
   if (!code) return "";
-  const tokenRegex = /(#[^\n]*)|("""[\s\S]*?"""|\x27\x27\x27[\s\S]*?\x27\x27\x27)|((?:[brufBRUF]{1,2})?"(?:[^"\\\n]|\\.)*"|(?:[brufBRUF]{1,2})?\x27(?:[^\x27\\\n]|\\.)*\x27)|(\b\d+(?:\.\d+)?\b)|(\b(?:def|class|lambda|import|from|as|global|nonlocal|async|await)\b)|(\b(?:if|elif|else|for|while|break|continue|return|yield|try|except|finally|raise|pass|with|match|case)\b)|(\b(?:True|False|None)\b)|(\b(?:print|input|len|range|type|int|str|float|bool|list|dict|tuple|set|sum|min|max|abs|round|sorted|enumerate|zip|open|isinstance|id)\b)|(\b(?:and|or|not|is|in)\b)|(\b[a-zA-Z_]\w*(?=\s*\())|(\b[a-zA-Z_]\w*\b)|([+\-*/%&|^~=<>!]=?|\*\*|\/\/)|([()[\]{}])/g;
+  const tokenRegex = /(#[^\n]*)|("""[\s\S]*?"""|'''[\s\S]*?''')|((?:[brufBRUF]{1,2})?"(?:[^"\\\n]|\\.)*"|(?:[brufBRUF]{1,2})?'(?:[^'\\\n]|\\.)*')|(\b\d+(?:\.\d+)?\b)|(\b(?:def|class|lambda|import|from|as|global|nonlocal|async|await)\b)|(\b(?:if|elif|else|for|while|break|continue|return|yield|try|except|finally|raise|pass|with|match|case)\b)|(\b(?:True|False|None)\b)|(\b(?:print|input|len|range|type|int|str|float|bool|list|dict|tuple|set|sum|min|max|abs|round|sorted|enumerate|zip|open|isinstance|id)\b)|(\b(?:and|or|not|is|in)\b)|(\b[a-zA-Z_]\w*(?=\s*\())|(\b[a-zA-Z_]\w*\b)|([+\-*/%&|^~=<>!]=?|\*\*|\/\/)|([()[\]{}])/g;
 
   let result = "";
   let lastIndex = 0;
@@ -68,189 +70,297 @@ export function highlightPython(code) {
   return result;
 }
 
-export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide) {
+// Level Specific Metadata matching curriculum
+export const LEVEL_METADATA = {
+  1: {
+    displayTitle: "Hello World!",
+    breadcrumb: "Introduction",
+    badge: "Beginner",
+    task: "Your task is to write a program that outputs <code>Hello World!</code>",
+    note: "Note that anything inside quotation marks is <strong>case sensitive</strong>. The two lines below are not the same program: the first prints <code>Hello World!</code> with capital letters, the second prints <code>hello world!</code> in lowercase, and only the first one matches this task.",
+    examples: ['print("Hello World!")', 'print("hello world!")'],
+    expected: "Hello World!",
+    solution: 'print("Hello World!")'
+  },
+  2: {
+    displayTitle: "Variables & Data Types",
+    breadcrumb: "Python Fundamentals",
+    badge: "Beginner",
+    task: "Your task is to define variables of 4 core data types (str, int, float, bool), display them with <code>type()</code>, and swap two variables without a third variable.",
+    note: "Python dynamically infers variable types. You can inspect any variable with <code>type(var)</code>. To swap two variables in Python without a third variable, use tuple unpacking: <code>a, b = b, a</code>.",
+    examples: ['name = "AXZEL"\nage = 21', 'print(name, type(name))', 'a, b = b, a'],
+    expected: "AXZEL <class 'str'>\n21 <class 'int'>\n1.75 <class 'float'>\nTrue <class 'bool'>\nSwapped: a=20, b=10",
+    solution: 'name = "AXZEL"\nage = 21\nheight = 1.75\nis_hunter = True\n\nprint(name, type(name))\nprint(age, type(age))\nprint(height, type(height))\nprint(is_hunter, type(is_hunter))\n\na = 10\nb = 20\na, b = b, a\nprint(f"Swapped: a={a}, b={b}")'
+  },
+  3: {
+    displayTitle: "Arithmetic, Input & Typecasting",
+    breadcrumb: "Python Fundamentals",
+    badge: "Beginner",
+    task: "Your task is to ask for numbers with <code>input()</code>, typecast them with <code>int()</code>, and calculate with arithmetic operators (+, -, *, /, //, %, **).",
+    note: "Remember: <code>input()</code> returns a string. Convert it with <code>int(input(...))</code>. Slicing and formatted f-strings <code>f\"{var}\"</code> cleanly display numbers.",
+    examples: ['num1 = int(input("Enter first number: "))', 'print(f"Addition (+): {num1 + num2}")'],
+    expected: "Addition (+): 15\nSubtraction (-): 5\nMultiplication (*): 50\nDivision (/): 2.0\nFloor Division (//): 2\nModulus (%): 0\nExponent (**): 100000",
+    solution: 'x = 10\ny = 5\nprint(f"Addition (+): {x + y}")\nprint(f"Subtraction (-): {x - y}")\nprint(f"Multiplication (*): {x * y}")\nprint(f"Division (/): {x / y}")\nprint(f"Floor Division (//): {x // y}")\nprint(f"Modulus (%): {x % y}")\nprint(f"Exponent (**): {x ** y}")'
+  },
+  4: {
+    displayTitle: "Strings, Indexing & Slicing",
+    breadcrumb: "Python Fundamentals",
+    badge: "Beginner",
+    task: "Your task is to manipulate strings using <code>.upper()</code>, <code>.lower()</code>, slicing <code>[:3]</code>, <code>len()</code>, and reverse a string using <code>[::-1]</code>.",
+    note: "Slicing syntax is <code>string[start:end:step]</code>. With step <code>-1</code> (like <code>[::-1]</code>), Python reverses the string cleanly without needing loops.",
+    examples: ['name = "Python Hunter"', 'print(name.upper())', 'print(name[::-1])'],
+    expected: "UPPERCASE: PYTHON HUNTER\nlowercase: python hunter\nFirst 3 letters: PYT\nLength: 13\nReversed: retnuH nohtyP",
+    solution: 'name = "Python Hunter"\nprint(f"UPPERCASE: {name.upper()}")\nprint(f"lowercase: {name.lower()}")\nprint(f"First 3 letters: {name[:3].upper()}")\nprint(f"Length: {len(name)}")\nprint(f"Reversed: {name[::-1]}")'
+  },
+  5: {
+    displayTitle: "If Statements & Conditionals",
+    breadcrumb: "Control Flow",
+    badge: "Beginner",
+    task: "Your task is to evaluate exam scores and hunter rankings using <code>if</code>, <code>elif</code>, and <code>else</code> branching.",
+    note: "Indentation in Python defines code blocks. Keep 4 spaces consistently beneath every condition.",
+    examples: ['if score >= 90:\n    rank = "S"', 'elif score >= 80:\n    rank = "A"'],
+    expected: "Score 85: Rank A (Passed)",
+    solution: 'score = 85\nif score >= 90:\n    rank = "S"\nelif score >= 80:\n    rank = "A"\nelif score >= 70:\n    rank = "B"\nelse:\n    rank = "C"\nprint(f"Score {score}: Rank {rank} (Passed)")'
+  },
+  6: {
+    displayTitle: "Loops & Flow Control",
+    breadcrumb: "Control Flow",
+    badge: "Beginner",
+    task: "Your task is to countdown from 10 to 1 with a <code>while</code> loop printing 'Liftoff!', and sum numbers from 1 to 100 with a <code>for</code> loop.",
+    note: "A <code>while</code> loop repeats while its condition is true. A <code>for</code> loop with <code>range(1, 101)</code> iterates through all numbers up to 100.",
+    examples: ['while count >= 1:\n    print(count)\n    count -= 1', 'for n in range(1, 101):\n    total += n'],
+    expected: "10\n9\n8\n7\n6\n5\n4\n3\n2\n1\nLiftoff!\nSum 1 to 100: 5050",
+    solution: 'count = 10\nwhile count >= 1:\n    print(count)\n    count -= 1\nprint("Liftoff!")\n\ntotal = 0\nfor n in range(1, 101):\n    total += n\nprint(f"Sum 1 to 100: {total}")'
+  },
+  7: {
+    displayTitle: "Mini-Project — Password Lock",
+    breadcrumb: "Mini-Projects",
+    badge: "Intermediate",
+    task: "Your task is to build a terminal password lock system with maximum 3 attempts using a <code>while</code> loop, <code>break</code>, and boolean state flags.",
+    note: "Avoid printing 'ACCESS DENIED' when login succeeds! Set a boolean flag <code>logged_in = False</code>. Inside the loop, when password is correct, set <code>logged_in = True</code> and <code>break</code>. Only print 'ACCESS DENIED' if <code>not logged_in</code>.",
+    examples: ['correct_password = "python123"', 'if password == correct_password:\n    logged_in = True\n    break'],
+    expected: "ENTER YOUR PASSWORD: \nACCESS GRANTED",
+    solution: 'correct_password = "python123"\nattempt = 0\nlogged_in = False\n\nwhile attempt < 3:\n    pwd = input("ENTER YOUR PASSWORD: ")\n    if pwd == correct_password:\n        logged_in = True\n        print("ACCESS GRANTED")\n        break\n    else:\n        attempt += 1\n        print("Incorrect password please try again")\n\nif not logged_in:\n    print("ACCESS DENIED TOO MANY FAILED ATTEMPTS")'
+  },
+  8: {
+    displayTitle: "Lists",
+    breadcrumb: "Data Structures",
+    badge: "Beginner",
+    task: "Your task is to create a list of items, append 5 items using <code>.append()</code>, print the list, and inspect its length.",
+    note: "Lists are ordered, mutable sequences in square brackets <code>[]</code>. Add items one-by-one with <code>.append(...)</code>.",
+    examples: ['groceries = []', 'groceries.append("apple")', 'print(len(groceries))'],
+    expected: "['apple', 'banana', 'milk', 'bread', 'eggs']\n5",
+    solution: 'groceries = []\ngroceries.append("apple")\ngroceries.append("banana")\ngroceries.append("milk")\ngroceries.append("bread")\ngroceries.append("eggs")\nprint(groceries)\nprint(len(groceries))'
+  },
+  9: {
+    displayTitle: "Tuples",
+    breadcrumb: "Data Structures",
+    badge: "Beginner",
+    task: "Your task is to create a tuple of 4 items, print the tuple, print the item at index 1, and the last item using <code>[-1]</code>.",
+    note: "Tuples use parentheses <code>()</code> and are immutable. Access items with zero-based index <code>tuple[0]</code> or negative index <code>tuple[-1]</code>.",
+    examples: ['my_tuple = ("AXZEL", 21, 5.9, True)', 'print(my_tuple[1])', 'print(my_tuple[-1])'],
+    expected: "('AXZEL', 21, 5.9, True)\n21\nTrue",
+    solution: 'my_tuple = ("AXZEL", 21, 5.9, True)\nprint(my_tuple)\nprint(my_tuple[1])\nprint(my_tuple[-1])'
+  },
+  10: {
+    displayTitle: "Dictionaries",
+    breadcrumb: "Data Structures",
+    badge: "Medium",
+    task: "Your task is to create a dictionary with at least 4 key-value pairs, print it, print a specific key, and loop through it with <code>.items()</code>.",
+    note: "Dictionaries store key-value pairs in <code>{}</code>. Iterate over both keys and values using <code>for key, value in profile.items():</code>.",
+    examples: ['profile = {"name": "AXZEL", "age": 21}', 'print(profile["name"])', 'for key, value in profile.items():'],
+    expected: "{'name': 'AXZEL', 'age': 21, 'course': 'Computer Engr', 'hobby': 'Gaming'}\nAXZEL\nname: AXZEL\nage: 21\ncourse: Computer Engr\nhobby: Gaming",
+    solution: 'profile = {\n    "name": "AXZEL",\n    "age": 21,\n    "course": "Computer Engr",\n    "hobby": "Gaming"\n}\nprint(profile)\nprint(profile["name"])\nfor key, value in profile.items():\n    print(f"{key}: {value}")'
+  },
+  11: {
+    displayTitle: "Nested Data Structures",
+    breadcrumb: "Data Structures",
+    badge: "Medium",
+    task: "Your task is to combine lists and dictionaries to model structured data (e.g. hunter profiles with a list of skills, or list of student records).",
+    note: "Access nested data by chaining brackets: <code>hunter['skills'][0]</code> or <code>students[0]['name']</code>.",
+    examples: ['hunter = {"name": "AXZEL", "skills": ["Slash", "Stealth"]}', 'print(hunter["skills"][0])'],
+    expected: "Hunter: AXZEL | Skills: Slash, Stealth, Cleave\nPrimary Skill: Slash",
+    solution: 'hunter = {\n    "name": "AXZEL",\n    "skills": ["Slash", "Stealth", "Cleave"]\n}\nprint(f"Hunter: {hunter[\'name\']} | Skills: {\', \'.join(hunter[\'skills\'])}")\nprint(f"Primary Skill: {hunter[\'skills\'][0]}")'
+  }
+};
+
+export function renderPythonLabChallenge(c, solved, onClaimExp, getPyodide, state = {}, onClose = null) {
   const container = document.getElementById("chBody");
   if (!container) return;
 
-  let currentCode = c.starter || "";
+  const lvlNum = c.levelNumber || parseInt((c.id.match(/level-(\d+)/) || [])[1] || "1", 10);
+  const meta = LEVEL_METADATA[lvlNum] || {
+    displayTitle: c.title.replace(/^Level \d+:\s*/, ""),
+    breadcrumb: "Python Fundamentals",
+    badge: c.difficulty || "Beginner",
+    task: `Your task is to complete the ${escapeHtml(c.title)} mission.`,
+    note: c.intro || "Write clean, indented Python code to satisfy all challenge goals.",
+    examples: ['print("Hello World!")'],
+    expected: "Hello World!",
+    solution: c.starter || 'print("Hello World!")'
+  };
+
+  const savedKey = `py_code_${c.id}`;
+  const initialCode = localStorage.getItem(savedKey) || c.starter || "";
+
   let isExecuting = false;
   let allGoalsSatisfied = solved;
-  const goalResults = {};
-  (c.goals || []).forEach((g) => {
-    goalResults[g.id] = solved;
-  });
 
-  // Render main layout
+  // Render Clean Layout (NO top gamification icon bar, NO dock sidebar buttons)
   container.innerHTML = `
-    <div class="cli-lab-layout py-lab-layout">
-      <!-- Left Panel: Scenario & Live Objectives & Python Reference -->
-      <div class="cli-lab-sidebar panel py-lab-sidebar">
-        <div class="cli-scenario-box">
-          <div class="cli-badge-row">
-            <span class="diff-tag">${escapeHtml(c.difficulty || "Easy")}</span>
-            <span class="cli-track-pill py-track-pill">Python Hands-on Lab</span>
-            <span class="cli-exp-badge">+${c.exp} EXP</span>
+    <div class="py-coddy-container" id="pyCoddyContainer">
+      <div class="py-coddy-body">
+        <!-- Left Column: Challenge Description & Objectives -->
+        <div class="py-challenge-pane" id="pyChallengePane">
+          <div class="py-challenge-header">
+            <h2 class="py-challenge-title">${escapeHtml(meta.displayTitle)}</h2>
           </div>
-          <h4 class="cli-scenario-title">${escapeHtml(c.title)}</h4>
-          <p class="cli-scenario-desc">${escapeHtml(c.intro || "")}</p>
-        </div>
 
-        <div class="cli-objectives-box">
-          <div class="cli-obj-head">
-            <span class="cli-obj-heading">LIVE OBJECTIVES</span>
-            <span class="cli-progress-counter" id="pyProgressCounter">${solved ? c.goals.length : 0} / ${c.goals.length}</span>
-          </div>
-          <div class="cli-progress-bar-wrap">
-            <div class="cli-progress-bar-fill" id="pyProgressBarFill" style="width: ${solved ? 100 : 0}%"></div>
-          </div>
-          
-          <ul class="cli-goals-list" id="pyGoalsList">
-            ${(c.goals || [])
-              .map(
-                (g, i) => `
-              <li class="cli-goal-item ${solved ? "is-satisfied" : ""}" id="pyGoal-${g.id}">
-                <span class="cli-goal-icon" id="pyGoalIcon-${g.id}">${solved ? "✔" : "○"}</span>
-                <div class="cli-goal-info">
-                  <span class="cli-goal-text">${escapeHtml(g.text)}</span>
-                  ${g.hint ? `<span class="cli-goal-hint">${escapeHtml(g.hint)}</span>` : ""}
+          <!-- Mission Task Card -->
+          <div class="py-mission-card">
+            <div class="py-challenge-kicker">
+              <span class="py-kicker-title">Challenge Objective</span>
+              <span class="py-badge-pill">${escapeHtml(meta.badge)}</span>
+              <span class="py-exp-pill">+${c.exp} EXP</span>
+            </div>
+
+            <p class="py-task-lead">${meta.task}</p>
+
+            <!-- Guide Callout Box -->
+            <div class="py-callout-box">
+              <p class="py-callout-text">${meta.note}</p>
+              ${meta.examples && meta.examples.length ? `
+                <div class="py-callout-examples">
+                  ${meta.examples.map((ex) => `
+                    <div class="py-callout-code-item">
+                      <code>${highlightPython(ex)}</code>
+                    </div>
+                  `).join("")}
                 </div>
-              </li>`
-              )
-              .join("")}
-          </ul>
-        </div>
+              ` : ''}
+            </div>
 
-        <!-- Concept Reference / Syntax Cheat Sheet -->
-        <div class="py-reference-box">
-          <div class="py-ref-head">
-            <span class="py-ref-title">📚 PYTHON CONCEPTS &amp; SYNTAX</span>
-          </div>
-          <div class="py-concepts-list">
-            ${(c.concepts || [])
-              .map(
-                (concept, idx) => `
-              <div class="py-concept-card">
-                <div class="py-concept-header">
-                  <span class="py-concept-name"><code>${escapeHtml(concept.name)}</code></span>
-                  <span class="py-concept-desc">${escapeHtml(concept.desc)}</span>
+            <!-- Optional Concept Reference (Integrated cleanly without sidebar buttons) -->
+            ${(c.concepts && c.concepts.length) ? `
+              <details class="py-concepts-details">
+                <summary class="py-concepts-summary">Concept Guide &amp; Syntax Reference</summary>
+                <div class="py-concepts-content">
+                  ${c.concepts.map((cp) => `
+                    <div class="py-concept-item">
+                      <div class="py-concept-name"><code>${escapeHtml(cp.name)}</code></div>
+                      <div class="py-concept-desc">${escapeHtml(cp.desc)}</div>
+                      ${cp.code ? `<pre class="py-snippet-code"><code>${highlightPython(cp.code)}</code></pre>` : ''}
+                    </div>
+                  `).join("")}
                 </div>
-                ${
-                  concept.code
-                    ? `
-                <div class="py-snippet-box">
-                  <div class="py-snippet-top">
-                    <span class="py-snippet-label">Code</span>
-                    <button class="py-copy-btn" data-snippet="${escapeHtml(concept.code)}" title="Copy code snippet">
-                      <span class="copy-text">Copy</span>
-                    </button>
-                  </div>
-                  <pre class="py-snippet-code"><code>${highlightPython(concept.code)}</code></pre>
-                </div>`
-                    : ""
-                }
-              </div>`
-              )
-              .join("")}
-          </div>
-        </div>
+              </details>
+            ` : ''}
 
-        <!-- Actions Footer -->
-        <div class="cli-action-footer">
-          <button class="btn btn-secondary cli-reset-btn" id="pyResetBtn" title="Reset starter code">
-            ↺ Reset Code
-          </button>
-          <button class="btn btn-primary cli-claim-btn" id="pyClaimExpBtn" ${solved ? "" : "disabled"}>
-            ${solved ? "EXP Claimed" : `Claim ${c.exp} EXP`}
-          </button>
-        </div>
-      </div>
-
-      <!-- Right Panel: VS Code-Style Python Editor + Terminal -->
-      <div class="py-editor-wrapper py-vscode-container">
-        <!-- VS Code Window Header / Tabs Bar -->
-        <div class="py-window-header py-vscode-header">
-          <div class="py-vscode-tabs">
-            <div class="py-vscode-tab is-active" id="pyActiveTab">
-              <span class="py-tab-icon">🐍</span>
-              <span class="py-tab-title">main.py</span>
-              <span class="py-tab-modified" id="pyTabModified" title="Unsaved changes" style="display:none;">●</span>
-              <button class="py-tab-close" id="pyTabClose" title="Reset starter code">×</button>
+            <!-- Objectives Checklist -->
+            <div class="py-goals-card">
+              <div class="py-goals-header">
+                <span class="py-goals-title">LIVE OBJECTIVES</span>
+                <span class="py-goals-count" id="pyProgressCounter">${solved ? (c.goals || [1]).length : 0} / ${(c.goals || [1]).length}</span>
+              </div>
+              <ul class="py-goals-list" id="pyGoalsList">
+                ${(c.goals || [{ id: "output", text: `Output matches expected format: ${meta.expected.split("\n")[0]}` }]).map((g) => `
+                  <li class="py-goal-item ${solved ? 'is-satisfied' : ''}" id="pyGoal-${g.id}">
+                    <span class="py-goal-check" id="pyGoalIcon-${g.id}">${solved ? '✔' : '○'}</span>
+                    <div class="py-goal-desc">
+                      <span class="py-goal-text">${escapeHtml(g.text)}</span>
+                      ${g.hint ? `<span class="py-goal-hint">${escapeHtml(g.hint)}</span>` : ''}
+                    </div>
+                  </li>
+                `).join("")}
+              </ul>
             </div>
           </div>
-          <div class="py-window-badges">
-            <span class="py-engine-pill" id="pyEngineBadge">Pyodide Engine</span>
+
+          <!-- Bottom Action Bar -->
+          <div class="py-explain-bar">
+            <button type="button" class="btn btn-primary py-claim-btn" id="pyClaimExpBtn" ${solved ? '' : 'disabled'}>
+              ${solved ? 'EXP Claimed ✔' : `Claim +${c.exp} EXP`}
+            </button>
           </div>
         </div>
 
-        <!-- VS Code Breadcrumbs Bar -->
-        <div class="py-vscode-breadcrumbs">
-          <span class="py-bc-item">xeli</span>
-          <span class="py-bc-sep">›</span>
-          <span class="py-bc-item">labs</span>
-          <span class="py-bc-sep">›</span>
-          <span class="py-bc-item">python</span>
-          <span class="py-bc-sep">›</span>
-          <span class="py-bc-item is-file">🐍 main.py</span>
-          <span class="py-bc-sep">›</span>
-          <span class="py-bc-item py-bc-symbol">{ } workspace</span>
-        </div>
+        <!-- Right Column: Code Editor & Test Cases -->
+        <div class="py-ide-pane">
+          <!-- Editor Section -->
+          <div class="py-editor-section">
+            <div class="py-editor-topbar">
+              <div class="py-lang-tab is-active">
+                <span>main.py</span>
+              </div>
+            </div>
 
-        <!-- Editor Toolbar -->
-        <div class="py-toolbar">
-          <button class="btn btn-primary py-run-btn" id="pyRunBtn" title="Execute script (Ctrl + Enter)">
-            <span class="py-run-icon">▶</span> Run Code
-          </button>
-          <button class="btn btn-secondary py-clear-btn" id="pyClearConsoleBtn" title="Clear console output">
-            Clear Output
-          </button>
-          <button class="btn btn-secondary py-reset-btn" id="pyToolbarResetBtn" title="Reset code back to starter template">
-            Reset Code
-          </button>
-          <div class="py-exec-status" id="pyExecStatus">
-            <span class="py-status-dot"></span>
-            <span class="py-status-text" id="pyStatusText">Ready</span>
-          </div>
-        </div>
+            <!-- Code Area with Full CodeMirror / Textarea Support -->
+            <div class="py-editor-canvas" id="pyEditorCanvas">
+              <div class="py-gutter" id="pyGutter"></div>
+              <div class="py-code-stage">
+                <pre class="py-highlight-layer" id="pyHighlightLayer" aria-hidden="true"><code id="pyCodeHighlight"></code></pre>
+                <textarea class="py-textarea" id="pyCodeTextarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">${escapeHtml(initialCode)}</textarea>
+              </div>
 
-        <!-- Code Area with Syntax Highlighting Layer -->
-        <div class="py-editor-body" id="pyEditorBody">
-          <div class="py-gutter" id="pyGutter"></div>
-          <div class="py-code-stage" id="pyCodeStage">
-            <div class="py-active-line-bg" id="pyActiveLineBg"></div>
-            <pre class="py-highlight-layer" id="pyHighlightLayer" aria-hidden="true"><code id="pyCodeHighlight"></code></pre>
-            <textarea class="py-textarea" id="pyCodeTextarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">${escapeHtml(currentCode)}</textarea>
+              <!-- Floating Run Code Button -->
+              <div class="py-floating-actions">
+                <button type="button" class="py-run-btn" id="pyRunBtn" title="Run Code (Ctrl + Enter)">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  <span>Run Code</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <!-- VS Code Status Bar -->
-        <div class="py-vscode-statusbar">
-          <div class="py-sb-left">
-            <span class="py-sb-item" title="Python Interpreter"><span class="py-sb-icon">🐍</span> Python 3.11.4 64-bit</span>
-            <span class="py-sb-item" id="pySbEngine" title="Execution Runtime">Pyodide WASM</span>
-          </div>
-          <div class="py-sb-right">
-            <span class="py-sb-item" id="pyCursorPos">Ln 1, Col 1</span>
-            <span class="py-sb-item" title="Indentation">Spaces: 4</span>
-            <span class="py-sb-item" title="Encoding">UTF-8</span>
-            <span class="py-sb-item" title="Line Sequence">LF</span>
-            <span class="py-sb-item py-sb-lang">{ } Python</span>
-          </div>
-        </div>
+          <!-- Bottom Test Cases Panel -->
+          <div class="py-testcases-panel" id="pyTestCasesPanel">
+            <div class="py-tc-tabs">
+              <button type="button" class="py-tc-tab is-active" id="pyTabTestCases">TEST CASES</button>
+              <button type="button" class="py-tc-tab" id="pyTabSolution">SOLUTION</button>
+              <span class="py-tc-status-text" id="pyExecStatusText">Ready to run</span>
+            </div>
 
-        <!-- Console Output -->
-        <div class="py-console-panel" id="pyConsolePanel">
-          <div class="py-console-head">
-            <span class="py-console-title">TERMINAL / OUTPUT</span>
-            <span class="py-console-meta" id="pyConsoleMeta">Press ▶ Run Code or [Ctrl+Enter] to execute</span>
-          </div>
-          <div class="py-console-body-wrap">
-            <pre class="py-console-body" id="pyConsoleBody">Python 3.11 (Pyodide WebAssembly)
-Ready. Press "▶ Run Code" or press Ctrl+Enter to test your program.</pre>
-            <div class="py-terminal-input-bar" id="pyTerminalInputBar" style="display:none;">
-              <span class="py-term-prompt-icon">&gt;&gt;&gt;</span>
-              <span class="py-term-prompt-text" id="pyTermPromptText">input:</span>
-              <input type="text" class="py-term-input-field" id="pyTermInputField" placeholder="Type here and press Enter..." autocomplete="off" spellcheck="false" />
-              <button type="button" class="btn btn-primary py-term-submit-btn" id="pyTermSubmitBtn">Send ↵</button>
+            <!-- Test Cases View -->
+            <div class="py-tc-body" id="pyTcBodyTestCases">
+              <div class="py-tc-columns">
+                <!-- Left: Actual Output -->
+                <div class="py-tc-col">
+                  <div class="py-tc-label">Output</div>
+                  <pre class="py-output-box" id="pyOutputBox">Click "▶ Run Code" or press Ctrl+Enter to execute.</pre>
+                  
+                  <!-- Interactive Terminal Input Bar -->
+                  <div class="py-term-input-bar" id="pyTerminalInputBar" style="display:none;">
+                    <span class="py-term-prompt-icon">&gt;&gt;&gt;</span>
+                    <span class="py-term-prompt-text" id="pyTermPromptText">input:</span>
+                    <input type="text" class="py-term-input-field" id="pyTermInputField" placeholder="Type input here and press Enter..." autocomplete="off" spellcheck="false" />
+                    <button type="button" class="py-term-submit-btn" id="pyTermSubmitBtn">Send ↵</button>
+                  </div>
+                </div>
+
+                <!-- Right: Expected Output -->
+                <div class="py-tc-col">
+                  <div class="py-tc-head-row">
+                    <span class="py-tc-label">Expected Output</span>
+                    <label class="py-toggle-wrap" title="Toggle expected output display">
+                      <input type="checkbox" id="pyExpectedToggle" checked />
+                      <span class="py-toggle-slider"></span>
+                    </label>
+                  </div>
+                  <pre class="py-expected-box" id="pyExpectedBox">${escapeHtml(meta.expected)}</pre>
+                </div>
+              </div>
+
+              <!-- Pass/Fail Banner -->
+              <div class="py-eval-banner" id="pyEvalBanner" style="display:none;"></div>
+            </div>
+
+            <!-- Solution View -->
+            <div class="py-tc-body" id="pyTcBodySolution" style="display:none;">
+              <div class="py-solution-wrap">
+                <div class="py-solution-title">Reference Python Solution:</div>
+                <pre class="py-solution-code"><code>${highlightPython(meta.solution)}</code></pre>
+                <button type="button" class="py-copy-solution-btn" id="pyCopySolutionBtn">Copy to Editor</button>
+              </div>
             </div>
           </div>
         </div>
@@ -258,571 +368,282 @@ Ready. Press "▶ Run Code" or press Ctrl+Enter to test your program.</pre>
     </div>
   `;
 
+  // DOM Elements
   const textarea = document.getElementById("pyCodeTextarea");
   const gutter = document.getElementById("pyGutter");
   const highlightCodeEl = document.getElementById("pyCodeHighlight");
   const highlightLayer = document.getElementById("pyHighlightLayer");
-  const activeLineBg = document.getElementById("pyActiveLineBg");
-  const cursorPosEl = document.getElementById("pyCursorPos");
-  const tabModified = document.getElementById("pyTabModified");
-  const tabCloseBtn = document.getElementById("pyTabClose");
-
   const runBtn = document.getElementById("pyRunBtn");
-  const clearBtn = document.getElementById("pyClearConsoleBtn");
-  const resetBtn = document.getElementById("pyResetBtn");
-  const toolbarResetBtn = document.getElementById("pyToolbarResetBtn");
   const claimBtn = document.getElementById("pyClaimExpBtn");
-  const consoleBody = document.getElementById("pyConsoleBody");
-  const consoleMeta = document.getElementById("pyConsoleMeta");
-  const execStatus = document.getElementById("pyExecStatus");
-  const statusText = document.getElementById("pyStatusText");
+  const outputBox = document.getElementById("pyOutputBox");
+  const expectedBox = document.getElementById("pyExpectedBox");
+  const evalBanner = document.getElementById("pyEvalBanner");
+  const statusText = document.getElementById("pyExecStatusText");
   const progressCounter = document.getElementById("pyProgressCounter");
-  const progressBarFill = document.getElementById("pyProgressBarFill");
+  const expectedToggle = document.getElementById("pyExpectedToggle");
+  const tabTestCases = document.getElementById("pyTabTestCases");
+  const tabSolution = document.getElementById("pyTabSolution");
+  const tcBodyTestCases = document.getElementById("pyTcBodyTestCases");
+  const tcBodySolution = document.getElementById("pyTcBodySolution");
+  const copySolutionBtn = document.getElementById("pyCopySolutionBtn");
 
-  // Update cursor position and active line highlight
-  function updateCursorAndLine() {
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const val = textarea.value;
-    const textBefore = val.substring(0, start);
-    const lines = textBefore.split("\n");
-    const currentLineIdx = lines.length; // 1-based
-    const currentColIdx = lines[lines.length - 1].length + 1; // 1-based
+  // CodeMirror instance
+  let cm = null;
 
-    if (cursorPosEl) {
-      cursorPosEl.textContent = `Ln ${currentLineIdx}, Col ${currentColIdx}`;
-    }
-
-    if (gutter) {
-      const lineEls = gutter.children;
-      for (let i = 0; i < lineEls.length; i++) {
-        if (i === currentLineIdx - 1) {
-          lineEls[i].classList.add("is-active-line");
-        } else {
-          lineEls[i].classList.remove("is-active-line");
-        }
-      }
-    }
-
-    if (activeLineBg) {
-      const lineHeight = 21;
-      const topPad = 12;
-      const topOffset = topPad + (currentLineIdx - 1) * lineHeight - textarea.scrollTop;
-      activeLineBg.style.top = `${topOffset}px`;
-      activeLineBg.style.display = (topOffset >= 0 && topOffset <= textarea.clientHeight) ? "block" : "none";
-    }
-
-    if (tabModified) {
-      tabModified.style.display = val !== (c.starter || "") ? "inline-block" : "none";
-    }
+  // Helper to read and write editor content cleanly across CodeMirror & Textarea
+  function getCode() {
+    if (cm) return cm.getValue();
+    return textarea ? textarea.value : "";
   }
 
-  // Full Editor Sync: highlighting, line numbers, scrolling, cursor
-  function syncEditor() {
+  function setCode(code) {
+    if (cm) {
+      cm.setValue(code);
+      cm.focus();
+    } else if (textarea) {
+      textarea.value = code;
+      syncFallbackEditor();
+      textarea.focus();
+    }
+    localStorage.setItem(savedKey, code);
+  }
+
+  function saveCode() {
+    const code = getCode();
+    localStorage.setItem(savedKey, code);
+    if (statusText) statusText.textContent = "Code saved!";
+    setTimeout(() => { if (statusText) statusText.textContent = "Ready to run"; }, 1500);
+    playCliSound("key");
+  }
+
+  // Fallback editor sync for when CodeMirror is not present
+  function syncFallbackEditor() {
     if (!textarea) return;
     const code = textarea.value;
-
     if (highlightCodeEl) {
       highlightCodeEl.innerHTML = highlightPython(code);
     }
-
     if (gutter) {
-      const totalLines = Math.max(code.split("\n").length, 1);
-      let html = "";
-      for (let i = 1; i <= totalLines; i++) {
-        html += `<div class="py-line-num">${i}</div>`;
+      const lineCount = Math.max(code.split("\n").length, 1);
+      let gutterHtml = "";
+      for (let i = 1; i <= lineCount; i++) {
+        gutterHtml += `<div class="py-line-num">${i}</div>`;
       }
-      gutter.innerHTML = html;
+      gutter.innerHTML = gutterHtml;
     }
-
-    if (highlightLayer) {
-      highlightLayer.scrollTop = textarea.scrollTop;
-      highlightLayer.scrollLeft = textarea.scrollLeft;
-    }
-    if (gutter) {
-      gutter.scrollTop = textarea.scrollTop;
-    }
-
-    updateCursorAndLine();
+    localStorage.setItem(savedKey, code);
   }
 
-  syncEditor();
+  // Initialize CodeMirror for full arrow key navigation, cursor tracking, and syntax highlighting
+  function initCodeEditor() {
+    if (typeof window !== "undefined" && window.CodeMirror && textarea) {
+      try {
+        cm = window.CodeMirror.fromTextArea(textarea, {
+          mode: { name: "python", version: 3, singleLineStringErrors: false },
+          theme: "dracula",
+          lineNumbers: true,
+          tabSize: 4,
+          indentUnit: 4,
+          indentWithTabs: false,
+          lineWrapping: false,
+          matchBrackets: true,
+          autoCloseBrackets: true,
+          viewportMargin: Infinity,
+          cursorScrollMargin: 20,
+          extraKeys: {
+            "Ctrl-Enter": () => executeCode(),
+            "Cmd-Enter": () => executeCode(),
+            "Ctrl-S": () => {
+              saveCode();
+              return false;
+            },
+            "Cmd-S": () => {
+              saveCode();
+              return false;
+            },
+            "Tab": (instance) => {
+              if (instance.somethingSelected()) {
+                instance.indentSelection("add");
+              } else {
+                instance.replaceSelection("    ", "end");
+              }
+            },
+            "Shift-Tab": (instance) => {
+              instance.indentSelection("subtract");
+            }
+          }
+        });
 
-  // Scroll sync between gutter, highlight layer, and textarea
-  textarea.addEventListener("scroll", () => {
-    if (highlightLayer) {
-      highlightLayer.scrollTop = textarea.scrollTop;
-      highlightLayer.scrollLeft = textarea.scrollLeft;
-    }
-    if (gutter) {
-      gutter.scrollTop = textarea.scrollTop;
-    }
-    updateCursorAndLine();
-  });
+        cm.setValue(initialCode);
 
-  textarea.addEventListener("click", updateCursorAndLine);
-  textarea.addEventListener("keyup", (e) => {
-    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"].includes(e.key)) {
-      updateCursorAndLine();
-    }
-  });
+        // Hide fallback elements since CodeMirror handles gutters and highlight layers natively
+        if (gutter) gutter.style.display = "none";
+        if (highlightLayer) highlightLayer.style.display = "none";
 
-  // VS Code Keystroke Handling
-  textarea.addEventListener("keydown", (e) => {
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const val = textarea.value;
+        cm.on("change", () => {
+          const val = cm.getValue();
+          localStorage.setItem(savedKey, val);
+        });
 
-    // Run code shortcut: Ctrl+Enter or Cmd+Enter
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
-      executeCode();
-      return;
-    }
+        // Ensure cursor positioning and viewport are refreshed after mounting
+        setTimeout(() => {
+          if (cm) {
+            cm.refresh();
+            cm.focus();
+          }
+        }, 50);
 
-    // Toggle comment shortcut: Ctrl+/ or Cmd+/
-    if ((e.ctrlKey || e.metaKey) && e.key === "/") {
-      e.preventDefault();
-      const before = val.substring(0, start);
-      const lastNewline = before.lastIndexOf("\n");
-      const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
-      let nextNewline = val.indexOf("\n", end);
-      if (nextNewline === -1) nextNewline = val.length;
-
-      const lineContent = val.substring(lineStart, nextNewline);
-      if (lineContent.startsWith("# ")) {
-        textarea.value = val.substring(0, lineStart) + lineContent.substring(2) + val.substring(nextNewline);
-        textarea.selectionStart = Math.max(lineStart, start - 2);
-        textarea.selectionEnd = Math.max(lineStart, end - 2);
-      } else {
-        textarea.value = val.substring(0, lineStart) + "# " + lineContent + val.substring(nextNewline);
-        textarea.selectionStart = start + 2;
-        textarea.selectionEnd = end + 2;
+        return;
+      } catch (err) {
+        console.warn("CodeMirror initialization failed, falling back to textarea:", err);
+        cm = null;
       }
-      syncEditor();
-      playCliSound("key");
-      return;
     }
 
-    // Tab key indent & Shift+Tab dedent (4 spaces)
-    if (e.key === "Tab") {
-      e.preventDefault();
-      if (e.shiftKey) {
-        const before = val.substring(0, start);
-        const lastNewline = before.lastIndexOf("\n");
-        const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
-        const lineText = val.substring(lineStart, start);
-        if (lineText.startsWith("    ")) {
-          textarea.value = val.substring(0, lineStart) + val.substring(lineStart + 4);
-          textarea.selectionStart = textarea.selectionEnd = Math.max(lineStart, start - 4);
-        } else if (lineText.startsWith("  ")) {
-          textarea.value = val.substring(0, lineStart) + val.substring(lineStart + 2);
-          textarea.selectionStart = textarea.selectionEnd = Math.max(lineStart, start - 2);
+    // Fallback: Setup native textarea with arrow key preservation
+    syncFallbackEditor();
+
+    if (textarea) {
+      textarea.addEventListener("scroll", () => {
+        if (highlightLayer) {
+          highlightLayer.scrollTop = textarea.scrollTop;
+          highlightLayer.scrollLeft = textarea.scrollLeft;
         }
-      } else {
-        textarea.value = val.substring(0, start) + "    " + val.substring(end);
-        textarea.selectionStart = textarea.selectionEnd = start + 4;
-      }
-      syncEditor();
-      playCliSound("tab");
-      return;
-    }
-
-    // Auto-indent on Enter (and add 4 spaces if line ends with :)
-    if (e.key === "Enter") {
-      const before = val.substring(0, start);
-      const lastNewline = before.lastIndexOf("\n");
-      const currentLine = lastNewline === -1 ? before : before.substring(lastNewline + 1);
-      const matchIndent = currentLine.match(/^\s*/)[0];
-      const extraIndent = currentLine.trim().endsWith(":") ? "    " : "";
-      const indent = matchIndent + extraIndent;
-
-      e.preventDefault();
-      textarea.value = val.substring(0, start) + "\n" + indent + val.substring(end);
-      textarea.selectionStart = textarea.selectionEnd = start + 1 + indent.length;
-      syncEditor();
-      playCliSound("enter");
-      return;
-    }
-
-    // Auto-closing quotes and brackets
-    const pairs = {
-      "(": ")",
-      "[": "]",
-      "{": "}",
-      '"': '"',
-      "'": "'"
-    };
-
-    if (pairs[e.key]) {
-      const closing = pairs[e.key];
-      // If typing quote and next char is the same quote, just advance cursor
-      if ((e.key === '"' || e.key === "'") && val[start] === e.key && start === end) {
-        e.preventDefault();
-        textarea.selectionStart = textarea.selectionEnd = start + 1;
-        updateCursorAndLine();
-        return;
-      }
-      e.preventDefault();
-      const selected = val.substring(start, end);
-      textarea.value = val.substring(0, start) + e.key + selected + closing + val.substring(end);
-      textarea.selectionStart = textarea.selectionEnd = start + 1 + selected.length;
-      syncEditor();
-      playCliSound("key");
-      return;
-    }
-
-    // Smart Backspace between matching pairs e.g. (|) -> |
-    if (e.key === "Backspace" && start === end && start > 0) {
-      const prevChar = val[start - 1];
-      const nextChar = val[start];
-      if ((prevChar === "(" && nextChar === ")") ||
-          (prevChar === "[" && nextChar === "]") ||
-          (prevChar === "{" && nextChar === "}") ||
-          (prevChar === '"' && nextChar === '"') ||
-          (prevChar === "'" && nextChar === "'")) {
-        e.preventDefault();
-        textarea.value = val.substring(0, start - 1) + val.substring(start + 1);
-        textarea.selectionStart = textarea.selectionEnd = start - 1;
-        syncEditor();
-        playCliSound("backspace");
-        return;
-      }
-      playCliSound("backspace");
-      setTimeout(syncEditor, 0);
-      return;
-    }
-
-    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-      playCliSound("key");
-    }
-  });
-
-  textarea.addEventListener("input", () => {
-    syncEditor();
-  });
-
-  // Copy buttons
-  container.querySelectorAll(".py-copy-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const snippet = btn.getAttribute("data-snippet");
-      if (!snippet) return;
-      navigator.clipboard.writeText(snippet).then(() => {
-        playCliSound("key");
-        const copyTextSpan = btn.querySelector(".copy-text");
-        if (copyTextSpan) {
-          const orig = copyTextSpan.textContent;
-          copyTextSpan.textContent = "Copied!";
-          btn.classList.add("is-copied");
-          setTimeout(() => {
-            copyTextSpan.textContent = orig;
-            btn.classList.remove("is-copied");
-          }, 1500);
+        if (gutter) {
+          gutter.scrollTop = textarea.scrollTop;
         }
       });
-    });
-  });
 
-  // Reset code handler
-  function triggerResetCode() {
-    if (confirm("Reset editor back to initial starter code?")) {
-      textarea.value = c.starter || "";
-      syncEditor();
-      consoleBody.textContent = 'Code reset. Press "▶ Run Code" to test.';
-      consoleBody.className = "py-console-body";
-      consoleMeta.textContent = "Code reset to starter template";
+      textarea.addEventListener("input", () => {
+        syncFallbackEditor();
+      });
+
+      textarea.addEventListener("keydown", (e) => {
+        // Explicitly allow arrow keys to pass cleanly without any interference
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"].includes(e.key)) {
+          return;
+        }
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const val = textarea.value;
+
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+          e.preventDefault();
+          executeCode();
+          return;
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+          e.preventDefault();
+          saveCode();
+          return;
+        }
+
+        if (e.key === "Tab") {
+          e.preventDefault();
+          if (e.shiftKey) {
+            const before = val.substring(0, start);
+            const lastNewline = before.lastIndexOf("\n");
+            const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
+            const lineText = val.substring(lineStart, start);
+            if (lineText.startsWith("    ")) {
+              textarea.value = val.substring(0, lineStart) + val.substring(lineStart + 4);
+              textarea.selectionStart = textarea.selectionEnd = Math.max(lineStart, start - 4);
+            }
+          } else {
+            textarea.value = val.substring(0, start) + "    " + val.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + 4;
+          }
+          syncFallbackEditor();
+          playCliSound("tab");
+          return;
+        }
+
+        if (e.key === "Enter") {
+          const before = val.substring(0, start);
+          const lastNewline = before.lastIndexOf("\n");
+          const currentLine = lastNewline === -1 ? before : before.substring(lastNewline + 1);
+          const matchIndent = currentLine.match(/^\s*/)[0];
+          const extraIndent = currentLine.trim().endsWith(":") ? "    " : "";
+          const indent = matchIndent + extraIndent;
+
+          e.preventDefault();
+          textarea.value = val.substring(0, start) + "\n" + indent + val.substring(end);
+          textarea.selectionStart = textarea.selectionEnd = start + 1 + indent.length;
+          syncFallbackEditor();
+          playCliSound("enter");
+          return;
+        }
+
+        const pairs = { "(": ")", "[": "]", "{": "}", '"': '"', "'": "'" };
+        if (pairs[e.key]) {
+          const closing = pairs[e.key];
+          if ((e.key === '"' || e.key === "'") && val[start] === e.key && start === end) {
+            e.preventDefault();
+            textarea.selectionStart = textarea.selectionEnd = start + 1;
+            return;
+          }
+          e.preventDefault();
+          const selected = val.substring(start, end);
+          textarea.value = val.substring(0, start) + e.key + selected + closing + val.substring(end);
+          textarea.selectionStart = textarea.selectionEnd = start + 1 + selected.length;
+          syncFallbackEditor();
+          playCliSound("key");
+          return;
+        }
+      });
+    }
+  }
+
+  initCodeEditor();
+
+  // Tabs: Test Cases vs Solution
+  if (tabTestCases && tabSolution) {
+    tabTestCases.addEventListener("click", () => {
+      tabTestCases.classList.add("is-active");
+      tabSolution.classList.remove("is-active");
+      tcBodyTestCases.style.display = "flex";
+      tcBodySolution.style.display = "none";
       playCliSound("key");
-    }
-  }
-
-  if (resetBtn) resetBtn.addEventListener("click", triggerResetCode);
-  if (toolbarResetBtn) toolbarResetBtn.addEventListener("click", triggerResetCode);
-  if (tabCloseBtn) tabCloseBtn.addEventListener("click", triggerResetCode);
-
-  // Clear output
-  clearBtn.addEventListener("click", () => {
-    consoleBody.textContent = "Console cleared.";
-    consoleBody.className = "py-console-body";
-    consoleMeta.textContent = "Output cleared";
-    playCliSound("key");
-  });
-
-  // Claim EXP button
-  claimBtn.addEventListener("click", () => {
-    if (claimBtn.disabled) return;
-    claimBtn.disabled = true;
-    claimBtn.textContent = "EXP Claimed";
-    onClaimExp(c);
-    playCliSound("enter");
-  });
-
-  // Live Goal Check Evaluator
-  function evaluateGoals(code, stdout, stderr, runError, globalsMap) {
-    const goals = c.goals || [];
-    let satisfiedCount = 0;
-
-    goals.forEach((g) => {
-      let isMet = false;
-
-      if (c.id === "py-level-1-output-comments") {
-        if (g.id === "comment") {
-          // Checks for at least one human comment (# ...)
-          isMet = /(?:^|\n)\s*#[^\n]+/m.test(code);
-        } else if (g.id === "three_prints") {
-          // Checks for at least three separate print(...) statements
-          const printMatches = code.match(/\bprint\s*\(/g);
-          isMet = Boolean(printMatches && printMatches.length >= 3);
-        } else if (g.id === "about_me") {
-          // Task: About Me — three separate print statements for name, age, favorite food
-          // Output should have at least 3 non-empty output lines without runtime errors
-          const lines = stdout
-            .split("\n")
-            .map((l) => l.trim())
-            .filter((l) => l.length > 0);
-          isMet = !runError && lines.length >= 3;
-        }
-      } else if (c.id === "py-level-2-variables-data-types") {
-        if (g.id === "variable_roundup") {
-          // Task 1: 4 variables (str, int, float, bool), each printed with value + type()
-          const combined = (code + "\n" + stdout).toLowerCase();
-          const hasStr = combined.includes("<class 'str'>") || combined.includes("str") || /['"][^'"]+['"]/.test(code);
-          const hasInt = combined.includes("<class 'int'>") || combined.includes("int") || /\b\d+\b/.test(code);
-          const hasFloat = combined.includes("<class 'float'>") || combined.includes("float") || /\b\d+\.\d+\b/.test(code);
-          const hasBool = combined.includes("<class 'bool'>") || combined.includes("bool") || /\b(True|False)\b/.test(code);
-          const hasType = /\btype\s*\(/.test(code);
-
-          // In globalsMap or output:
-          const typeMatchesInOutput = (stdout.match(/<class '(str|int|float|bool)'>/g) || []).length;
-          isMet = !runError && hasType && hasStr && hasInt && hasFloat && (typeMatchesInOutput >= 2 || (hasBool && hasType));
-        } else if (g.id === "swap_variables") {
-          // Task 2: Swap Without a Third Variable - swap two variables in one line
-          // e.g. a, b = b, a or x, y = y, x
-          const singleLineSwapRegex = /\b([a-zA-Z_]\w*)\s*,\s*([a-zA-Z_]\w*)\s*=\s*\2\s*,\s*\1\b/;
-          const hasSingleLineSwap = singleLineSwapRegex.test(code);
-          // And check that no third temp variable was used for the swap
-          isMet = !runError && hasSingleLineSwap;
-        }
-      } else if (c.id === "py-level-3-arithmetic-input-typecasting") {
-        if (g.id === "mini_calculator") {
-          // Task 1: Mini Calculator — ask for 2 numbers, print results of all 7 operators (+, -, *, /, //, %, **)
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasInput = /\binput\s*\(/.test(code);
-          const hasTypecast = /\b(int|float)\s*\(/.test(code);
-          const hasAdd = /\+/.test(cleanCode);
-          const hasSub = /(?<!-)-(?!-)/.test(cleanCode);
-          const hasMul = /(?<!\*)\*(?!\*)/.test(cleanCode);
-          const hasDiv = /(?<!\/)\/(?!\/)/.test(cleanCode);
-          const hasFloor = /\/\//.test(cleanCode);
-          const hasMod = /%/.test(cleanCode);
-          const hasExp = /\*\*/.test(cleanCode);
-
-          const hasAll7Ops = hasAdd && hasSub && hasMul && hasDiv && hasFloor && hasMod && hasExp;
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasInput && hasTypecast && hasAll7Ops && hasPrint;
-        } else if (g.id === "age_from_birth_year") {
-          // Task 2: Age from Birth Year — ask for birth year, calculate age via subtraction
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasInput = /\binput\s*\(/.test(code);
-          const hasTypecast = /\b(int|float)\s*\(/.test(code);
-          const hasSubtraction = /(?<!-)-(?!-)/.test(cleanCode);
-          const hasAgeLogic = /(birth|year|age|\b20\d\d\b)/i.test(code);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasInput && hasTypecast && hasSubtraction && hasAgeLogic && hasPrint;
-        }
-      } else if (c.id === "py-level-4-strings-indexing-slicing") {
-        if (g.id === "name_manipulation") {
-          // Task 1: Name manipulation
-          // Store full name in a variable. Print: uppercase, lowercase, first 3 letters (slicing), len()
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasUpper = /\.upper\s*\(\s*\)/.test(cleanCode);
-          const hasLower = /\.lower\s*\(\s*\)/.test(cleanCode);
-          const hasSlice = /\[\s*(0\s*)?:\s*3\s*\]/.test(cleanCode);
-          const hasLen = /\blen\s*\(/.test(cleanCode);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasUpper && hasLower && hasSlice && hasLen && hasPrint;
-        } else if (g.id === "reverse_string") {
-          // Task 2: Reverse a string
-          // Ask for word with input(), print it reversed without a loop using slicing [::-1]
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasInput = /\binput\s*\(/.test(code);
-          const hasRevSlice = /\[\s*:\s*:\s*-1\s*\]/.test(cleanCode);
-          const hasLoop = /\b(for\s+\w+\s+in|while\b)/.test(cleanCode);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasInput && hasRevSlice && !hasLoop && hasPrint;
-        }
-      } else if (c.id === "py-level-5-if-conditionals") {
-        if (g.id === "even_or_odd") {
-          // Task 1: Even or Odd
-          // Ask for a number with input(), then print "Even" or "Odd" using if/else and modulo (%)
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasInput = /\binput\s*\(/.test(code);
-          const hasModulo = /%\s*2\b|%/.test(cleanCode);
-          const hasIfElse = /\bif\b/.test(cleanCode) && /\belse\s*:/.test(cleanCode);
-          const hasKeywords = /even/i.test(code) && /odd/i.test(code);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasInput && hasModulo && hasIfElse && hasKeywords && hasPrint;
-        } else if (g.id === "grade_checker") {
-          // Task 2: Grade Checker
-          // Ask for a score (0-100), print letter grade using if/elif/else
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasInput = /\binput\s*\(/.test(code) || /score\s*=/.test(cleanCode);
-          const hasElif = /\belif\b/.test(cleanCode);
-          const hasIf = /\bif\b/.test(cleanCode);
-          const hasGrades = /['"]?A['"]?.*['"]?B['"]?.*['"]?C['"]?.*['"]?F['"]?/s.test(cleanCode) || 
-                            (/[ABC]/i.test(cleanCode) && /\b(90|80|70)\b/.test(cleanCode));
-          const hasComparison = /[><]=?/.test(cleanCode);
-
-          isMet = !runError && hasInput && hasIf && hasElif && hasGrades && hasComparison;
-        }
-      } else if (c.id === "py-level-6-loops-flow-control") {
-        if (g.id === "countdown") {
-          // Task 1: Countdown
-          // Using a while loop, print numbers from 10 to 1, then print "Liftoff!"
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasWhile = /\bwhile\b/.test(cleanCode);
-          const hasDecrement = /(-=\s*1|count\s*-\s*1|n\s*-\s*1|i\s*-\s*1)/.test(cleanCode) || /-\s*1/.test(cleanCode);
-          const hasLiftoff = /liftoff/i.test(code) || /liftoff/i.test(stdout);
-          const hasPrint = /\bprint\s*\(/.test(code);
-          const hasOutputCountdown = /\b10\b/.test(stdout) && /\b1\b/.test(stdout);
-
-          isMet = !runError && hasWhile && (hasDecrement || hasOutputCountdown) && hasLiftoff && hasPrint;
-        } else if (g.id === "sum_of_numbers") {
-          // Task 2: Sum of numbers
-          // Using a for loop and range(), calculate and print the sum of all numbers from 1 to 100
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasFor = /\bfor\s+\w+\s+in\s+range\s*\(/.test(cleanCode);
-          const hasRunningTotal = /(\+=\s*\w+|\b\w+\s*=\s*\w+\s*\+\s*\w+)/.test(cleanCode);
-          const has5050 = /\b5050\b/.test(stdout) || /5050/.test(cleanCode) || /101/.test(cleanCode) || /100/.test(cleanCode);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasFor && hasRunningTotal && has5050 && hasPrint;
-        }
-      } else if (c.id === "py-level-7-mini-project-password-lock") {
-        const cleanCode = code.replace(/#.*$/gm, "");
-        if (g.id === "flag_and_attempts") {
-          // Task 1: Boolean Flag & Loop
-          const hasWhile = /\bwhile\b/.test(cleanCode);
-          const hasFlag = /\b(logged_in|is_logged_in|success|authenticated|access_granted|is_auth|flag|logged)\s*=\s*False\b/i.test(cleanCode) || /\b(False|True)\b/.test(cleanCode);
-          const hasAttempt = /\battempt\b/i.test(cleanCode) || /\b(count|tries)\b/i.test(cleanCode);
-          const hasIncrement = /(\+=\s*1|\b\w+\s*=\s*\w+\s*\+\s*1)/.test(cleanCode);
-
-          isMet = !runError && hasWhile && hasFlag && hasAttempt && hasIncrement;
-        } else if (g.id === "conditional_access_denied") {
-          // Task 2: Access Control & Bug Fix
-          const hasBreak = /\bbreak\b/.test(cleanCode);
-          const hasFlagTrue = /\b(logged_in|is_logged_in|success|authenticated|access_granted|is_auth|flag|logged)\s*=\s*True\b/i.test(cleanCode) || /while\s+.*:[\s\S]*?else\s*:/i.test(cleanCode);
-          const hasPostLoopCheck = /\bif\s+(not\s+\w+|\w+\s*==\s*False|\w+\s*!=\s*True)/i.test(cleanCode) || /else\s*:\s*print\s*\(.*ACCESS DENIED/i.test(cleanCode);
-          const hasGranted = /ACCESS GRANTED/i.test(code) || /ACCESS GRANTED/i.test(stdout);
-          const hasDeniedInCode = /ACCESS DENIED/i.test(code);
-          // Crucial bug check: In output with matching password, ACCESS GRANTED is printed, but ACCESS DENIED must NOT be printed!
-          const bothOutputsPrinted = /ACCESS GRANTED/i.test(stdout) && /ACCESS DENIED/i.test(stdout);
-
-          isMet = !runError && hasBreak && hasFlagTrue && hasPostLoopCheck && hasGranted && hasDeniedInCode && !bothOutputsPrinted;
-        }
-      } else if (c.id === "py-level-8-lists") {
-        if (g.id === "grocery_list_manager") {
-          // Level 8: Grocery List Manager
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasGroceries = /\bgroceries\s*=\s*\[\s*\]|\bgroceries\b/.test(cleanCode);
-          const hasAppend = (cleanCode.match(/\.append\s*\(/g) || []).length >= 3;
-          const hasLen = /\blen\s*\(\s*groceries\s*\)/.test(cleanCode);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasGroceries && hasAppend && hasLen && hasPrint;
-        }
-      } else if (c.id === "py-level-9-tuples") {
-        if (g.id === "tuple_basics") {
-          // Level 9: Tuple Basics
-          const cleanCode = code.replace(/#.*$/gm, "");
-          const hasTuple = /\(\s*[^)]+,\s*[^)]+,\s*[^)]+,\s*[^)]+\)/.test(cleanCode) || /\w+\s*=\s*\([^)]+\)/.test(cleanCode);
-          const hasIndex1 = /\[\s*1\s*\]/.test(cleanCode);
-          const hasNegIndex = /\[\s*-\s*1\s*\]/.test(cleanCode);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasTuple && hasIndex1 && hasNegIndex && hasPrint;
-        }
-      } else if (c.id === "py-level-10-dictionaries") {
-        const cleanCode = code.replace(/#.*$/gm, "");
-        if (g.id === "build_profile") {
-          // Level 10: Task 1: Build a Profile
-          const hasProfile = /\bprofile\s*=\s*\{[\s\S]*?\}/.test(cleanCode);
-          const hasKeyLookup = /\bprofile\s*\[\s*['"][^'"]+['"]\s*\]/.test(cleanCode);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasProfile && hasKeyLookup && hasPrint;
-        } else if (g.id === "loop_and_print") {
-          // Level 10: Task 2: Loop and Print
-          const hasItems = /\.items\s*\(\s*\)/.test(cleanCode);
-          const hasFor = /\bfor\s+\w+(\s*,\s*\w+)?\s+in\s+/.test(cleanCode);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasItems && hasFor && hasPrint;
-        }
-      } else if (c.id === "py-level-11-nested-data-structures") {
-        const cleanCode = code.replace(/#.*$/gm, "");
-        if (g.id === "person_with_hobbies") {
-          // Level 11: Task 1: Person with Hobbies
-          const hasHobbiesList = /['"]?hobbies['"]?\s*:\s*\[[\s\S]*?\]/.test(cleanCode);
-          const hasLoopHobby = /\bfor\s+\w+\s+in\s+.*hobbies/i.test(cleanCode) || /\bfor\s+\w+\s+in\s+\w+\[['"]hobbies['"]\]/i.test(cleanCode);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasHobbiesList && hasLoopHobby && hasPrint;
-        } else if (g.id === "list_of_friends") {
-          // Level 11: Task 2: List of Friends
-          const hasListOfDicts = /\[\s*\{[\s\S]*?\}\s*,\s*\{[\s\S]*?\}\s*,\s*\{[\s\S]*?\}\s*\]/.test(cleanCode) ||
-                                 (cleanCode.includes("[") && (cleanCode.match(/\{[^}]*name[^}]*\}/gi) || []).length >= 2);
-          const hasLoop = /\bfor\s+\w+\s+in\s+/.test(cleanCode);
-          const hasDictAccess = /\w+\[['"](name|age)['"]\]/i.test(cleanCode);
-          const hasPrint = /\bprint\s*\(/.test(code);
-
-          isMet = !runError && hasListOfDicts && hasLoop && hasDictAccess && hasPrint;
-        }
-      } else {
-        // Generic fallback for custom goals
-        isMet = !runError && stdout.trim().length > 0;
-      }
-
-      goalResults[g.id] = isMet || solved;
-      if (goalResults[g.id]) satisfiedCount++;
-
-      // Update goal item UI
-      const itemEl = document.getElementById(`pyGoal-${g.id}`);
-      const iconEl = document.getElementById(`pyGoalIcon-${g.id}`);
-      if (itemEl && iconEl) {
-        if (goalResults[g.id]) {
-          itemEl.classList.add("is-satisfied");
-          iconEl.textContent = "✔";
-        } else {
-          itemEl.classList.remove("is-satisfied");
-          iconEl.textContent = "○";
-        }
-      }
     });
-
-    // Update progress bar & counter
-    if (progressCounter) {
-      progressCounter.textContent = `${satisfiedCount} / ${goals.length}`;
-    }
-    if (progressBarFill) {
-      const pct = Math.round((satisfiedCount / goals.length) * 100);
-      progressBarFill.style.width = `${pct}%`;
-    }
-
-    if (satisfiedCount === goals.length) {
-      allGoalsSatisfied = true;
-      if (!claimBtn.disabled && claimBtn.textContent.includes("Claim")) {
-        claimBtn.classList.add("is-ready");
-      }
-      claimBtn.disabled = false;
-    }
+    tabSolution.addEventListener("click", () => {
+      tabSolution.classList.add("is-active");
+      tabTestCases.classList.remove("is-active");
+      tcBodyTestCases.style.display = "none";
+      tcBodySolution.style.display = "block";
+      playCliSound("key");
+    });
   }
 
+  // Copy Solution to Editor
+  if (copySolutionBtn) {
+    copySolutionBtn.addEventListener("click", () => {
+      setCode(meta.solution);
+      playCliSound("enter");
+      tabTestCases.click();
+    });
+  }
+
+  // Expected Output Toggle
+  if (expectedToggle && expectedBox) {
+    expectedToggle.addEventListener("change", () => {
+      expectedBox.style.display = expectedToggle.checked ? "block" : "none";
+    });
+  }
+
+  // Claim EXP
+  if (claimBtn) {
+    claimBtn.addEventListener("click", () => {
+      if (claimBtn.disabled) return;
+      claimBtn.disabled = true;
+      claimBtn.textContent = "EXP Claimed ✔";
+      onClaimExp(c);
+      playCliSound("enter");
+    });
+  }
+
+  // Interactive Terminal Input Handler
   let activeInputResolve = null;
 
   function requestTerminalInput(promptText) {
@@ -835,19 +656,15 @@ Ready. Press "▶ Run Code" or press Ctrl+Enter to test your program.</pre>
       if (label) {
         label.textContent = promptText ? promptText.trim() : "input:";
       }
-      if (consoleMeta) {
-        consoleMeta.textContent = "Waiting for input in terminal below ↵";
+      if (statusText) {
+        statusText.textContent = "Awaiting terminal input ↵";
       }
       if (bar && input) {
         bar.style.display = "flex";
         input.value = "";
         input.placeholder = promptText ? `Enter: ${promptText.trim()}` : "Type input and press Enter...";
-        setTimeout(() => {
-          input.focus();
-        }, 50);
-        if (consoleBody) {
-          consoleBody.scrollTop = consoleBody.scrollHeight;
-        }
+        setTimeout(() => input.focus(), 50);
+        if (outputBox) outputBox.scrollTop = outputBox.scrollHeight;
       }
     });
   }
@@ -858,7 +675,7 @@ Ready. Press "▶ Run Code" or press Ctrl+Enter to test your program.</pre>
     const bar = document.getElementById("pyTerminalInputBar");
     const val = input ? input.value : "";
     if (bar) bar.style.display = "none";
-    if (consoleMeta) consoleMeta.textContent = "Running script...";
+    if (statusText) statusText.textContent = "Running script...";
     const resolve = activeInputResolve;
     activeInputResolve = null;
     resolve(val);
@@ -866,9 +683,7 @@ Ready. Press "▶ Run Code" or press Ctrl+Enter to test your program.</pre>
 
   const termSubmitBtn = document.getElementById("pyTermSubmitBtn");
   const termInputField = document.getElementById("pyTermInputField");
-  if (termSubmitBtn) {
-    termSubmitBtn.addEventListener("click", () => submitTerminalInput());
-  }
+  if (termSubmitBtn) termSubmitBtn.addEventListener("click", submitTerminalInput);
   if (termInputField) {
     termInputField.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -878,348 +693,170 @@ Ready. Press "▶ Run Code" or press Ctrl+Enter to test your program.</pre>
     });
   }
 
-  function preparePythonCodeForTerminal(rawCode) {
-    const lines = rawCode.split("\n");
-    const processed = lines.map((line) => {
-      const commentIdx = line.indexOf("#");
-      if (commentIdx !== -1) {
-        const codePart = line.substring(0, commentIdx);
-        const commentPart = line.substring(commentIdx);
-        return codePart.replace(/\binput\s*\(/g, "(await __terminal_input(") + commentPart;
+  // Live Goal Check Evaluator
+  function evaluateGoals(code, stdout, stderr, runError) {
+    const goals = c.goals || [{ id: "output", text: "Output matches expected format" }];
+    let satisfiedCount = 0;
+
+    goals.forEach((g) => {
+      let isMet = false;
+
+      if (c.id === "py-level-1-output-comments") {
+        if (g.id === "comment") {
+          isMet = /(?:^|\n)\s*#[^\n]+/m.test(code);
+        } else if (g.id === "three_prints") {
+          const printMatches = code.match(/\bprint\s*\(/g);
+          isMet = Boolean(printMatches && printMatches.length >= 1);
+        } else if (g.id === "about_me") {
+          isMet = !runError && (stdout.includes("Hello World!") || stdout.trim().length > 0);
+        } else {
+          isMet = !runError && stdout.trim().length > 0;
+        }
+      } else if (c.id === "py-level-2-variables-data-types") {
+        if (g.id === "variable_roundup") {
+          const combined = (code + "\n" + stdout).toLowerCase();
+          isMet = !runError && (combined.includes("str") || combined.includes("int") || combined.includes("float"));
+        } else if (g.id === "swap_variables") {
+          isMet = !runError && (/\b([a-zA-Z_]\w*)\s*,\s*([a-zA-Z_]\w*)\s*=\s*\2\s*,\s*\1\b/.test(code) || stdout.includes("Swapped"));
+        } else {
+          isMet = !runError && stdout.trim().length > 0;
+        }
+      } else if (c.id === "py-level-3-arithmetic-input-typecasting") {
+        if (g.id === "mini_calculator") {
+          isMet = !runError && (/\+/.test(code) || stdout.includes("Addition"));
+        } else if (g.id === "age_from_birth_year") {
+          isMet = !runError && (code.includes("input") || stdout.trim().length > 0);
+        } else {
+          isMet = !runError && stdout.trim().length > 0;
+        }
+      } else if (c.id === "py-level-4-strings-indexing-slicing") {
+        if (g.id === "name_manipulation") {
+          isMet = !runError && (code.includes(".upper()") || code.includes(".lower()") || code.includes("[:3]") || stdout.includes("PYTHON"));
+        } else if (g.id === "reverse_string") {
+          isMet = !runError && (code.includes("[::-1]") || stdout.includes("retnuH"));
+        } else {
+          isMet = !runError && stdout.trim().length > 0;
+        }
+      } else if (c.id === "py-level-5-if-conditionals") {
+        isMet = !runError && (code.includes("if ") && (code.includes("else:") || code.includes("elif ")) || stdout.includes("Rank"));
+      } else if (c.id === "py-level-6-loops-flow-control") {
+        isMet = !runError && ((code.includes("for ") || code.includes("range(") || code.includes("while ")) || stdout.includes("5050") || stdout.includes("Liftoff"));
+      } else if (c.id === "py-level-7-mini-project-password-lock") {
+        isMet = !runError && (stdout.includes("ACCESS GRANTED") || stdout.includes("ENTER YOUR PASSWORD") || code.includes("while "));
+      } else if (c.id === "py-level-8-lists") {
+        isMet = !runError && (code.includes(".append(") || code.includes("[") || stdout.includes("apple"));
+      } else if (c.id === "py-level-9-tuples") {
+        isMet = !runError && (code.includes("(") || stdout.includes("21"));
+      } else if (c.id === "py-level-10-dictionaries") {
+        isMet = !runError && (code.includes("{") || stdout.includes("AXZEL"));
+      } else if (c.id === "py-level-11-nested-data-structures") {
+        isMet = !runError && (code.includes("{") || stdout.includes("Slash"));
+      } else {
+        isMet = !runError && stdout.trim().length > 0;
       }
-      return line.replace(/\binput\s*\(/g, "(await __terminal_input(");
+
+      const itemEl = document.getElementById(`pyGoal-${g.id}`);
+      const iconEl = document.getElementById(`pyGoalIcon-${g.id}`);
+      if (itemEl && iconEl) {
+        if (isMet) {
+          itemEl.classList.add("is-satisfied");
+          iconEl.textContent = "✔";
+          satisfiedCount++;
+        } else {
+          itemEl.classList.remove("is-satisfied");
+          iconEl.textContent = "○";
+        }
+      }
     });
-    return processed.join("\n");
-  }
 
-  // Fallback JS-based lightweight Python executor in case Pyodide CDN is unreachable
-  async function evaluateFallbackPython(code, onInput) {
-    const lines = code.split("\n");
-    let stdout = "";
-    let stderr = "";
-    const vars = {};
-
-    try {
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#")) continue;
-
-        // Input assignment: var = int(input("...")) or var = input("...")
-        const inputMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=\s*(?:(int|float)\s*\(\s*)?input\s*\((.*?)\)\s*\)?$/);
-        if (inputMatch) {
-          const varName = inputMatch[1];
-          const castType = inputMatch[2];
-          const rawPrompt = inputMatch[3].trim();
-          let promptText = "";
-          if (rawPrompt) {
-            promptText = rawPrompt.replace(/^['"]|['"]$/g, "");
-            stdout += promptText;
-            consoleBody.textContent = stdout;
-          }
-          let inputVal = onInput ? await onInput(promptText) : "python123";
-          stdout += String(inputVal) + "\n";
-          consoleBody.textContent = stdout;
-          if (castType === "int") inputVal = parseInt(inputVal, 10);
-          else if (castType === "float") inputVal = parseFloat(inputVal);
-          else inputVal = String(inputVal);
-          vars[varName] = inputVal;
-          continue;
-        }
-
-        // Tuple swap: a, b = b, a
-        const swapMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*,\s*([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)\s*,\s*([a-zA-Z_]\w*)$/);
-        if (swapMatch) {
-          const v1 = swapMatch[1], v2 = swapMatch[2];
-          const r1 = swapMatch[3], r2 = swapMatch[4];
-          const val1 = vars[r1] !== undefined ? vars[r1] : r1;
-          const val2 = vars[r2] !== undefined ? vars[r2] : r2;
-          vars[v1] = val1;
-          vars[v2] = val2;
-          return;
-        }
-
-        // Variable assignment: name = "AXZEL", age = 21, or math
-        const assignMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/);
-        if (assignMatch) {
-          const varName = assignMatch[1];
-          const rawVal = assignMatch[2].trim();
-          if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
-            vars[varName] = rawVal.slice(1, -1);
-          } else if (rawVal === "True") {
-            vars[varName] = true;
-          } else if (rawVal === "False") {
-            vars[varName] = false;
-          } else if (!isNaN(Number(rawVal))) {
-            vars[varName] = Number(rawVal);
-          } else {
-            try {
-              let jsExpr = rawVal.replace(/\/\//g, "/").replace(/\*\*/g, "**");
-              Object.keys(vars).forEach((k) => {
-                if (!k.startsWith("__")) {
-                  const reg = new RegExp(`\\b${k}\\b`, "g");
-                  jsExpr = jsExpr.replace(reg, JSON.stringify(vars[k]));
-                }
-              });
-              const evalRes = Function(`"use strict"; return (${jsExpr})`)();
-              vars[varName] = evalRes;
-            } catch {
-              vars[varName] = rawVal;
-            }
-          }
-          return;
-        }
-
-        // Print statement: print(...)
-        const printMatch = trimmed.match(/^print\s*\((.*)\)$/);
-        if (printMatch) {
-          const argsRaw = printMatch[1].trim();
-          // Check for f-string: f"Age: {age}"
-          const fstringMatch = argsRaw.match(/^f['"](.*)['"]$/);
-          if (fstringMatch) {
-            let res = fstringMatch[1].replace(/\{([a-zA-Z_]\w*)\}/g, (_, v) => (vars[v] !== undefined ? vars[v] : ""));
-            stdout += res + "\n";
-            return;
-          }
-
-          const parts = argsRaw.split(",").map((p) => p.trim());
-          const outParts = parts.map((part) => {
-            const typeMatch = part.match(/^type\s*\(([a-zA-Z_]\w*)\)$/);
-            if (typeMatch) {
-              const targetVar = typeMatch[1];
-              const val = vars[targetVar];
-              if (typeof val === "string") return "<class 'str'>";
-              if (typeof val === "number") return Number.isInteger(val) ? "<class 'int'>" : "<class 'float'>";
-              if (typeof val === "boolean") return "<class 'bool'>";
-              return "<class 'object'>";
-            }
-            if ((part.startsWith('"') && part.endsWith('"')) || (part.startsWith("'") && part.endsWith("'"))) {
-              return part.slice(1, -1);
-            }
-            if (vars[part] !== undefined) {
-              return String(vars[part]);
-            }
-            // Evaluate string methods like name.upper(), name.lower(), len(name)
-            const upperMatch = part.match(/^([a-zA-Z_]\w*)\.upper\(\)$/);
-            if (upperMatch && vars[upperMatch[1]] !== undefined) {
-              return String(vars[upperMatch[1]]).toUpperCase();
-            }
-            const lowerMatch = part.match(/^([a-zA-Z_]\w*)\.lower\(\)$/);
-            if (lowerMatch && vars[lowerMatch[1]] !== undefined) {
-              return String(vars[lowerMatch[1]]).toLowerCase();
-            }
-            const lenMatch = part.match(/^len\(([a-zA-Z_]\w*)\)$/);
-            if (lenMatch && vars[lenMatch[1]] !== undefined) {
-              return String(String(vars[lenMatch[1]]).length);
-            }
-            // Evaluate string slicing: word[0], word[-1], word[0:3], word[:3], word[::-1]
-            const sliceMatch = part.match(/^([a-zA-Z_]\w*)\[([^\]]+)\]$/);
-            if (sliceMatch && vars[sliceMatch[1]] !== undefined) {
-              const strVal = String(vars[sliceMatch[1]]);
-              const sl = sliceMatch[2].trim();
-              if (sl === "::-1") {
-                return strVal.split("").reverse().join("");
-              }
-              if (sl.startsWith(":") || sl.startsWith("0:")) {
-                const end = parseInt(sl.replace(/^[0:]*/, "") || "3", 10);
-                return strVal.slice(0, end);
-              }
-              const idx = parseInt(sl, 10);
-              if (!isNaN(idx)) {
-                return idx < 0 ? strVal[strVal.length + idx] || "" : strVal[idx] || "";
-              }
-            }
-            // Evaluate math in print e.g. print(a + b), print(a // b)
-            try {
-              let jsExpr = part.replace(/\/\//g, "/").replace(/\*\*/g, "**");
-              Object.keys(vars).forEach((k) => {
-                if (!k.startsWith("__")) {
-                  const reg = new RegExp(`\\b${k}\\b`, "g");
-                  jsExpr = jsExpr.replace(reg, JSON.stringify(vars[k]));
-                }
-              });
-              const val = Function(`"use strict"; return (${jsExpr})`)();
-              if (part.includes("//")) return String(Math.floor(val));
-              return String(val);
-            } catch {
-              return part;
-            }
-          });
-          stdout += outParts.join(" ") + "\n";
-          consoleBody.textContent = stdout;
-        }
-      }
-    } catch (err) {
-      stderr += String(err.message || err) + "\n";
+    if (progressCounter) {
+      progressCounter.textContent = `${satisfiedCount} / ${goals.length}`;
     }
 
-    return { stdout, stderr, runError: stderr.length > 0 ? new Error(stderr) : null };
+    allGoalsSatisfied = satisfiedCount === goals.length;
+    return allGoalsSatisfied;
   }
 
-  // Execute Code in Pyodide with live stdout redirection
+  // Execute Code Function with Live Stream and Evaluation
   async function executeCode() {
     if (isExecuting) return;
-    const code = textarea.value;
+    const code = getCode();
 
     isExecuting = true;
     runBtn.disabled = true;
-    execStatus.className = "py-exec-status is-running";
-    statusText.textContent = "Executing...";
-    consoleBody.textContent = "Executing Python script in WebAssembly runtime...";
-    consoleBody.className = "py-console-body";
-    consoleMeta.textContent = "Connecting to execution engine...";
+    runBtn.classList.add("is-running");
+    if (statusText) statusText.textContent = "Running script...";
+    outputBox.textContent = "Executing Python script...";
+    outputBox.classList.remove("is-error");
+    evalBanner.style.display = "none";
 
     try {
-      let stdout = "";
-      let stderr = "";
-      let runError = null;
+      const res = await runPython(code, {
+        onStdout: (chunk) => {
+          outputBox.textContent = chunk;
+          outputBox.scrollTop = outputBox.scrollHeight;
+        },
+        onStderr: (chunk) => {
+          outputBox.textContent = chunk;
+          outputBox.scrollTop = outputBox.scrollHeight;
+        },
+        onInput: requestTerminalInput,
+        getPyodide
+      });
 
-      let pyodide = null;
-      try {
-        if (typeof getPyodide === "function") {
-          pyodide = await getPyodide();
-        } else if (window.loadPyodide) {
-          pyodide = await window.loadPyodide();
-        }
-      } catch (loadErr) {
-        console.warn("Pyodide load exception, using fallback runner:", loadErr);
-      }
+      const finalOut = (res.stdout || "").trim();
+      const finalErr = (res.stderr || "").trim();
 
-      if (pyodide) {
-        consoleMeta.textContent = "Running script...";
-        consoleBody.textContent = "";
-
-        // Provide real-time live stdout/stderr hooks
-        window.__py_stdout_write = (chunk) => {
-          stdout += chunk;
-          consoleBody.textContent = stdout;
-          consoleBody.scrollTop = consoleBody.scrollHeight;
-        };
-
-        window.__py_stderr_write = (chunk) => {
-          stderr += chunk;
-          consoleBody.textContent = (stdout ? stdout + "\n" : "") + stderr;
-          consoleBody.scrollTop = consoleBody.scrollHeight;
-        };
-
-        window.__js_terminal_input = async (promptStr) => {
-          return await requestTerminalInput(promptStr);
-        };
-
-        const wrapper = `
-import sys
-import js
-
-class __LiveStdout:
-    def __init__(self):
-        self.buffer = ""
-    def write(self, s):
-        val = str(s)
-        self.buffer += val
-        js.__py_stdout_write(val)
-    def flush(self):
-        pass
-
-class __LiveStderr:
-    def __init__(self):
-        self.buffer = ""
-    def write(self, s):
-        val = str(s)
-        self.buffer += val
-        js.__py_stderr_write(val)
-    def flush(self):
-        pass
-
-__live_out = __LiveStdout()
-__live_err = __LiveStderr()
-sys.stdout = __live_out
-sys.stderr = __live_err
-
-async def __terminal_input(prompt=""):
-    prompt_str = str(prompt) if prompt is not None else ""
-    if prompt_str:
-        sys.stdout.write(prompt_str)
-    val = await js.__js_terminal_input(prompt_str)
-    sys.stdout.write(str(val) + "\\n")
-    return str(val)
-`;
-        await pyodide.runPythonAsync(wrapper);
-
-        const codeToRun = preparePythonCodeForTerminal(code);
-
-        try {
-          await pyodide.runPythonAsync(codeToRun);
-        } catch (execErr) {
-          runError = execErr;
-          if (execErr && execErr.message) {
-            stderr += (stderr ? "\n" : "") + execErr.message;
-          }
-        }
-
-        const teardown = `
-sys.stdout = sys.__stdout__
-sys.stderr = sys.__stderr__
-`;
-        try {
-          await pyodide.runPythonAsync(teardown);
-        } catch {}
-      } else {
-        // Fallback engine
-        const fallbackRes = await evaluateFallbackPython(code, requestTerminalInput);
-        stdout = fallbackRes.stdout;
-        stderr = fallbackRes.stderr;
-        runError = fallbackRes.runError;
-      }
-
-      // Display results
-      let finalConsoleOutput = "";
-      if (stdout) {
-        finalConsoleOutput += stdout;
-      }
-      if (stderr) {
-        finalConsoleOutput += (finalConsoleOutput ? "\n" : "") + stderr;
-      }
-      if (runError) {
-        finalConsoleOutput += (finalConsoleOutput ? "\n" : "") + `Traceback (most recent call last):\n  ${runError.message || runError}`;
-      }
-
-      if (!finalConsoleOutput.trim()) {
-        finalConsoleOutput = "[Program finished with no output to stdout]";
-      }
-
-      consoleBody.textContent = finalConsoleOutput;
-      consoleMeta.textContent = `Execution completed · ${stdout.split("\n").filter(Boolean).length} output lines`;
-
-      if (runError) {
-        consoleBody.className = "py-console-body is-error";
-        execStatus.className = "py-exec-status is-error";
-        statusText.textContent = "Runtime Error";
+      if (res.runError || finalErr) {
+        outputBox.textContent = (finalOut ? finalOut + "\n\n" : "") + `Runtime Error:\n${finalErr || res.runError?.message}`;
+        outputBox.classList.add("is-error");
+        statusText.textContent = "Execution failed";
+        evalBanner.style.display = "flex";
+        evalBanner.className = "py-eval-banner is-failed";
+        evalBanner.innerHTML = `<span>✖ Output did not match or error occurred. Review your syntax above.</span>`;
         playCliSound("backspace");
       } else {
-        consoleBody.className = "py-console-body is-success";
-        execStatus.className = "py-exec-status is-success";
-        statusText.textContent = "Success";
-        playCliSound("enter");
-      }
+        outputBox.textContent = finalOut || "[Finished with no output]";
+        outputBox.classList.remove("is-error");
+        statusText.textContent = "Execution succeeded";
 
-      // Evaluate objectives
-      evaluateGoals(code, stdout, stderr, runError);
+        // Check if output matches expected or satisfies objectives
+        const normalizedOut = finalOut.toLowerCase().replace(/\s+/g, " ").trim();
+        const normalizedExpected = meta.expected.toLowerCase().replace(/\s+/g, " ").trim();
+        const matchesExpected = normalizedOut.includes(normalizedExpected) || normalizedExpected.includes(normalizedOut);
 
-      if (allGoalsSatisfied) {
-        consoleBody.textContent += "\n\n✔ All live objectives met! Click 'Claim " + c.exp + " EXP' to submit trial.";
+        const goalsPassed = evaluateGoals(code, finalOut, finalErr, res.runError);
+
+        evalBanner.style.display = "flex";
+        if (goalsPassed || matchesExpected) {
+          evalBanner.className = "py-eval-banner is-passed";
+          evalBanner.innerHTML = `<span>✔ Test Case Passed! (All challenge objectives cleared)</span>`;
+          if (claimBtn) {
+            claimBtn.disabled = false;
+            claimBtn.classList.add("is-ready");
+          }
+          playCliSound("enter");
+        } else {
+          evalBanner.className = "py-eval-banner is-failed";
+          evalBanner.innerHTML = `<span>● Keep going! Check the live objectives and expected output format.</span>`;
+          playCliSound("key");
+        }
       }
     } catch (fatal) {
-      consoleBody.textContent = `Fatal Execution Error:\n${fatal.message || fatal}`;
-      consoleBody.className = "py-console-body is-error";
-      execStatus.className = "py-exec-status is-error";
-      statusText.textContent = "Error";
+      outputBox.textContent = `Fatal Error: ${fatal.message || fatal}`;
+      outputBox.classList.add("is-error");
+      statusText.textContent = "Fatal Error";
       playCliSound("backspace");
     } finally {
       isExecuting = false;
       runBtn.disabled = false;
+      runBtn.classList.remove("is-running");
     }
   }
 
-  runBtn.addEventListener("click", () => {
-    executeCode();
-  });
+  if (runBtn) {
+    runBtn.addEventListener("click", () => {
+      executeCode();
+    });
+  }
 }
