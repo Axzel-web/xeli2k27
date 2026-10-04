@@ -59,6 +59,10 @@
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2ZM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8Zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1Z"/></svg>
         <span class="nav-label"><span class="nav-full">Leaderboard</span><span class="nav-short">Ranks</span></span>
       </button>
+      <button class="nav-item nav-item-3d-live" data-view="3d-live" title="3D Live">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2Zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2Zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5Zm3-3c-.83 0-1.5-.67-1.5-1.5S17.67 9 18.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5Z"/></svg>
+        <span class="nav-label"><span class="nav-full">🎮 3D Live</span><span class="nav-short">🎮 3D Live</span></span>
+      </button>
       <button class="nav-item" data-view="achievements" title="Achievements">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 2 9.2 5H5v4.2L2 12l3 2.8V19h4.2L12 22l2.8-3H19v-4.2L22 12l-3-2.8V5h-4.2L12 2Zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/></svg>
         <span class="nav-label"><span class="nav-full">Achievements</span><span class="nav-short">Badges</span></span>
@@ -668,6 +672,234 @@
         <span class="ach-summary-label" id="achProgressLabel">0 of 0 unlocked</span>
       </div>
       <div id="achievementGrid"></div>
+    </section>
+
+    <!-- ---------- 3D LIVE // NETWORK ENGINEER FACILITY ---------- -->
+    <section class="view" id="view-3d-live">
+      <div class="live3d-container" id="live3dContainer">
+        <!-- 3D WebGL Canvas -->
+        <canvas id="live3dCanvas" class="live3d-canvas"></canvas>
+
+        <!-- TOP BAR HUD -->
+        <div class="live3d-hud-top">
+          <div class="live3d-hud-left">
+            <button type="button" class="live3d-back-btn" data-view="dashboard" title="Exit to Dashboard">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+              <span>EXIT TO STATUS</span>
+            </button>
+            <div class="live3d-brand-badge">
+              <span class="live3d-status-dot" id="live3dStatusDot"></span>
+              <span class="live3d-title">XELI // 3D LIVE</span>
+              <span class="live3d-online-tag" id="live3dOnlineCount">1 Hunter Online</span>
+            </div>
+          </div>
+
+          <div class="live3d-hud-center">
+            <div class="live3d-zone-banner" id="live3dZoneBanner">
+              <span class="live3d-zone-icon">🌐</span>
+              <div class="live3d-zone-info">
+                <span class="live3d-zone-label">FACILITY ZONE</span>
+                <span class="live3d-zone-name" id="live3dZoneName">Network Facility · Main Lab</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="live3d-hud-right">
+            <div class="live3d-profile-badge">
+              <img id="live3dAvatarImg" src="/assets/rank_e_level_1_5.png" alt="Hunter" class="live3d-profile-avatar" />
+              <div class="live3d-profile-info">
+                <div class="live3d-profile-name-row">
+                  <span class="live3d-profile-name" id="live3dHunterName">Hunter</span>
+                  <span class="live3d-rank-pill" id="live3dHunterRank">E-RANK</span>
+                </div>
+                <div class="live3d-exp-row">
+                  <span class="live3d-level-tag">LV. <b id="live3dHunterLevel">1</b></span>
+                  <span class="live3d-exp-tag"><b id="live3dHunterExp">0</b> EXP</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Minimap Container -->
+            <div class="live3d-minimap-wrap" title="Facility Minimap">
+              <canvas id="live3dMinimap" width="110" height="110" class="live3d-minimap"></canvas>
+              <div class="live3d-minimap-label">RADAR</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3D FLOATING NAMEPLATES CONTAINER -->
+        <div id="live3dNameplates" class="live3d-nameplates-layer" aria-hidden="true"></div>
+
+        <!-- INTERACTION PROMPT HUD -->
+        <div class="live3d-interact-prompt" id="live3dInteractPrompt" style="display:none;">
+          <div class="live3d-key-chip">E</div>
+          <div class="live3d-interact-text">
+            <span class="live3d-interact-action" id="live3dInteractAction">INTERACT</span>
+            <span class="live3d-interact-target" id="live3dInteractTarget">Cisco Core Router 01</span>
+          </div>
+        </div>
+
+        <!-- BOTTOM HUD -->
+        <div class="live3d-hud-bottom">
+          <!-- Controls Guide -->
+          <div class="live3d-controls-card">
+            <div class="live3d-ctrl-col">
+              <span class="live3d-kbc">W</span><span class="live3d-kbc">A</span><span class="live3d-kbc">S</span><span class="live3d-kbc">D</span>
+              <span class="live3d-ctrl-label">Move</span>
+            </div>
+            <div class="live3d-ctrl-col">
+              <span class="live3d-kbc">SHIFT</span>
+              <span class="live3d-ctrl-label">Sprint</span>
+            </div>
+            <div class="live3d-ctrl-col">
+              <span class="live3d-kbc">SPACE</span>
+              <span class="live3d-ctrl-label">Jump</span>
+            </div>
+            <div class="live3d-ctrl-col">
+              <span class="live3d-kbc">E</span>
+              <span class="live3d-ctrl-label">Interact</span>
+            </div>
+            <div class="live3d-ctrl-col">
+              <span class="live3d-kbc">DRAG</span>
+              <span class="live3d-ctrl-label">Rotate Cam</span>
+            </div>
+          </div>
+
+          <!-- Bottom Center: Quick Station Shortcuts / Status -->
+          <div class="live3d-facility-pills">
+            <button type="button" class="live3d-pill-btn" id="live3dTeleportLab" title="Teleport to Lab">🔬 Lab</button>
+            <button type="button" class="live3d-pill-btn" id="live3dTeleportNoc" title="Teleport to NOC">📊 NOC</button>
+            <button type="button" class="live3d-pill-btn" id="live3dTeleportArena" title="Teleport to Arena">⚔ Arena</button>
+            <button type="button" class="live3d-pill-btn" id="live3dTeleportTraining" title="Teleport to Training">🎓 Training</button>
+          </div>
+
+          <!-- Bottom Right: Large Floating FIND OPPONENT Button -->
+          <div class="live3d-action-wrap">
+            <button type="button" class="live3d-find-opponent-btn" id="live3dFindOpponentBtn">
+              <span class="live3d-duel-icon">⚔</span>
+              <div class="live3d-btn-content">
+                <span class="live3d-btn-main">FIND OPPONENT</span>
+                <span class="live3d-btn-sub">Network Duel Arena · 5 Rounds</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- MATCHMAKING SEARCHING OVERLAY -->
+        <div class="live3d-matchmaking-modal" id="live3dMatchmakingModal" style="display:none;">
+          <div class="live3d-modal-box">
+            <div class="live3d-radar-ring">
+              <div class="live3d-radar-sweep"></div>
+              <div class="live3d-radar-pulse"></div>
+              <span class="live3d-radar-cross">⚔</span>
+            </div>
+            <h3 class="live3d-modal-title" id="live3dMatchStatusTitle">Searching for Opponent...</h3>
+            <p class="live3d-modal-sub" id="live3dMatchStatusSub">Scanning the Network Challenge Arena for available Hunters...</p>
+            
+            <!-- Opponent Preview Card (shown when found) -->
+            <div class="live3d-opponent-preview-card" id="live3dOpponentCard" style="display:none;">
+              <div class="live3d-opp-avatar-wrap">
+                <img id="live3dOppAvatar" src="/assets/rank_e_level_1_5.png" alt="Opponent Avatar" class="live3d-opp-avatar" />
+                <span class="live3d-opp-rank-tag" id="live3dOppRank">D-RANK</span>
+              </div>
+              <div class="live3d-opp-details">
+                <div class="live3d-opp-name" id="live3dOppName">NETWORK_HUNTER_99</div>
+                <div class="live3d-opp-title" id="live3dOppTitle">Senior NOC Engineer</div>
+                <div class="live3d-opp-stats-row">
+                  <span>Level <b id="live3dOppLevel">14</b></span>
+                  <span><b id="live3dOppExp">18,250</b> Total EXP</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="live3d-modal-actions">
+              <button type="button" class="btn btn-primary live3d-accept-btn" id="live3dAcceptChallengeBtn" style="display:none;">
+                ⚔ ACCEPT CHALLENGE
+              </button>
+              <button type="button" class="btn btn-secondary live3d-cancel-match-btn" id="live3dCancelMatchBtn">
+                CANCEL
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5-ROUND NETWORK DUEL ARENA MODAL -->
+        <div class="live3d-duel-modal" id="live3dDuelModal" style="display:none;">
+          <div class="live3d-duel-frame">
+            <!-- Duel Header: Player A vs Player B + Live Points -->
+            <div class="live3d-duel-header">
+              <div class="live3d-duel-player live3d-duel-p1">
+                <img id="live3dDuelP1Avatar" src="/assets/rank_e_level_1_5.png" alt="You" class="live3d-duel-pavatar" />
+                <div class="live3d-duel-pinfo">
+                  <span class="live3d-duel-ptag">YOU</span>
+                  <span class="live3d-duel-pname" id="live3dDuelP1Name">Hunter</span>
+                  <span class="live3d-duel-plevel" id="live3dDuelP1Level">Lv. 1</span>
+                </div>
+                <div class="live3d-duel-score" id="live3dDuelP1Score">0 pts</div>
+              </div>
+
+              <div class="live3d-duel-vs-banner">
+                <span class="live3d-duel-vs-text">VS</span>
+                <div class="live3d-duel-round-pill" id="live3dDuelRoundPill">ROUND 1/5: SUBNETTING</div>
+                <div class="live3d-duel-timer-bar">
+                  <div class="live3d-duel-timer-fill" id="live3dDuelTimerFill" style="width:100%;"></div>
+                </div>
+                <span class="live3d-duel-seconds" id="live3dDuelSeconds">2:00</span>
+              </div>
+
+              <div class="live3d-duel-player live3d-duel-p2">
+                <div class="live3d-duel-score" id="live3dDuelP2Score">0 pts</div>
+                <div class="live3d-duel-pinfo" style="text-align:right;">
+                  <span class="live3d-duel-ptag">OPPONENT</span>
+                  <span class="live3d-duel-pname" id="live3dDuelP2Name">NetworkHunter</span>
+                  <span class="live3d-duel-plevel" id="live3dDuelP2Level">Lv. 12</span>
+                </div>
+                <img id="live3dDuelP2Avatar" src="/assets/rank_e_level_1_5.png" alt="Opponent" class="live3d-duel-pavatar" />
+              </div>
+            </div>
+
+            <!-- Duel Question & Challenge Card -->
+            <div class="live3d-duel-body" id="live3dDuelBody">
+              <div class="live3d-duel-question-card">
+                <div class="live3d-duel-category-badge" id="live3dDuelCategoryBadge">ROUND 1: SUBNETTING</div>
+                <h3 class="live3d-duel-prompt" id="live3dDuelPrompt">Loading network challenge scenario...</h3>
+                
+                <!-- Code / Topology snippet box -->
+                <div class="live3d-duel-snippet-box" id="live3dDuelSnippetBox" style="display:none;">
+                  <pre><code id="live3dDuelSnippet"></code></pre>
+                </div>
+
+                <!-- 4 Options -->
+                <div class="live3d-duel-options-grid" id="live3dDuelOptionsGrid"></div>
+              </div>
+            </div>
+
+            <!-- Round Result Banner -->
+            <div class="live3d-round-feedback" id="live3dRoundFeedback" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- INTERACTIVE EQUIPMENT / TRAINING STATION MODAL -->
+        <div class="live3d-equipment-modal" id="live3dEquipmentModal" style="display:none;">
+          <div class="live3d-equip-frame">
+            <div class="live3d-equip-head">
+              <div class="live3d-equip-title-row">
+                <span class="live3d-equip-icon" id="live3dEquipIcon">🖥️</span>
+                <div>
+                  <h3 class="live3d-equip-title" id="live3dEquipTitle">Cisco Core Router 01</h3>
+                  <span class="live3d-equip-sub" id="live3dEquipSub">GigabitEthernet Interfaces · OSPF Area 0 Active</span>
+                </div>
+              </div>
+              <button type="button" class="icon-btn live3d-equip-close" id="live3dEquipCloseBtn" aria-label="Close Equipment Dialog">✕</button>
+            </div>
+            
+            <div class="live3d-equip-content" id="live3dEquipContent">
+              <!-- Dynamically populated with Terminal CLI, Switch config, Server diagnostics or Training challenges -->
+            </div>
+          </div>
+        </div>
+
+      </div>
     </section>
 
   </main>

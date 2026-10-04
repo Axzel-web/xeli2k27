@@ -23,6 +23,12 @@ import {
 import { renderCliLabChallenge } from "./cli-lab-ui.js";
 import { renderBinaryLabChallenge } from "./binary-lab-ui.js";
 import { renderPythonLabChallenge } from "./python-lab-ui.js";
+import {
+  init3DLiveWorld,
+  resume3DLiveWorld,
+  pause3DLiveWorld,
+  update3DLiveProfileHUD,
+} from "./live-3d-world.js";
 
 /* ============================================================
    XELI — Challenge Lab data
@@ -2262,6 +2268,9 @@ const ACHIEVEMENT_GROUPS = [
     renderCalendar();
     renderAchievements();
     checkAchievements();
+    try {
+      update3DLiveProfileHUD();
+    } catch (_) {}
   }
  
   function renderDashQuestList() {
@@ -3786,6 +3795,7 @@ const ACHIEVEMENT_GROUPS = [
     leaderboard: "Global Leaderboard",
     roadmap: "Global Leaderboard",
     achievements: "Achievements",
+    "3d-live": "🎮 3D Live // Network Facility",
   };
  
   function switchView(view) {
@@ -3804,6 +3814,32 @@ const ACHIEVEMENT_GROUPS = [
         switchLeaderboardTab("progression");
       }
       refreshLeaderboard(false);
+    }
+
+    if (targetView === "3d-live") {
+      const container = $("#live3dContainer");
+      if (container) {
+        init3DLiveWorld(container, {
+          onAddExp: (amount, reason) => {
+            addExp(amount, reason);
+          },
+          onRefreshLeaderboard: () => {
+            if (typeof refreshLeaderboard === "function") {
+              refreshLeaderboard(false);
+            }
+          },
+          getState: () => ({
+            name: state.name || "Hunter",
+            level: state.level || 1,
+            rank: rankInfoForLevel(state.level).rank,
+            totalExp: state.totalExp || 0,
+            avatarUrl: state.avatarUrl || null,
+          }),
+        });
+        resume3DLiveWorld();
+      }
+    } else {
+      pause3DLiveWorld();
     }
   }
  
